@@ -4,38 +4,42 @@ import { Button } from '../ui/button';
 
 const NHTGlobalPromotion = () => {
     return (
-        <div className="flex flex-col md:flex-row bg-white shadow-lg min-h-screen ">
+        <div className="flex flex-col md:flex-row bg-white shadow-lg min-h-screen">
             {/* Content Section (Left) */}
-            <div className="w-full md:w-1/2 p-8 bg-black  flex flex-col justify-center gap-5 ">
+            <div className="w-full md:w-1/2 p-8 bg-black flex flex-col justify-center gap-5">
                 <h1 className="text-4xl tracking-wide font-medium text-white mb-4">
-                    Grow Your NHT Global Business Like Never Before
+                    Start a Home-Based Global Business — We’ll Help You Grow.
                 </h1>
-
-                <ul className="space-y-7 mb-6 font-light ">
-                    <li className="flex items-start ">
-                        <Check className="text-white mr-2 mt-1 flex-shrink-0" size={20} />
-                        <span className="text-white">
-                            Get Your Stunning NHT Global Independent Distributor Site
-                        </span>
-                    </li>
-
+                <p className="text-lg text-white mb-6 font-light">
+                    Join NHTGlobal with our all-in-one platform that helps you launch, automate, and scale — both online and offline.
+                </p>
+                <ul className="space-y-4 mb-4 font-light">
                     <li className="flex items-start">
                         <Check className="text-white mr-2 mt-1 flex-shrink-0" size={20} />
                         <span className="text-white">
-                            A full readymade customizable site for your prospects worldwide
+                             Traditional network marketing meets a new-age digital system
                         </span>
                     </li>
-
                     <li className="flex items-start">
                         <Check className="text-white mr-2 mt-1 flex-shrink-0" size={20} />
                         <span className="text-white">
-                            Achieve higher sales and grow your team
+                             Build your brand online while growing your network offline
+                        </span>
+                    </li>
+                    <li className="flex items-start">
+                        <Check className="text-white mr-2 mt-1 flex-shrink-0" size={20} />
+                        <span className="text-white">
+                             Be your own boss, set your hours, and work from anywhere
+                        </span>
+                    </li>
+                    <li className="flex items-start">
+                        <Check className="text-white mr-2 mt-1 flex-shrink-0" size={20} />
+                        <span className="text-white">
+                             Connect globally, duplicate locally — grow your way
                         </span>
                     </li>
                 </ul>
-
-                <Button variant="outline" size='lg' className="  py-3 px-6 rounded-md font-medium cursor-pointer  transition duration-300 w-max">
-
+                <Button variant="outline" size='lg' className="py-3 px-6 rounded-md font-medium cursor-pointer transition duration-300 w-max">
                     Get Started
                 </Button>
             </div>

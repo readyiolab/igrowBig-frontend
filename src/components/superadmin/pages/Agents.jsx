@@ -156,7 +156,7 @@ const Agents = () => {
       const updated = { ...prev, [name]: files ? files[0] : value };
       if (['domain_type', 'primary_domain_name'].includes(name)) {
         const protocol = window.location.protocol; // http: or https:
-        const baseDomain = process.env.NODE_ENV === 'production' ? 'begrat.com' : 'localhost:5173';
+        const baseDomain = process.env.NODE_ENV === 'production' ? 'igrowbig.com' : 'localhost:5173';
         updated.website_link =
           updated.domain_type === 'path'
             ? `${protocol}//${baseDomain}/${selectedAgent?.tenant_id || ''}`

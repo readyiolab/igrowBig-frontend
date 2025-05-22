@@ -149,14 +149,14 @@ import { useState, useCallback } from "react";
 import axios from "axios";
 
 const getBaseUrl = () => {
-  const protocol = window.location.protocol; // http:
+  const protocol = window.location.protocol;
   const hostname = window.location.hostname;
 
   if (hostname.includes("localhost")) {
-    return "http://localhost:3001/api"; // Direct backend for local dev
+    return "http://localhost:3001/api";
   }
 
-  return `${protocol}//${hostname}/api`; // e.g., http://begrat.com/api, http://alokshope.com/api
+  return `${protocol}//${hostname}/api`;
 };
 
 const BASE_URL = getBaseUrl();
@@ -168,10 +168,11 @@ const apiClient = axios.create({
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
-    const isLoginRequest =
-      error.config.url.includes("/admin/login") ||
-      error.config.url.includes("/users/login") ||
-      error.config.url.includes("/users/signup");
+    const isLoginRequest = error.config?.url
+      ? error.config.url.includes("/admin/login") ||
+        error.config.url.includes("/users/login") ||
+        error.config.url.includes("/users/signup")
+      : false;
 
     if (isLoginRequest) {
       return Promise.reject(error);
@@ -212,7 +213,7 @@ const useTenantApi = () => {
         "/users/login",
         "/admin/login",
         "/site/by-domain",
-        "/site/"
+        "/site/",
       ];
 
       const token = getToken();
@@ -227,6 +228,7 @@ const useTenantApi = () => {
         return Promise.reject(authError);
       }
 
+      let config;
       try {
         const headers = {};
         if (token && !endpoint.startsWith("/site/")) {
@@ -236,7 +238,7 @@ const useTenantApi = () => {
           headers["Content-Type"] = "application/json";
         }
 
-        const config = {
+        config = {
           method,
           url: endpoint.startsWith("http") ? endpoint : `${BASE_URL}${endpoint}`,
           headers,
@@ -254,7 +256,7 @@ const useTenantApi = () => {
           message: "API request failed",
           details: err.message,
         };
-        console.error(`API Error: ${method} ${config.url}`, errorData);
+        console.error(`API Error: ${method} ${config ? config.url : endpoint}`, errorData);
         setError(errorData);
         return Promise.reject(errorData);
       } finally {

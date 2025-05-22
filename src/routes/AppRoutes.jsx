@@ -30,8 +30,9 @@ const CreateUser = lazy(() => import("@/components/superadmin/pages/CreateUser")
 const ResetUserPassword = lazy(() => import("@/components/superadmin/pages/ResetUserPassword"));
 const SendTenantNotification = lazy(() => import("@/components/superadmin/pages/SendTenantNotification"));
 const SuperAdminLogin = lazy(() => import("@/components/superadmin/pages/SuperAdminLogin"));
-const TenantStatusPage = lazy(() => import("@/components/superadmin/pages/TenantStatusPage"));
-const DomainSetup = lazy(() => import("@/components/superadmin/pages/DomainStatus"));
+
+
+
 
 // Backoffice pages
 const BackofficeLogin = lazy(() => import("@/components/backoffice/pages/BackofficeLogin"));
@@ -53,7 +54,6 @@ const ContactUsEditor = lazy(() => import("@/components/backoffice/pages/Contact
 const BlogEditor = lazy(() => import("@/components/backoffice/pages/BlogEditor"));
 const SocialMediaEditor = lazy(() => import("@/components/backoffice/pages/SocialMediaEditor"));
 const FooterEditor = lazy(() => import("@/components/backoffice/pages/FooterEditor"));
-
 const TenantSettings = lazy(() => import("@/components/backoffice/pages/TenantSettings"));
 const BackofficeSignup = lazy(() => import("@/components/backoffice/pages/BackofficeSignup"));
 const HomepageOpportunityVideo = lazy(() => import("@/components/backoffice/pages/HomepageOpportunityVideo"));
@@ -361,9 +361,7 @@ const router = createBrowserRouter([
       { path: "settings", element: withSuspense(Settings)() },
       { path: "create-user", element: withSuspense(CreateUser)() },
       { path: "reset-pass", element: withSuspense(ResetUserPassword)() },
-      { path: "send-notification", element: withSuspense(SendTenantNotification)() },
-      { path: "tenant-status-page", element: withSuspense(TenantStatusPage)() },
-      { path: "domain-setup", element: withSuspense(DomainSetup)() },
+      { path: "send-notification", element: withSuspense(SendTenantNotification)() }
     ],
   },
   {

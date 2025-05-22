@@ -154,32 +154,8 @@ export default function AdminLayout() {
                 >
                   Send Message
                 </NavLink>
-                <NavLink
-                  to="/admin/tenant-status-page"
-                  className={({ isActive }) =>
-                    `block py-2 px-4 rounded transition-all duration-200 ${
-                      isActive
-                        ? "bg-gray-100 text-gray-900 shadow-sm"
-                        : "text-gray-700 hover:bg-gray-100 hover:shadow-sm"
-                    }`
-                  }
-                  onClick={() => setIsSidebarOpen(false)}
-                >
-                  Status Page
-                </NavLink>
-                <NavLink
-                  to="/admin/domain-setup"
-                  className={({ isActive }) =>
-                    `block py-2 px-4 rounded transition-all duration-200 ${
-                      isActive
-                        ? "bg-gray-100 text-gray-900 shadow-sm"
-                        : "text-gray-700 hover:bg-gray-100 hover:shadow-sm"
-                    }`
-                  }
-                  onClick={() => setIsSidebarOpen(false)}
-                >
-                  Domain Setup
-                </NavLink>
+               
+                
               </div>
             </nav>
           </ScrollArea>

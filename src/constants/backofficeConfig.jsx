@@ -72,14 +72,10 @@ export const menuConfig = [
   },
   { to: '/backoffice/contact-us', label: 'Contact Us', icon: MessageSquare },
   { to: '/backoffice/blogs', label: 'Blogs', icon: FileText },
-  // { to: '/backoffice/leaders', label: 'Leaders', icon: Users },
-  // { to: '/backoffice/global-opportunity', label: 'Global Opportunity', icon: Globe },
-  // { to: '/backoffice/lead-capture', label: 'Lead Capture Page', icon: AtSign },
   { to: '/backoffice/social-media', label: 'Social Media', icon: Share2 },
   { to: '/backoffice/footer-disclaimer', label: 'Footer Disclaimer', icon: FileCode },
   { to: '/backoffice/subscriber-message', label: 'Subscriber Message', icon: Mail },
   { to: '/backoffice/notifications', label: 'Notifications', icon: HelpCircle },
-  // { to: '/backoffice/testimonials', label: 'Testimonials', icon: BookCopy },
   { to: '/backoffice/settings', label: 'Settings', icon: Settings },
   {to : '/backoffice/training' , label:"Training" , icon:Settings}
 ];

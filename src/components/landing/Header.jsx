@@ -15,13 +15,14 @@ const Header = () => {
   const [isOpen, setIsOpen] = useState(false);
 
   const navItems = [
-    { title: "Home", to: "promotion" }, // Adjusted to scroll to top section
+    { title: "Home", to: "promotion" }, 
+    { title: "Opportunity ", to: "opportunity" },
     { title: "Features", to: "features" },
     { title: "How it Works", to: "how-it-works" },
     { title: "Pricing", to: "pricing" },
     { title: "FAQs", to: "faqs" },
     { title: "Contact", to: "contact" },
-    { title: "Templates", to: "templates" },
+    
   ];
 
   return (
@@ -73,11 +74,11 @@ const Header = () => {
         <div className="hidden md:flex items-center gap-4">
           <Button
             variant="outline"
-            className="border-gray-300 
-              text-gray-700 
-              hover:text-black 
-              hover:border-black 
-              hover:bg-gray-50 
+            className="bg-black text-white
+              hover:bg-gray-800   
+              hover:text-white
+              
+              
               font-semibold 
               px-6 
               py-2 
@@ -86,7 +87,7 @@ const Header = () => {
               duration-200"
             asChild
           >
-            <RouterLink to="/backoffice-signup">Join Us</RouterLink>
+            <RouterLink to="/backoffice-signup">Join Now</RouterLink>
           </Button>
           <Button
             className="bg-black 
@@ -100,7 +101,7 @@ const Header = () => {
               duration-200"
             asChild
           >
-            <RouterLink to="/backoffice-login">Login</RouterLink>
+            {/* <RouterLink to="/backoffice-login">Login</RouterLink> */}
           </Button>
         </div>
 
@@ -154,7 +155,7 @@ const Header = () => {
                   asChild
                 >
                   <RouterLink to="/backoffice-signup" onClick={() => setIsOpen(false)}>
-                    Join Us
+                    Join Now
                   </RouterLink>
                 </Button>
                 <Button
@@ -170,9 +171,9 @@ const Header = () => {
                     duration-200"
                   asChild
                 >
-                  <RouterLink to="/backoffice-login" onClick={() => setIsOpen(false)}>
+                  {/* <RouterLink to="/backoffice-login" onClick={() => setIsOpen(false)}>
                     Login
-                  </RouterLink>
+                  </RouterLink> */}
                 </Button>
               </div>
             </nav>
