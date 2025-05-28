@@ -1,4 +1,9 @@
-import { createBrowserRouter, Navigate, useNavigate, useParams } from "react-router-dom";
+import {
+  createBrowserRouter,
+  Navigate,
+  useNavigate,
+  useParams,
+} from "react-router-dom";
 import React, { Suspense, lazy, useEffect, useState } from "react";
 import useTenantApi from "@/hooks/useTenantApi";
 import TenantTrainingList from "@/components/backoffice/pages/TenantTrainingList";
@@ -16,73 +21,167 @@ const LoadingFallback = () => (
 // Lazy load components
 const Layout = lazy(() => import("../components/landing/Layout"));
 const AdminLayout = lazy(() => import("../components/superadmin/Layout"));
-const BackofficeLayout = lazy(() => import("@/components/backoffice/layout/BackofficeLayout"));
-const MainLayout = lazy(() => import("../templates/Template1/layouts/MainLayout"));
+const BackofficeLayout = lazy(() =>
+  import("@/components/backoffice/layout/BackofficeLayout")
+);
+const MainLayout = lazy(() =>
+  import("../templates/Template1/layouts/MainLayout")
+);
 const Template2 = lazy(() => import("@/templates/Template2"));
 const Template3 = lazy(() => import("@/templates/Template3"));
 
 // Admin pages
-const Dashboard = lazy(() => import("../components/superadmin/pages/Dashboard"));
+const Dashboard = lazy(() =>
+  import("../components/superadmin/pages/Dashboard")
+);
 const Agents = lazy(() => import("../components/superadmin/pages/Agents"));
-const ManageTraining = lazy(() => import("../components/superadmin/pages/ManageTraining"));
+const ManageTraining = lazy(() =>
+  import("../components/superadmin/pages/ManageTraining")
+);
 const Settings = lazy(() => import("../components/superadmin/pages/Settings"));
-const CreateUser = lazy(() => import("@/components/superadmin/pages/CreateUser"));
-const ResetUserPassword = lazy(() => import("@/components/superadmin/pages/ResetUserPassword"));
-const SendTenantNotification = lazy(() => import("@/components/superadmin/pages/SendTenantNotification"));
-const SuperAdminLogin = lazy(() => import("@/components/superadmin/pages/SuperAdminLogin"));
-
-
-
+const CreateUser = lazy(() =>
+  import("@/components/superadmin/pages/CreateUser")
+);
+const ResetUserPassword = lazy(() =>
+  import("@/components/superadmin/pages/ResetUserPassword")
+);
+const SendTenantNotification = lazy(() =>
+  import("@/components/superadmin/pages/SendTenantNotification")
+);
+const SuperAdminLogin = lazy(() =>
+  import("@/components/superadmin/pages/SuperAdminLogin")
+);
 
 // Backoffice pages
-const BackofficeLogin = lazy(() => import("@/components/backoffice/pages/BackofficeLogin"));
-const BackofficeDashboard = lazy(() => import("@/components/backoffice/pages/Dashboard"));
-const SliderBanner = lazy(() => import("@/components/backoffice/pages/SliderBanner"));
-const WelcomeMessage = lazy(() => import("@/components/backoffice/pages/WelcomeMessage"));
-const HomePageIntroduction = lazy(() => import("@/components/backoffice/pages/HomePageIntroduction"));
-const HomepageAboutCompany = lazy(() => import("@/components/backoffice/pages/HomepageAboutCompany"));
-const ProductPage = lazy(() => import("@/components/backoffice/pages/ProductPage"));
-const CategoryEditor = lazy(() => import("@/components/backoffice/pages/CategoryEditor"));
-const ProductEditor = lazy(() => import("@/components/backoffice/pages/ProductEditor"));
-const OpportunityOverviewPageBanner = lazy(() => import("@/components/backoffice/pages/OpportunityOverviewPageBanner"));
-const OpportunityOverviewPageContent = lazy(() => import("@/components/backoffice/pages/OpportunityOverviewPageContent"));
-const OpportunityOverviewVideoSection = lazy(() => import("@/components/backoffice/pages/OpportunityOverviewVideoSection"));
-const OpportunityOverviewCompensationPlan = lazy(() => import("@/components/backoffice/pages/OpportunityOverviewCompensationPlan"));
-const PageBannerEditor = lazy(() => import("@/components/backoffice/pages/PageBannerEditor"));
-const PageContentEditor = lazy(() => import("@/components/backoffice/pages/PageContentEditor"));
-const ContactUsEditor = lazy(() => import("@/components/backoffice/pages/ContactUsEditor"));
-const BlogEditor = lazy(() => import("@/components/backoffice/pages/BlogEditor"));
-const SocialMediaEditor = lazy(() => import("@/components/backoffice/pages/SocialMediaEditor"));
-const FooterEditor = lazy(() => import("@/components/backoffice/pages/FooterEditor"));
-const TenantSettings = lazy(() => import("@/components/backoffice/pages/TenantSettings"));
-const BackofficeSignup = lazy(() => import("@/components/backoffice/pages/BackofficeSignup"));
-const HomepageOpportunityVideo = lazy(() => import("@/components/backoffice/pages/HomepageOpportunityVideo"));
-const HomepageSupportMessage = lazy(() => import("@/components/backoffice/pages/HomepageSupportMessage"));
-const HomepageWhyNetworkMarketing = lazy(() => import("@/components/backoffice/pages/HomepageWhyNetworkMarketing"));
-const SuperadminNotificationList = lazy(() => import("@/components/backoffice/pages/SuperadminNotificationList"));
-const SubscriberMessagePlaceholder = lazy(() => import("@/components/backoffice/pages/SubscriberMessagePlaceholder"));
+const BackofficeLogin = lazy(() =>
+  import("@/components/backoffice/pages/BackofficeLogin")
+);
+const BackofficeDashboard = lazy(() =>
+  import("@/components/backoffice/pages/Dashboard")
+);
+const SliderBanner = lazy(() =>
+  import("@/components/backoffice/pages/SliderBanner")
+);
+const WelcomeMessage = lazy(() =>
+  import("@/components/backoffice/pages/WelcomeMessage")
+);
+const HomePageIntroduction = lazy(() =>
+  import("@/components/backoffice/pages/HomePageIntroduction")
+);
+const HomepageAboutCompany = lazy(() =>
+  import("@/components/backoffice/pages/HomepageAboutCompany")
+);
+const ProductPage = lazy(() =>
+  import("@/components/backoffice/pages/ProductPage")
+);
+const CategoryEditor = lazy(() =>
+  import("@/components/backoffice/pages/CategoryEditor")
+);
+const ProductEditor = lazy(() =>
+  import("@/components/backoffice/pages/ProductEditor")
+);
+const OpportunityOverviewPageBanner = lazy(() =>
+  import("@/components/backoffice/pages/OpportunityOverviewPageBanner")
+);
+const OpportunityOverviewPageContent = lazy(() =>
+  import("@/components/backoffice/pages/OpportunityOverviewPageContent")
+);
+const OpportunityOverviewVideoSection = lazy(() =>
+  import("@/components/backoffice/pages/OpportunityOverviewVideoSection")
+);
+const OpportunityOverviewCompensationPlan = lazy(() =>
+  import("@/components/backoffice/pages/OpportunityOverviewCompensationPlan")
+);
+const PageBannerEditor = lazy(() =>
+  import("@/components/backoffice/pages/PageBannerEditor")
+);
+const PageContentEditor = lazy(() =>
+  import("@/components/backoffice/pages/PageContentEditor")
+);
+const ContactUsEditor = lazy(() =>
+  import("@/components/backoffice/pages/ContactUsEditor")
+);
+const BlogEditor = lazy(() =>
+  import("@/components/backoffice/pages/BlogEditor")
+);
+const SocialMediaEditor = lazy(() =>
+  import("@/components/backoffice/pages/SocialMediaEditor")
+);
+const FooterEditor = lazy(() =>
+  import("@/components/backoffice/pages/FooterEditor")
+);
+const TenantSettings = lazy(() =>
+  import("@/components/backoffice/pages/TenantSettings")
+);
+const BackofficeSignup = lazy(() =>
+  import("@/components/backoffice/pages/BackofficeSignup")
+);
+const HomepageOpportunityVideo = lazy(() =>
+  import("@/components/backoffice/pages/HomepageOpportunityVideo")
+);
+const HomepageSupportMessage = lazy(() =>
+  import("@/components/backoffice/pages/HomepageSupportMessage")
+);
+const HomepageWhyNetworkMarketing = lazy(() =>
+  import("@/components/backoffice/pages/HomepageWhyNetworkMarketing")
+);
+const SuperadminNotificationList = lazy(() =>
+  import("@/components/backoffice/pages/SuperadminNotificationList")
+);
+const SubscriberMessagePlaceholder = lazy(() =>
+  import("@/components/backoffice/pages/SubscriberMessagePlaceholder")
+);
 
 // Dynamic template pages
-const DynamicMainLayout = lazy(() => import("../dynamictemplate/Template1/layouts/MainLayout"));
-const DynamicHome = lazy(() => import("../dynamictemplate/Template1/pages/Home"));
-const DynamicProducts = lazy(() => import("../dynamictemplate/Template1/pages/Products"));
-const DynamicProductDetail = lazy(() => import("../dynamictemplate/Template1/pages/ProductDetail"));
-const DynamicOpportunity = lazy(() => import("../dynamictemplate/Template1/pages/Opportunity"));
-const DynamicJoinUs = lazy(() => import("../dynamictemplate/Template1/pages/JoinUs"));
-const DynamicContact = lazy(() => import("../dynamictemplate/Template1/pages/Contact"));
-const DynamicBlog = lazy(() => import("../dynamictemplate/Template1/pages/Blog"));
-const DynamicBlogPost = lazy(() => import("../dynamictemplate/Template1/pages/BlogPost"));
+const DynamicMainLayout = lazy(() =>
+  import("../dynamictemplate/Template1/layouts/MainLayout")
+);
+const DynamicHome = lazy(() =>
+  import("../dynamictemplate/Template1/pages/Home")
+);
+const DynamicProducts = lazy(() =>
+  import("../dynamictemplate/Template1/pages/Products")
+);
+const DynamicProductDetail = lazy(() =>
+  import("../dynamictemplate/Template1/pages/ProductDetail")
+);
+const DynamicOpportunity = lazy(() =>
+  import("../dynamictemplate/Template1/pages/Opportunity")
+);
+const DynamicJoinUs = lazy(() =>
+  import("../dynamictemplate/Template1/pages/JoinUs")
+);
+const DynamicContact = lazy(() =>
+  import("../dynamictemplate/Template1/pages/Contact")
+);
+const DynamicBlog = lazy(() =>
+  import("../dynamictemplate/Template1/pages/Blog")
+);
+const DynamicBlogPost = lazy(() =>
+  import("../dynamictemplate/Template1/pages/BlogPost")
+);
 
 // Ecommerce pages (for template1 demo)
 const EcommerceHome = lazy(() => import("../templates/Template1/pages/Home"));
-const EcommerceProducts = lazy(() => import("../templates/Template1/pages/Products"));
-const EcommerceProductDetail = lazy(() => import("../templates/Template1/pages/ProductDetail"));
-const EcommerceOpportunity = lazy(() => import("../templates/Template1/pages/Opportunity"));
-const EcommerceJoinUs = lazy(() => import("../templates/Template1/pages/JoinUs"));
-const EcommerceContact = lazy(() => import("../templates/Template1/pages/Contact"));
+const EcommerceProducts = lazy(() =>
+  import("../templates/Template1/pages/Products")
+);
+const EcommerceProductDetail = lazy(() =>
+  import("../templates/Template1/pages/ProductDetail")
+);
+const EcommerceOpportunity = lazy(() =>
+  import("../templates/Template1/pages/Opportunity")
+);
+const EcommerceJoinUs = lazy(() =>
+  import("../templates/Template1/pages/JoinUs")
+);
+const EcommerceContact = lazy(() =>
+  import("../templates/Template1/pages/Contact")
+);
 const EcommerceBlog = lazy(() => import("../templates/Template1/pages/Blog"));
-const EcommerceBlogPost = lazy(() => import("../templates/Template1/pages/BlogPost"));
-
+const EcommerceBlogPost = lazy(() =>
+  import("../templates/Template1/pages/BlogPost")
+);
 
 const DynamicTemplateLoader = ({ children }) => {
   const { slug } = useParams();
@@ -96,29 +195,44 @@ const DynamicTemplateLoader = ({ children }) => {
     const fetchTenantData = async () => {
       try {
         console.log("DynamicTemplateLoader: Fetching tenant for slug:", slug);
+
         const hostname = window.location.hostname;
-        const isCustomDomain =
-          hostname !== "begrat.com" &&
-          hostname !== "www.begrat.com" &&
-          hostname !== "stage.begrat.com";
+        const isCustomDomain = ![
+          "igrowbig.com",
+          "www.igrowbig.com",
+          "localhost",
+        ].includes(hostname);
+        
 
         let endpoint;
         if (isCustomDomain) {
           endpoint = "/site/by-domain";
-          console.log("DynamicTemplateLoader: Using custom domain endpoint:", endpoint);
+          console.log(
+            "DynamicTemplateLoader: Using custom domain endpoint:",
+            endpoint
+          );
         } else {
           endpoint = slug ? `/site/${slug}` : "/";
-          console.log("DynamicTemplateLoader: Using slug-based endpoint:", endpoint);
+          console.log(
+            "DynamicTemplateLoader: Using slug-based endpoint:",
+            endpoint
+          );
         }
 
         const response = await getAll(endpoint);
         console.log("DynamicTemplateLoader: API response:", response);
 
         if (response?.tenant?.template_id) {
-          console.log("DynamicTemplateLoader: Setting template_id:", response.tenant.template_id);
+          console.log(
+            "DynamicTemplateLoader: Setting template_id:",
+            response.tenant.template_id
+          );
           setTemplateId(response.tenant.template_id);
         } else {
-          console.log("DynamicTemplateLoader: No valid tenant data in response:", response);
+          console.log(
+            "DynamicTemplateLoader: No valid tenant data in response:",
+            response
+          );
           setError("No tenant found for this slug or domain");
         }
       } catch (err) {
@@ -170,7 +284,10 @@ const DynamicTemplateLoader = ({ children }) => {
       );
   }
 
-  console.log("DynamicTemplateLoader: Rendering TemplateLayout with templateId:", templateId);
+  console.log(
+    "DynamicTemplateLoader: Rendering TemplateLayout with templateId:",
+    templateId
+  );
   return (
     <Suspense fallback={<LoadingFallback />}>
       <TemplateLayout>{children}</TemplateLayout>
@@ -179,7 +296,6 @@ const DynamicTemplateLoader = ({ children }) => {
 };
 
 // Admin ProtectedRoute
-
 
 // const DynamicTemplateLoader = ({ children }) => {
 //   const { slug } = useParams();
@@ -306,7 +422,10 @@ const ProtectedRoute = ({ children }) => {
         })
         .catch((err) => {
           console.error("Backoffice auth check failed:", err);
-          if (err.message === "No authentication token found" || err.status === 401) {
+          if (
+            err.message === "No authentication token found" ||
+            err.status === 401
+          ) {
             localStorage.clear();
             navigate("/backoffice-login", { replace: true });
           }
@@ -345,7 +464,9 @@ const router = createBrowserRouter([
   },
   {
     path: "/admin",
-    element: <AdminProtectedRoute>{withSuspense(AdminLayout)()}</AdminProtectedRoute>,
+    element: (
+      <AdminProtectedRoute>{withSuspense(AdminLayout)()}</AdminProtectedRoute>
+    ),
     errorElement: <ErrorBoundary />,
     children: [
       { index: true, element: <Navigate to="/admin/dashboard" replace /> },
@@ -354,38 +475,67 @@ const router = createBrowserRouter([
       {
         path: "training",
         children: [
-          { index: true, element: <Navigate to="/admin/training/manage" replace /> },
+          {
+            index: true,
+            element: <Navigate to="/admin/training/manage" replace />,
+          },
           { path: "manage", element: withSuspense(ManageTraining)() },
         ],
       },
       { path: "settings", element: withSuspense(Settings)() },
       { path: "create-user", element: withSuspense(CreateUser)() },
       { path: "reset-pass", element: withSuspense(ResetUserPassword)() },
-      { path: "send-notification", element: withSuspense(SendTenantNotification)() }
+      {
+        path: "send-notification",
+        element: withSuspense(SendTenantNotification)(),
+      },
     ],
   },
   {
     path: "/backoffice",
-    element: <ProtectedRoute>{withSuspense(BackofficeLayout)()}</ProtectedRoute>,
+    element: (
+      <ProtectedRoute>{withSuspense(BackofficeLayout)()}</ProtectedRoute>
+    ),
     children: [
       { path: "dashboard", element: withSuspense(BackofficeDashboard)() },
       { path: "slider-banners", element: withSuspense(SliderBanner)() },
       { path: "welcome-message", element: withSuspense(WelcomeMessage)() },
       { path: "introduction", element: withSuspense(HomePageIntroduction)() },
       { path: "about-company", element: withSuspense(HomepageAboutCompany)() },
-      { path: "why-network-marketing", element: withSuspense(HomepageWhyNetworkMarketing)() },
-      { path: "opportunity-video", element: withSuspense(HomepageOpportunityVideo)() },
-      { path: "support-message", element: withSuspense(HomepageSupportMessage)() },
+      {
+        path: "why-network-marketing",
+        element: withSuspense(HomepageWhyNetworkMarketing)(),
+      },
+      {
+        path: "opportunity-video",
+        element: withSuspense(HomepageOpportunityVideo)(),
+      },
+      {
+        path: "support-message",
+        element: withSuspense(HomepageSupportMessage)(),
+      },
       { path: "about-page", element: withSuspense(ProductPage)() },
       { path: "categories", element: withSuspense(CategoryEditor)() },
       { path: "products-list", element: withSuspense(ProductEditor)() },
       {
         path: "opportunity",
         children: [
-          { index: true, element: withSuspense(OpportunityOverviewPageBanner)() },
-          { path: "page-banner", element: withSuspense(OpportunityOverviewPageBanner)() },
-          { path: "page-content", element: withSuspense(OpportunityOverviewPageContent)() },
-          { path: "video-section", element: withSuspense(OpportunityOverviewVideoSection)() },
+          {
+            index: true,
+            element: withSuspense(OpportunityOverviewPageBanner)(),
+          },
+          {
+            path: "page-banner",
+            element: withSuspense(OpportunityOverviewPageBanner)(),
+          },
+          {
+            path: "page-content",
+            element: withSuspense(OpportunityOverviewPageContent)(),
+          },
+          {
+            path: "video-section",
+            element: withSuspense(OpportunityOverviewVideoSection)(),
+          },
           {
             path: "compensation-plan",
             element: withSuspense(OpportunityOverviewCompensationPlan)(),
@@ -404,9 +554,15 @@ const router = createBrowserRouter([
       { path: "blogs", element: withSuspense(BlogEditor)() },
       { path: "social-media", element: withSuspense(SocialMediaEditor)() },
       { path: "footer-disclaimer", element: withSuspense(FooterEditor)() },
-      { path: "subscriber-message", element: withSuspense(SubscriberMessagePlaceholder)() },
+      {
+        path: "subscriber-message",
+        element: withSuspense(SubscriberMessagePlaceholder)(),
+      },
       { path: "settings", element: withSuspense(TenantSettings)() },
-      { path: "notifications", element: withSuspense(SuperadminNotificationList)() },
+      {
+        path: "notifications",
+        element: withSuspense(SuperadminNotificationList)(),
+      },
       { path: "training", element: withSuspense(TenantTrainingList)() },
     ],
   },
