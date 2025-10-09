@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import useTenantApi from "@/hooks/useTenantApi";
-import BannerCarousel from "@/components/sections/BannerCarousel";
+
 import SectionHeader from "@/components/sections/SectionHeader";
 import HomeSkeleton from "@/components/loaders/HomeSkeleton";
 import { Button } from "@/components/ui/button";
@@ -81,7 +81,7 @@ function Home() {
   return (
     <div className="min-h-screen bg-accent font-inter">
       {/* Hero Carousel */}
-      <BannerCarousel banners={banners} />
+     
 
       {/* Welcome Section */}
       <section
