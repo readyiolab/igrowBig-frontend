@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import useTenantApi from "@/hooks/useTenantApi";
-
-
+import BannerCarousel from "@/components/sections/BannerCarousel";
+import SectionHeader from "@/components/sections/SectionHeader";
 import HomeSkeleton from "@/components/loaders/HomeSkeleton";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -81,7 +81,7 @@ function Home() {
   return (
     <div className="min-h-screen bg-accent font-inter">
       {/* Hero Carousel */}
-     
+      <BannerCarousel banners={banners} />
 
       {/* Welcome Section */}
       <section
@@ -89,7 +89,11 @@ function Home() {
         className="py-16 md:py-24 px-4 sm:px-8 lg:px-12 bg-gradient-to-b from-accent to-white"
       >
         <div className="max-w-7xl mx-auto text-center">
-          
+          <SectionHeader 
+            title="Welcome to Our World of Opportunities" 
+            centered={true}
+            divider={false}
+          />
           
           <div
             className="pb-8 max-w-4xl mx-auto text-gray-700 leading-relaxed"
@@ -117,7 +121,7 @@ function Home() {
         className="py-16 md:py-24 px-4 sm:px-8 lg:px-12 bg-white"
       >
         <div className="max-w-7xl mx-auto">
-     
+          <SectionHeader title="A Message from John Ray" centered={true} />
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
             <div className="order-2 md:order-1">
@@ -159,7 +163,10 @@ function Home() {
         className="py-16 md:py-24 px-4 sm:px-8 lg:px-12 bg-gradient-to-r from-accent to-white"
       >
         <div className="max-w-7xl mx-auto">
-         
+          <SectionHeader 
+            title={homeData.about_company_title || "About NHT Global"} 
+            centered={true} 
+          />
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
             <div className="order-2 md:order-1">
@@ -213,7 +220,10 @@ function Home() {
         className="py-16 md:py-24 px-4 sm:px-8 lg:px-12 bg-white"
       >
         <div className="max-w-7xl mx-auto">
-         
+          <SectionHeader 
+            title={homeData.why_network_marketing_title || "Why Network Marketing"} 
+            centered={true} 
+          />
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
             <div className="order-2 md:order-1 relative h-72 sm:h-96 md:h-[500px] overflow-hidden rounded-xl shadow-xl">
@@ -253,7 +263,10 @@ function Home() {
           className="py-16 md:py-24 px-4 sm:px-8 lg:px-12 bg-gradient-to-b from-accent to-white"
         >
           <div className="max-w-5xl mx-auto">
-            
+            <SectionHeader 
+              title={homeData.opportunity_video_header_title || "Opportunity Overview"} 
+              centered={true} 
+            />
             
             <div className="relative aspect-video rounded-xl overflow-hidden shadow-xl transform transition-transform duration-300 hover:shadow-2xl">
               <video
@@ -273,7 +286,10 @@ function Home() {
         className="py-16 md:py-24 px-4 sm:px-8 lg:px-12 bg-white"
       >
         <div className="max-w-5xl mx-auto">
-          
+          <SectionHeader 
+            title="Our Commitment to Your Success" 
+            centered={true} 
+          />
           
           <div
             className="text-lg md:text-xl text-gray-700 leading-relaxed prose prose-lg prose-gray max-w-4xl mx-auto mb-10 text-center"
