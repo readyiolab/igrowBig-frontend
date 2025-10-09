@@ -33,33 +33,7 @@ function MainLayout({ children }) {
     });
   };
 
-  // Existing meta tag setup
-  // useEffect(() => {
-  //   if (!document.querySelector('html').getAttribute('lang')) {
-  //     document.querySelector('html').setAttribute('lang', 'en');
-  //   }
-    
-  //   if (!document.querySelector('meta[name="viewport"]')) {
-  //     const viewport = document.createElement('meta');
-  //     viewport.name = 'viewport';
-  //     viewport.content = 'width=device-width, initial-scale=1.0';
-  //     document.head.appendChild(viewport);
-  //   }
-    
-  //   if (!document.querySelector('meta[name="theme-color"]')) {
-  //     const themeColor = document.createElement('meta');
-  //     themeColor.name = 'theme-color';
-  //     themeColor.content = '#ffffff';
-  //     document.head.appendChild(themeColor);
-  //   }
-    
-  //   if (!document.querySelector('meta[name="author"]')) {
-  //     const author = document.createElement('meta');
-  //     author.name = 'author';
-  //     author.content = 'NHT Global';
-  //     document.head.appendChild(author);
-  //   }
-  // }, []);
+  
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -88,23 +62,3 @@ function MainLayout({ children }) {
 export default MainLayout;
 
 
-// dynamictemplate/Template1/layouts/MainLayout.jsx
-// import { Suspense } from "react";
-// import { Outlet } from "react-router-dom";
-
-// const MainLayout = ({ children }) => {
-//   console.log("DynamicMainLayout: Rendering");
-//   return (
-//     <div>
-//       <header>Store Header</header>
-//       <main>
-        // <Suspense fallback={<div>Loading...</div>}>
-        //   {children || <Outlet />}
-        // </Suspense>
-//       </main>
-//       <footer>Store Footer</footer>
-//     </div>
-//   );
-// };
-
-// export default MainLayout;

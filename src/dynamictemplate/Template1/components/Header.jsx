@@ -7,7 +7,7 @@ import useTenantApi from '@/hooks/useTenantApi';
 
 function Header() {
   const [isOpen, setIsOpen] = useState(false);
-  const { slug } = useParams(); // Get the dynamic slug from the URL
+  const { slug } = useParams(); // Get the dynamic slug from the URL (unused for fetch now)
   const { getAll } = useTenantApi(); // Hook to fetch tenant data
   const [siteData, setSiteData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -17,7 +17,7 @@ function Header() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await getAll(`/site/${slug}`);
+        const response = await getAll("/site/data");
         setSiteData(response.site_data);
       } catch (err) {
         setError(err.message);
@@ -26,16 +26,16 @@ function Header() {
       }
     };
     fetchData();
-  }, [slug, getAll]);
+  }, [getAll]);
 
-  // Navigation items array with dynamic slug prefix
+  // Navigation items array without dynamic slug prefix (uses absolute paths)
   const navItems = [
-    { path: `/${slug || ''}`, label: 'Home' },
-    { path: `/${slug}/products`, label: 'Products' },
-    { path: `/${slug}/opportunity`, label: 'Opportunity' },
-    { path: `/${slug}/join-us`, label: 'Join Us' },
-    { path: `/${slug}/contact`, label: 'Contact' },
-    { path: `/${slug}/blog`, label: 'Blog' },
+    { path: '/', label: 'Home' },
+    { path: '/products', label: 'Products' },
+    { path: '/opportunity', label: 'Opportunity' },
+    { path: '/join-us', label: 'Join Us' },
+    { path: '/contact', label: 'Contact' },
+    { path: '/blog', label: 'Blog' },
   ];
 
   // Handle navigation click
@@ -44,7 +44,7 @@ function Header() {
   };
 
   // Get the logo URL from siteData
-  const logoUrl = siteData?.tenant_Setting?.[0]?.site_logo_url || './1.png'; // Fallback to default logo if not available
+  const logoUrl = siteData?.tenant_setting?.site_logo_url || './1.png'; // Fallback to default logo if not available
 
   return (
     <header className="sticky top-0 shadow-xl py-4 bg-[#388e3c] text-white z-50">
@@ -52,14 +52,14 @@ function Header() {
         {/* Logo Section */}
         <div className="flex items-center gap-3">
           {loading ? (
-            <div>Loading...</div> // Optional: Show a loading state
+            <div className="w-13 h-13 bg-gray-300 animate-pulse rounded"></div> // Placeholder loader
           ) : error ? (
-            <div>Error loading logo</div> // Optional: Show error state
+            <div className="w-13 h-13 bg-gray-300 rounded flex items-center justify-center text-xs text-gray-500">Logo</div> // Placeholder on error
           ) : (
             <img
               src={logoUrl}
               alt="Site Logo"
-              className="w-13  transition-transform duration-300 "
+              className="w-13 h-13 transition-transform duration-300" // Fixed className (removed extra space)
             />
           )}
           <p className="text-xs md:text-sm font-light hidden sm:block">

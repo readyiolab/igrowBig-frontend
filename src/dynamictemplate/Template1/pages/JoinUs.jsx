@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { Link } from "react-router-dom";
 import useTenantApi from "@/hooks/useTenantApi";
 import { Button } from "@/components/ui/button";
 import {
@@ -29,7 +29,6 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 
 const JoinUs = () => {
-  const { slug } = useParams();
   const { getAll } = useTenantApi();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -38,7 +37,7 @@ const JoinUs = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await getAll(`/site/${slug}`);
+        const response = await getAll("/site/data");
         setData(response.site_data);
       } catch (err) {
         console.error("Error fetching join us data:", err);
@@ -48,7 +47,7 @@ const JoinUs = () => {
       }
     };
     fetchData();
-  }, [slug, getAll]);
+  }, [getAll]);
 
   if (loading) {
     return <JoinUsPageSkeleton />;
@@ -62,7 +61,7 @@ const JoinUs = () => {
         </div>
         <p className="text-gray-600 mb-6">{error}</p>
         <Button asChild>
-          <Link to={`/${slug}`}>
+          <Link to="/">
             <Home className="mr-2 h-4 w-4" />
             Return to Homepage
           </Link>
@@ -169,7 +168,7 @@ const JoinUs = () => {
                 asChild
                 className="bg-primary hover:bg-primary/90 text-white py-2 px-6 rounded-md transition-all duration-300 hover:translate-y-[-2px]"
               >
-                <Link to={`/${slug}/enrollment`} className="flex items-center">
+                <Link to="/enrollment" className="flex items-center">
                   <UserPlus className="mr-2 h-4 w-4" />
                   Enroll Now
                 </Link>
@@ -202,7 +201,7 @@ const JoinUs = () => {
                 asChild
                 className="bg-primary hover:bg-primary/90 text-white py-2 px-6 rounded-md transition-all duration-300 hover:translate-y-[-2px]"
               >
-                <Link to={`/${slug}/contact`} className="flex items-center">
+                <Link to="/contact" className="flex items-center">
                   <Phone className="mr-2 h-4 w-4" />
                   Contact Us
                 </Link>
@@ -235,7 +234,7 @@ const JoinUs = () => {
                 asChild
                 className="bg-primary hover:bg-primary/90 text-white py-2 px-6 rounded-md transition-all duration-300 hover:translate-y-[-2px]"
               >
-                <Link to={`/${slug}/opportunity`} className="flex items-center">
+                <Link to="/opportunity" className="flex items-center">
                   Learn More
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useParams, Link } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import useTenantApi from "@/hooks/useTenantApi";
 
 import { Input } from "@/components/ui/input";
@@ -32,7 +32,7 @@ import {
 } from "lucide-react";
 
 const Blog = () => {
-    const { slug } = useParams();
+    const { id } = useParams(); // For individual post ID if needed, but not for fetch
     const { getAll } = useTenantApi();
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -46,8 +46,8 @@ const Blog = () => {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                console.log("Blog: Fetching for slug:", slug);
-                const response = await getAll(`/site/${slug}`);
+                console.log("Blog: Fetching data");
+                const response = await getAll("/site/data");
                 console.log("Blog: Response:", response);
                 setData(response.site_data);
             } catch (err) {
@@ -58,7 +58,7 @@ const Blog = () => {
             }
         };
         fetchData();
-    }, [slug, getAll]);
+    }, [getAll]);
 
     useEffect(() => {
         if (!data?.blog) return;
@@ -337,7 +337,7 @@ const Blog = () => {
                             className="w-full bg-primary hover:bg-blue-700 text-white py-2 transition-all duration-200 hover:scale-105"
                             asChild
                         >
-                            <Link to={`/${slug}/blog/${selectedPost.id}`}>
+                            <Link to={`/blog/${selectedPost.id}`}>
                                 Read Full Article <ArrowRight className="ml-2 w-4 h-4" />
                             </Link>
                         </Button>

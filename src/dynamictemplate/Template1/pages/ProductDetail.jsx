@@ -17,7 +17,7 @@ import ProductDetailSkeleton from "@/components/loaders/ProductDetailSkeleton";
 import { formatPrice } from "@/lib/utils";
 
 const ProductDetail = () => {
-  const { id, slug } = useParams();
+  const { id } = useParams();
   const navigate = useNavigate();
   const { getAll } = useTenantApi();
   const [siteData, setSiteData] = useState(null);
@@ -29,7 +29,7 @@ const ProductDetail = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await getAll(`/site/${slug}`);
+        const response = await getAll("/site/data");
         setSiteData(response.site_data);
       } catch (err) {
         setError(err.message);
@@ -38,7 +38,7 @@ const ProductDetail = () => {
       }
     };
     fetchData();
-  }, [slug, getAll]);
+  }, [getAll]);
 
   if (loading) {
     return <ProductDetailSkeleton />;
@@ -70,7 +70,7 @@ const ProductDetail = () => {
         <div className="text-gray-800 text-xl font-semibold mb-4">Product not found</div>
         <Button 
           variant="outline"
-          onClick={() => navigate(`/${slug}/products`)}
+          onClick={() => navigate("/products")}
         >
           Back to Products
         </Button>
@@ -85,7 +85,7 @@ const ProductDetail = () => {
   };
 
   const handleBack = () => {
-    navigate(`/${slug}/products?category=${getCategoryName(product.category_id).toLowerCase()}`);
+    navigate(`/products?category=${getCategoryName(product.category_id).toLowerCase()}`);
   };
 
   // Gallery images
@@ -101,7 +101,7 @@ const ProductDetail = () => {
         <nav className="flex items-center text-md font-medium text-gray-500 space-x-2">
           <Button
             variant="link"
-            onClick={() => navigate(`/${slug}`)}
+            onClick={() => navigate("/")}
             className="p-0 text-primary hover:text-primary/80"
           >
             Home
@@ -109,7 +109,7 @@ const ProductDetail = () => {
           <span>/</span>
           <Button
             variant="link"
-            onClick={() => navigate(`/${slug}/products`)}
+            onClick={() => navigate("/products")}
             className="p-0 text-primary hover:text-primary/80"
           >
             Products

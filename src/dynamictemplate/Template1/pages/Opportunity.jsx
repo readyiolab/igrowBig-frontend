@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { Link } from "react-router-dom";
 import useTenantApi from "@/hooks/useTenantApi";
 import { Button } from "@/components/ui/button";
 import {
@@ -25,7 +25,6 @@ import {
 import { Download } from "lucide-react";
 
 const Opportunity = () => {
-  const { slug } = useParams();
   const { getAll } = useTenantApi();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -34,8 +33,8 @@ const Opportunity = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        console.log("Opportunity: Fetching for slug:", slug);
-        const response = await getAll(`/site/${slug}`);
+        console.log("Opportunity: Fetching data");
+        const response = await getAll("/site/data");
         console.log("Opportunity: Response:", response);
         setData(response.site_data);
       } catch (err) {
@@ -46,7 +45,7 @@ const Opportunity = () => {
       }
     };
     fetchData();
-  }, [slug, getAll]);
+  }, [getAll]);
 
   if (loading) {
     return (
@@ -162,7 +161,7 @@ const Opportunity = () => {
                 asChild
                 className="bg-primary hover:bg-blue-700 text-white rounded-lg px-4 sm:px-6 py-2 sm:py-3 font-semibold"
               >
-                <Link to={`/${slug}/join-us`}>Learn More</Link>
+                <Link to="/join-us">Learn More</Link>
               </Button>
               {opportunityPage.plan_document_url && (
                 <Button

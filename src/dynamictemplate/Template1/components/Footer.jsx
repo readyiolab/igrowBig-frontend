@@ -1,11 +1,10 @@
 import React, { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import useTenantApi from "@/hooks/useTenantApi";
 import parse from "html-react-parser"; // Import html-react-parser
 
 function Footer() {
-  const { slug } = useParams();
   const { getAll } = useTenantApi();
   const [footerData, setFooterData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -14,8 +13,8 @@ function Footer() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        console.log("Footer: Fetching for slug:", slug);
-        const response = await getAll(`/site/${slug}`);
+        console.log("Footer: Fetching data");
+        const response = await getAll("/site/data");
         console.log("Footer: Response:", response);
         setFooterData(response.site_data);
       } catch (err) {
@@ -26,7 +25,7 @@ function Footer() {
       }
     };
     fetchData();
-  }, [slug, getAll]);
+  }, [getAll]);
 
   // Fallback disclaimers in case data is not available
   const disclaimers = footerData?.footer_disclaimers?.[0] || {
@@ -46,8 +45,8 @@ function Footer() {
             <h3 className="text-base sm:text-lg font-medium mb-3">Quick Links</h3>
             <ul className="space-y-1.5 text-xs sm:text-sm">
               <li><Link to="/products" className="hover:underline">Products</Link></li>
-              <li><Link to="/global-opportunity" className="hover:underline">Global Opportunity</Link></li>
-              <li><Link to="/join" className="hover:underline">Join Us</Link></li>
+              <li><Link to="/opportunity" className="hover:underline">Global Opportunity</Link></li>
+              <li><Link to="/join-us" className="hover:underline">Join Us</Link></li>
               <li><Link to="/contact" className="hover:underline">Contact</Link></li>
               <li><Link to="/blog" className="hover:underline">Blog</Link></li>
               <li><Link to="/leaders" className="hover:underline">Leaders</Link></li>

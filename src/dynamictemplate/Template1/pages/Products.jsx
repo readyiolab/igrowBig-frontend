@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useParams, useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import useTenantApi from "@/hooks/useTenantApi";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Grid3X3, LayoutList, Search } from "lucide-react";
@@ -26,7 +26,6 @@ import ProductSkeleton from "@/components/loaders/ProductSkeleton";
 import parse from "html-react-parser";
 
 const EcommerceProducts = () => {
-  const { slug } = useParams();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { getAll } = useTenantApi();
@@ -40,7 +39,7 @@ const EcommerceProducts = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await getAll(`/site/${slug}`);
+        const response = await getAll("/site/data");
         setData(response.site_data);
       } catch (err) {
         setError(err.message);
@@ -49,7 +48,7 @@ const EcommerceProducts = () => {
       }
     };
     fetchData();
-  }, [slug, getAll]);
+  }, [getAll]);
 
   if (loading) {
     return (
@@ -147,7 +146,7 @@ const EcommerceProducts = () => {
   };
 
   const handleProductClick = (productId) => {
-    navigate(`/${slug}/product/${productId}`);
+    navigate(`/product/${productId}`);
   };
 
   // Banner for product page

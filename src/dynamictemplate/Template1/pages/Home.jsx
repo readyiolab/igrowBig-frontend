@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { Link } from "react-router-dom";
 import useTenantApi from "@/hooks/useTenantApi";
 import BannerCarousel from "@/components/sections/BannerCarousel";
 import SectionHeader from "@/components/sections/SectionHeader";
@@ -14,7 +14,6 @@ import {
 } from "lucide-react";
 
 function Home() {
-  const { slug } = useParams();
   const { getAll } = useTenantApi();
   const [siteData, setSiteData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -23,7 +22,7 @@ function Home() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await getAll(`/site/${slug}`);
+        const response = await getAll("/site/data");
         setSiteData(response.site_data);
       } catch (err) {
         setError(err.message);
@@ -32,7 +31,7 @@ function Home() {
       }
     };
     fetchData();
-  }, [slug, getAll]);
+  }, [getAll]);
 
   if (loading) {
     return <HomeSkeleton />;
@@ -66,7 +65,7 @@ function Home() {
         image: banner.image_url,
         description: banner.description,
         ctaText: "Shop Now",
-        ctaLink: `/${slug}/products`,
+        ctaLink: "/products",
       }))
     : [
         {
@@ -74,7 +73,7 @@ function Home() {
           image: "https://via.placeholder.com/1200x400?text=Welcome+to+NHT+Global",
           description: "Discover a world of wellness and opportunity.",
           ctaText: "Shop Now",
-          ctaLink: `/${slug}/products`,
+          ctaLink: "/products",
         },
       ];
 
@@ -108,7 +107,7 @@ function Home() {
             asChild
             className="bg-primary text-white text-lg px-8 py-4 rounded-lg shadow-lg transition-all duration-300 hover:scale-105 hover:bg-primary/90"
           >
-            <Link to={`/${slug}/join-us`} className="flex items-center gap-3">
+            <Link to="/join-us" className="flex items-center gap-3">
               Join Us Today <User className="w-6 h-6 ml-2 animate-pulse" />
             </Link>
           </Button>
@@ -137,7 +136,7 @@ function Home() {
                 asChild
                 className="mt-8 bg-primary text-white text-lg px-8 py-4 rounded-lg shadow-lg transition-all duration-300 hover:scale-105 hover:bg-primary/90"
               >
-                <Link to={`/${slug}/about`} className="flex items-center gap-3">
+                <Link to="/opportunity" className="flex items-center gap-3">
                   Learn More <CircleEllipsis className="w-6 h-6 ml-2" />
                 </Link>
               </Button>
@@ -182,7 +181,7 @@ function Home() {
                 asChild
                 className="bg-primary text-white text-lg px-8 py-4 rounded-lg shadow-lg transition-all duration-300 hover:scale-105 hover:bg-primary/90"
               >
-                <Link to={`/${slug}/about`} className="flex items-center gap-3">
+                <Link to="/opportunity" className="flex items-center gap-3">
                   Discover More <CircleEllipsis className="w-6 h-6 ml-2" />
                 </Link>
               </Button>
@@ -247,7 +246,7 @@ function Home() {
                 asChild
                 className="bg-primary hover:bg-primary/90 text-white text-lg px-8 py-4 rounded-lg shadow-lg transition-all duration-300 hover:scale-105"
               >
-                <Link to={`/${slug}/network-marketing`} className="flex items-center gap-3">
+                <Link to="/opportunity" className="flex items-center gap-3">
                   Explore Now <BookOpen className="w-6 h-6 ml-2" />
                 </Link>
               </Button>
@@ -304,7 +303,7 @@ function Home() {
               asChild
               className="bg-primary text-white text-lg px-8 py-4 rounded-lg shadow-lg transition-all duration-300 hover:scale-105 hover:bg-primary/90"
             >
-              <Link to={`/${slug}/join-us`} className="flex items-center gap-3">
+              <Link to="/join-us" className="flex items-center gap-3">
                 Get Started <ArrowRight className="w-6 h-6 ml-2 animate-pulse" />
               </Link>
             </Button>
