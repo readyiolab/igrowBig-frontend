@@ -208,9 +208,38 @@ const EcommerceBlogPost2 = lazy(() =>
 );
 
 /**
- * ✅ DYNAMIC TEMPLATE LOADER - Domain-Based Only
+ * ✅ SMART ROUTER - Detects main domain vs subdomain
  */
+const SmartRouter = ({ children }) => {
+  const navigate = useNavigate();
+  const [isMainDomain, setIsMainDomain] = useState(null);
 
+  useEffect(() => {
+    const hostname = window.location.hostname.toLowerCase();
+    const baseDomain = process.env.REACT_APP_BASE_DOMAIN || "igrowbig.com";
+
+    const mainDomainCheck = [
+      baseDomain,
+      `www.${baseDomain}`,
+      "localhost",
+    ].includes(hostname);
+
+    console.log("🔍 SmartRouter - Hostname:", hostname);
+    console.log("🔍 SmartRouter - Is Main Domain:", mainDomainCheck);
+
+    setIsMainDomain(mainDomainCheck);
+  }, []);
+
+  if (isMainDomain === null) {
+    return <LoadingFallback />;
+  }
+
+  return children;
+};
+
+/**
+ * ✅ DYNAMIC TEMPLATE LOADER - For subdomains only
+ */
 const DynamicTemplateLoader = ({ children }) => {
   const { getAll } = useTenantApi();
   const [templateId, setTemplateId] = useState(null);
@@ -234,14 +263,14 @@ const DynamicTemplateLoader = ({ children }) => {
         ].includes(hostname);
 
         if (isMainDomain) {
-          console.log("⚠️ Main domain detected - showing landing page");
+          console.log("⚠️ Main domain detected - should not be here");
           navigate("/", { replace: true });
           setLoading(false);
           return;
         }
 
         // ========== FETCH: Tenant by domain ==========
-        console.log("🔍 Fetching tenant for domain:", hostname);
+        console.log("🔍 Fetching tenant for subdomain:", hostname);
 
         const response = await getAll("/site/by-domain");
         console.log("✅ API Response:", response);
@@ -251,17 +280,10 @@ const DynamicTemplateLoader = ({ children }) => {
           setTemplateId(response.tenant.template_id);
         } else {
           console.log("❌ No valid tenant found in response");
-          setError("Store not found. This domain may not be configured yet.");
+          setError("Store not found. This subdomain may not be configured yet.");
         }
       } catch (err) {
         console.error("❌ DynamicTemplateLoader Error:", err);
-
-        if (err.message === "MAIN_DOMAIN") {
-          navigate("/", { replace: true });
-          setLoading(false);
-          return;
-        }
-
         setError(err.message || "Unable to load store data");
       } finally {
         setLoading(false);
@@ -287,15 +309,19 @@ const DynamicTemplateLoader = ({ children }) => {
           </h1>
           <p className="text-gray-600 mb-6">{error}</p>
           <button
-            onClick={() => (window.location.href = "/")}
+            onClick={() => {
+              const baseDomain =  "igrowbig.com";
+              window.location.href = `https://${baseDomain}`;
+            }}
             className="px-6 py-3 bg-black text-white rounded-lg hover:bg-gray-800"
           >
-            Go to Home
+            Go to Main Site
           </button>
         </div>
       </div>
     );
   }
+
   let TemplateLayout;
   switch (templateId) {
     case 1:
@@ -308,20 +334,22 @@ const DynamicTemplateLoader = ({ children }) => {
       TemplateLayout = Template3;
       break;
     default:
-      console.log("DynamicTemplateLoader: Invalid templateId:", templateId);
+      console.log("❌ Invalid templateId:", templateId);
       return (
-        <div>
-          <h1>Invalid Template</h1>
-          <p>Template ID {templateId} is not supported.</p>
-          <button onClick={() => navigate("/")}>Go to Home</button>
+        <div className="flex items-center justify-center min-h-screen bg-gray-50">
+          <div className="text-center p-8">
+            <h1 className="text-3xl font-bold text-gray-900 mb-4">
+              Invalid Template
+            </h1>
+            <p className="text-gray-600 mb-6">
+              Template ID {templateId} is not supported.
+            </p>
+          </div>
         </div>
       );
   }
 
-  console.log(
-    "DynamicTemplateLoader: Rendering TemplateLayout with templateId:",
-    templateId
-  );
+  console.log("✅ Rendering template:", templateId);
   return (
     <Suspense fallback={<LoadingFallback />}>
       <TemplateLayout>{children}</TemplateLayout>
@@ -401,12 +429,56 @@ const withSuspense = (Component) => {
   );
 };
 
+/**
+ * ✅ ROOT HANDLER - Decides between Landing Page or Dynamic Template
+ */
+const RootHandler = () => {
+  const [isMainDomain, setIsMainDomain] = useState(null);
+
+  useEffect(() => {
+    const hostname = window.location.hostname.toLowerCase();
+    const baseDomain =  "igrowbig.com";
+
+    const mainDomainCheck = [
+      baseDomain,
+      `www.${baseDomain}`,
+      "localhost",
+    ].includes(hostname);
+
+    console.log("🔍 RootHandler - Hostname:", hostname);
+    console.log("🔍 RootHandler - Is Main Domain:", mainDomainCheck);
+
+    setIsMainDomain(mainDomainCheck);
+  }, []);
+
+  if (isMainDomain === null) {
+    return <LoadingFallback />;
+  }
+
+  // Main domain - show landing page
+  if (isMainDomain) {
+    return withSuspense(Layout)();
+  }
+
+  // Subdomain - show dynamic template
+  return (
+    <DynamicTemplateLoader>
+      <Suspense fallback={<LoadingFallback />}>
+        <DynamicHome />
+      </Suspense>
+    </DynamicTemplateLoader>
+  );
+};
+
 const router = createBrowserRouter([
+  // ========== ROOT - Smart routing ==========
   {
     path: "/",
-    element: withSuspense(Layout)(),
+    element: <RootHandler />,
     errorElement: <ErrorBoundary />,
   },
+
+  // ========== ADMIN ROUTES ==========
   {
     path: "/admin",
     element: (
@@ -436,6 +508,8 @@ const router = createBrowserRouter([
       },
     ],
   },
+
+  // ========== BACKOFFICE ROUTES ==========
   {
     path: "/backoffice",
     element: (
@@ -511,6 +585,8 @@ const router = createBrowserRouter([
       { path: "training", element: withSuspense(TenantTrainingList)() },
     ],
   },
+
+  // ========== AUTH ROUTES ==========
   {
     path: "backoffice-login",
     element: withSuspense(BackofficeLogin)(),
@@ -523,6 +599,8 @@ const router = createBrowserRouter([
     path: "/superadmin-login",
     element: withSuspense(SuperAdminLogin)(),
   },
+
+  // ========== DEMO TEMPLATE ROUTES ==========
   {
     path: "/template1",
     element: withSuspense(MainLayout)(),
@@ -551,30 +629,69 @@ const router = createBrowserRouter([
       { path: "blog/:id", element: withSuspense(EcommerceBlogPost2)() },
     ],
   },
-  // {
-  //   path: "/template2",
-  //   element: withSuspense(Template2)(),
-  // },
 
-
-   // ========== 5. DYNAMIC TENANT STORE ROUTES ==========
+  // ========== SUBDOMAIN DYNAMIC ROUTES ==========
   {
-    path: "/",
-    element: <DynamicTemplateLoader />,
-    children: [
-      { path: "", element: withSuspense(DynamicHome)() },
-      { path: "products", element: withSuspense(DynamicProducts)() },
-      { path: "product/:id", element: withSuspense(DynamicProductDetail)() },
-      { path: "opportunity", element: withSuspense(DynamicOpportunity)() },
-      { path: "join-us", element: withSuspense(DynamicJoinUs)() },
-      { path: "contact", element: withSuspense(DynamicContact)() },
-      { path: "blog", element: withSuspense(DynamicBlog)() },
-      { path: "blog/:id", element: withSuspense(DynamicBlogPost)() },
-    ],
+    path: "/products",
+    element: (
+      <DynamicTemplateLoader>
+        {withSuspense(DynamicProducts)()}
+      </DynamicTemplateLoader>
+    ),
   },
   {
+    path: "/product/:id",
+    element: (
+      <DynamicTemplateLoader>
+        {withSuspense(DynamicProductDetail)()}
+      </DynamicTemplateLoader>
+    ),
+  },
+  {
+    path: "/opportunity",
+    element: (
+      <DynamicTemplateLoader>
+        {withSuspense(DynamicOpportunity)()}
+      </DynamicTemplateLoader>
+    ),
+  },
+  {
+    path: "/join-us",
+    element: (
+      <DynamicTemplateLoader>
+        {withSuspense(DynamicJoinUs)()}
+      </DynamicTemplateLoader>
+    ),
+  },
+  {
+    path: "/contact",
+    element: (
+      <DynamicTemplateLoader>
+        {withSuspense(DynamicContact)()}
+      </DynamicTemplateLoader>
+    ),
+  },
+  {
+    path: "/blog",
+    element: (
+      <DynamicTemplateLoader>
+        {withSuspense(DynamicBlog)()}
+      </DynamicTemplateLoader>
+    ),
+  },
+  {
+    path: "/blog/:id",
+    element: (
+      <DynamicTemplateLoader>
+        {withSuspense(DynamicBlogPost)()}
+      </DynamicTemplateLoader>
+    ),
+  },
+
+  // ========== CATCH ALL ==========
+  {
     path: "*",
-    element: <Navigate to="/" replace />, // Redirect to "/" for invalid routes
+    element: <Navigate to="/" replace />,
     errorElement: <ErrorBoundary />,
   },
 ]);
