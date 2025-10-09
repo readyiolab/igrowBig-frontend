@@ -1,21 +1,18 @@
 import React, { useEffect, useState } from 'react';
 import { Outlet } from 'react-router-dom';
-import Header from '.././components/Header'
-import Footer from '.././components/Footer';
-import { ArrowUp } from 'lucide-react'; // Optional: Icon for the button
+import Header from '../components/Header';
+import Footer from '../components/Footer';
+import { ArrowUp } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 
 function MainLayout() {
   const [isVisible, setIsVisible] = useState(false);
   const location = useLocation();
-  useEffect(() => {
-    console.log("MainLayout.jsx:11 Current path:", location.pathname); // Line 11
-  }, [location.pathname]); // Only log when pathname changes
 
-  // Handle scroll event to show/hide the button
+
   useEffect(() => {
     const toggleVisibility = () => {
-      if (window.scrollY > 300) { // Show button after scrolling 300px
+      if (window.scrollY > 250) { 
         setIsVisible(true);
       } else {
         setIsVisible(false);
@@ -36,38 +33,13 @@ function MainLayout() {
     });
   };
 
-  // Existing meta tag setup
-  useEffect(() => {
-    if (!document.querySelector('html').getAttribute('lang')) {
-      document.querySelector('html').setAttribute('lang', 'en');
-    }
-    
-    if (!document.querySelector('meta[name="viewport"]')) {
-      const viewport = document.createElement('meta');
-      viewport.name = 'viewport';
-      viewport.content = 'width=device-width, initial-scale=1.0';
-      document.head.appendChild(viewport);
-    }
-    
-    if (!document.querySelector('meta[name="theme-color"]')) {
-      const themeColor = document.createElement('meta');
-      themeColor.name = 'theme-color';
-      themeColor.content = '#ffffff';
-      document.head.appendChild(themeColor);
-    }
-    
-    if (!document.querySelector('meta[name="author"]')) {
-      const author = document.createElement('meta');
-      author.name = 'author';
-      author.content = 'NHT Global';
-      document.head.appendChild(author);
-    }
-  }, []);
-
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className="flex flex-col min-h-screen bg-[#f7e5d9]" style={{ backgroundColor: '#f7e5d9' }}>
       <Header />
-      <main className="flex-grow container mx-auto" id="main-content">
+      <main 
+        className="flex-grow container mx-auto px-4 sm:px-6 py-8" 
+        id="main-content"
+      >
         <Outlet />
       </main>
       <Footer />
@@ -76,10 +48,11 @@ function MainLayout() {
       {isVisible && (
         <button
           onClick={scrollToTop}
-          className="fixed bottom-6 right-6 bg-black text-white p-3 rounded-full shadow-lg  transition-all duration-300 z-50"
+          className="fixed bottom-8 right-8 p-3 rounded-lg shadow-xl hover:shadow-2xl transition-all duration-400 z-50"
+          style={{ backgroundColor: '#822b00', color: '#f7e5d9' }}
           aria-label="Scroll to top"
         >
-          <ArrowUp size={24} />
+          <ArrowUp size={28} />
         </button>
       )}
     </div>

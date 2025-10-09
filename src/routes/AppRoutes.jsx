@@ -27,6 +27,9 @@ const BackofficeLayout = lazy(() =>
 const MainLayout = lazy(() =>
   import("../templates/Template1/layouts/MainLayout")
 );
+const MainLayout2 = lazy(() =>
+  import("../templates/Template2/layouts/MainLayout")
+);
 const Template2 = lazy(() => import("@/templates/Template2"));
 const Template3 = lazy(() => import("@/templates/Template3"));
 
@@ -183,8 +186,29 @@ const EcommerceBlogPost = lazy(() =>
   import("../templates/Template1/pages/BlogPost")
 );
 
+// Ecommerce pages (for template2 demo)
+const EcommerceHome2 = lazy(() => import("../templates/Template2/pages/Home"));
+const EcommerceProducts2 = lazy(() =>
+  import("../templates/Template2/pages/Products")
+);
+const EcommerceProductDetail2 = lazy(() =>
+  import("../templates/Template2/pages/ProductDetail")
+);
+const EcommerceOpportunity2 = lazy(() =>
+  import("../templates/Template2/pages/Opportunity")
+);
+const EcommerceJoinUs2 = lazy(() =>
+  import("../templates/Template2/pages/JoinUs")
+);
+const EcommerceContact2 = lazy(() =>
+  import("../templates/Template2/pages/Contact")
+);
+const EcommerceBlog2 = lazy(() => import("../templates/Template2/pages/Blog"));
+const EcommerceBlogPost2 = lazy(() =>
+  import("../templates/Template2/pages/BlogPost")
+);
+
 const DynamicTemplateLoader = ({ children }) => {
-  const { slug } = useParams();
   const { getAll } = useTenantApi();
   const [templateId, setTemplateId] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -194,57 +218,51 @@ const DynamicTemplateLoader = ({ children }) => {
   useEffect(() => {
     const fetchTenantData = async () => {
       try {
-        console.log("DynamicTemplateLoader: Fetching tenant for slug:", slug);
-
         const hostname = window.location.hostname;
-        const isCustomDomain = ![
-          "igrowbig.com",
-          "www.igrowbig.com",
+        const baseDomain = process.env.REACT_APP_BASE_DOMAIN || "igrowbig.com";
+        
+        console.log("DynamicTemplateLoader: Hostname:", hostname);
+
+        // Check if it's a subdomain or custom domain
+        const isBaseDomain = [
+          baseDomain,
+          `www.${baseDomain}`,
           "localhost",
         ].includes(hostname);
-        
 
         let endpoint;
-        if (isCustomDomain) {
+        
+        if (!isBaseDomain) {
+          // It's either a subdomain (store.igrowbig.com) or custom domain (mycustomstore.com)
           endpoint = "/site/by-domain";
-          console.log(
-            "DynamicTemplateLoader: Using custom domain endpoint:",
-            endpoint
-          );
+          console.log("DynamicTemplateLoader: Using domain-based endpoint");
         } else {
-          endpoint = slug ? `/site/${slug}` : "/";
-          console.log(
-            "DynamicTemplateLoader: Using slug-based endpoint:",
-            endpoint
-          );
+          // Fallback to main domain
+          console.log("DynamicTemplateLoader: Base domain detected, redirecting to home");
+          navigate("/");
+          return;
         }
 
         const response = await getAll(endpoint);
         console.log("DynamicTemplateLoader: API response:", response);
 
         if (response?.tenant?.template_id) {
-          console.log(
-            "DynamicTemplateLoader: Setting template_id:",
-            response.tenant.template_id
-          );
+          console.log("DynamicTemplateLoader: Setting template_id:", response.tenant.template_id);
           setTemplateId(response.tenant.template_id);
         } else {
-          console.log(
-            "DynamicTemplateLoader: No valid tenant data in response:",
-            response
-          );
-          setError("No tenant found for this slug or domain");
+          console.log("DynamicTemplateLoader: No valid tenant found");
+          setError("Store not found. This domain may not be configured yet.");
         }
       } catch (err) {
         console.error("DynamicTemplateLoader: Failed to fetch tenant:", err);
-        setError(err.message || "Unable to load tenant data");
+        setError(err.message || "Unable to load store data");
       } finally {
         setLoading(false);
       }
     };
 
     fetchTenantData();
-  }, [slug, getAll]);
+  }, [getAll, navigate]);
 
   if (loading) {
     console.log("DynamicTemplateLoader: Rendering loading state");
@@ -252,12 +270,18 @@ const DynamicTemplateLoader = ({ children }) => {
   }
 
   if (error) {
-    console.log("DynamicTemplateLoader: Rendering error state:", error);
     return (
-      <div>
-        <h1>Error Loading Tenant</h1>
-        <p>{error}</p>
-        <button onClick={() => navigate("/")}>Go to Home</button>
+      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+        <div className="text-center p-8">
+          <h1 className="text-3xl font-bold text-gray-900 mb-4">Store Not Found</h1>
+          <p className="text-gray-600 mb-6">{error}</p>
+          <button
+            onClick={() => (window.location.href = "/")}
+            className="px-6 py-3 bg-black text-white rounded-lg hover:bg-gray-800"
+          >
+            Go to Home
+          </button>
+        </div>
       </div>
     );
   }
@@ -295,95 +319,7 @@ const DynamicTemplateLoader = ({ children }) => {
   );
 };
 
-// Admin ProtectedRoute
 
-// const DynamicTemplateLoader = ({ children }) => {
-//   const { slug } = useParams();
-//   const { getAll } = useTenantApi();
-//   const [templateId, setTemplateId] = useState(null);
-//   const [loading, setLoading] = useState(true);
-//   const [error, setError] = useState(null);
-//   const navigate = useNavigate();
-
-//   useEffect(() => {
-//     const fetchTenantData = async () => {
-//       try {
-//         console.log("DynamicTemplateLoader: Fetching tenant for slug:", slug);
-//         const hostname = window.location.hostname;
-//         const isCustomDomain =
-//           hostname !== "begrat.com" &&
-//           hostname !== "www.begrat.com" &&
-//           hostname !== "stage.begrat.com" &&
-//           !hostname.includes("localhost");
-
-//         // Use root endpoint for custom domains, slug-based for others
-//         const endpoint = isCustomDomain ? "/" : `/site/${slug}`;
-//         const response = await getAll(endpoint);
-//         console.log("DynamicTemplateLoader: API response:", response);
-
-//         if (response?.tenant?.template_id) {
-//           console.log(
-//             "DynamicTemplateLoader: Setting template_id:",
-//             response.tenant.template_id
-//           );
-//           setTemplateId(response.tenant.template_id);
-//         } else {
-//           console.log(
-//             "DynamicTemplateLoader: No valid tenant data in response:",
-//             response
-//           );
-//           setError("No tenant found for this slug or domain");
-//         }
-//       } catch (err) {
-//         console.error("DynamicTemplateLoader: Failed to fetch tenant:", err);
-//         setError(err.message || "Unable to load tenant data");
-//       } finally {
-//         setLoading(false);
-//       }
-//     };
-
-//     fetchTenantData();
-//   }, [slug, getAll]);
-
-//   if (loading) {
-//     console.log("DynamicTemplateLoader: Rendering loading state");
-//     return <LoadingFallback />;
-//   }
-
-//   if (error || !templateId) {
-//     console.log("DynamicTemplateLoader: Rendering error state:", error);
-//     // Redirect to begrat.com for invalid tenants
-//     window.location.href = "http://begrat.com";
-//     return null;
-//   }
-
-//   let TemplateLayout;
-//   switch (templateId) {
-//     case 1:
-//       TemplateLayout = DynamicMainLayout;
-//       break;
-//     case 2:
-//       TemplateLayout = Template2;
-//       break;
-//     case 3:
-//       TemplateLayout = Template3;
-//       break;
-//     default:
-//       console.log("DynamicTemplateLoader: Invalid templateId:", templateId);
-//       window.location.href = "http://begrat.com";
-//       return null;
-//   }
-
-//   console.log(
-//     "DynamicTemplateLoader: Rendering TemplateLayout with templateId:",
-//     templateId
-//   );
-//   return (
-//     <Suspense fallback={<LoadingFallback />}>
-//       <TemplateLayout>{children}</TemplateLayout>
-//     </Suspense>
-//   );
-// };
 const AdminProtectedRoute = ({ children }) => {
   const navigate = useNavigate();
   const token = localStorage.getItem("token");
@@ -594,10 +530,24 @@ const router = createBrowserRouter([
   },
   {
     path: "/template2",
-    element: withSuspense(Template2)(),
+    element: withSuspense(MainLayout2)(),
+    children: [
+      { path: "", element: withSuspense(EcommerceHome2)() },
+      { path: "products", element: withSuspense(EcommerceProducts2)() },
+      { path: "product/:id", element: withSuspense(EcommerceProductDetail2)() },
+      { path: "opportunity", element: withSuspense(EcommerceOpportunity2)() },
+      { path: "join-us", element: withSuspense(EcommerceJoinUs2)() },
+      { path: "contact", element: withSuspense(EcommerceContact2)() },
+      { path: "blog", element: withSuspense(EcommerceBlog2)() },
+      { path: "blog/:id", element: withSuspense(EcommerceBlogPost2)() },
+    ],
   },
-  {
-    path: "/:slug",
+  // {
+  //   path: "/template2",
+  //   element: withSuspense(Template2)(),
+  // },
+ {
+    path: "/",
     element: <DynamicTemplateLoader />,
     children: [
       { path: "", element: withSuspense(DynamicHome)() },

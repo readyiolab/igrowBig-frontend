@@ -19,22 +19,24 @@ const ProductEditor = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
 
-  const [newProduct, setNewProduct] = useState({
-    category_id: "",
-    name: "",
-    title: "",
-    price: "",
-    price_description: "",
-    availability: "in_stock",
-    status: "active",
-    image: null,
-    banner_image: null,
-    guide_pdf: null,
-    video: null,
-    youtube_link: "",
-    instructions: "",
-    description: "",
-  });
+ const [newProduct, setNewProduct] = useState({
+  category_id: "",
+  name: "",
+  title: "",
+  your_price: "", // Replace price
+  base_price: "",
+  preferred_customer_price: "",
+  availability: "in_stock",
+  status: "active",
+  image: null,
+  banner_image: null,
+  guide_pdf: null,
+  video: null,
+  video_url: "", // Replace youtube_link
+  instructions: "",
+  description: "", // Replace price_description
+  buy_link: "",
+});
 
   const MAX_IMAGE_SIZE = 4 * 1024 * 1024; // 4MB
   const MAX_PDF_SIZE = 4 * 1024 * 1024; // 4MB
@@ -56,22 +58,21 @@ const ProductEditor = () => {
   }, [tenantId, retryCount]);
 
   const fetchProducts = async () => {
-    try {
-      const response = await getAll(`/tenants/${tenantId}/products`);
-      setProducts(Array.isArray(response) ? response : []);
-      showSuccessToast("Products loaded!");
-      setRetryCount(0); // Reset retry count on success
-    } catch (err) {
-      console.error("Error fetching products:", err.response?.data || err.message);
-      if (retryCount < MAX_RETRIES) {
-        // Silently retry without toast
-        setTimeout(() => setRetryCount(retryCount + 1), 2000);
-      } else {
-        showErrorToast("Unable to load products. Please try again later.");
-        setProducts([]);
-      }
+  try {
+    const response = await getAll(`/tenants/${tenantId}/products`);
+    setProducts(Array.isArray(response.data) ? response.data : []); // Access response.data
+    showSuccessToast("Products loaded!");
+    setRetryCount(0);
+  } catch (err) {
+    console.error("Error fetching products:", err.response?.data || err.message);
+    if (retryCount < MAX_RETRIES) {
+      setTimeout(() => setRetryCount(retryCount + 1), 2000);
+    } else {
+      showErrorToast("Unable to load products. Please try again later.");
+      setProducts([]);
     }
-  };
+  }
+};
 
   const fetchCategories = async () => {
     try {
@@ -128,27 +129,29 @@ const ProductEditor = () => {
     });
   };
 
-  const handleEdit = (product) => {
-    setShowForm(true);
-    setIsEditing(true);
-    setEditId(product.id);
-    setNewProduct({
-      category_id: product.category_id || "",
-      name: product.name || "",
-      title: product.title || "",
-      price: product.price || "",
-      price_description: product.price_description || "",
-      availability: product.availability || "in_stock",
-      status: product.status || "active",
-      image: null,
-      banner_image: null,
-      guide_pdf: null,
-      video: null,
-      youtube_link: product.video_url || "",
-      instructions: product.instructions || "",
-      description: product.description || "",
-    });
-  };
+ const handleEdit = (product) => {
+  setShowForm(true);
+  setIsEditing(true);
+  setEditId(product.id);
+  setNewProduct({
+    category_id: product.category_id || "",
+    name: product.name || "",
+    title: product.title || "",
+    your_price: product.your_price || "",
+    base_price: product.base_price || "",
+    preferred_customer_price: product.preferred_customer_price || "",
+    availability: product.availability || "in_stock",
+    status: product.status || "active",
+    image: null,
+    banner_image: null,
+    guide_pdf: null,
+    video: null,
+    video_url: product.video_url || "",
+    instructions: product.instructions || "",
+    description: product.description || "",
+    buy_link: product.buy_link || "",
+  });
+};
 
   const handleCancel = () => {
     setShowForm(false);
@@ -216,91 +219,105 @@ const ProductEditor = () => {
   };
 
   const handleSave = async () => {
-    if (!tenantId) {
-      showErrorToast("Tenant ID not found. Please log in again.");
-      navigate("/backoffice-login");
-      return;
-    }
+  if (!tenantId) {
+    showErrorToast("Tenant ID not found. Please log in again.");
+    navigate("/backoffice-login");
+    return;
+  }
 
-    if (!newProduct.category_id) {
-      showErrorToast("Please select a product category.");
-      return;
-    }
-    if (!newProduct.name.trim()) {
-      showErrorToast("Product name is required.");
-      return;
-    }
-    if (!newProduct.title.trim()) {
-      showErrorToast("Product title is required.");
-      return;
-    }
-    if (!newProduct.price || isNaN(newProduct.price) || Number(newProduct.price) < 0) {
-      showErrorToast("Please enter a valid price (0 or greater).");
-      return;
-    }
+  if (!newProduct.category_id) {
+    showErrorToast("Please select a product category.");
+    return;
+  }
+  if (!newProduct.name.trim()) {
+    showErrorToast("Product name is required.");
+    return;
+  }
+  if (!newProduct.title.trim()) {
+    showErrorToast("Product title is required.");
+    return;
+  }
+  if (!newProduct.your_price || isNaN(newProduct.your_price) || Number(newProduct.your_price) < 0) {
+    showErrorToast("Please enter a valid 'Your Price' (0 or greater).");
+    return;
+  }
+  if (!newProduct.base_price || isNaN(newProduct.base_price) || Number(newProduct.base_price) < 0) {
+    showErrorToast("Please enter a valid 'Base Price' (0 or greater).");
+    return;
+  }
+  if (
+    !newProduct.preferred_customer_price ||
+    isNaN(newProduct.preferred_customer_price) ||
+    Number(newProduct.preferred_customer_price) < 0
+  ) {
+    showErrorToast("Please enter a valid 'Preferred Customer Price' (0 or greater).");
+    return;
+  }
 
-    if (!validateYouTubeLink(newProduct.youtube_link)) {
-      return;
-    }
+  if (!validateYouTubeLink(newProduct.video_url)) {
+    return;
+  }
 
-    if (
-      !validateFile(newProduct.image, "image", MAX_IMAGE_SIZE) ||
-      !validateFile(newProduct.banner_image, "image", MAX_IMAGE_SIZE) ||
-      !validateFile(newProduct.guide_pdf, "pdf", MAX_PDF_SIZE) ||
-      !validateFile(newProduct.video, "video", MAX_VIDEO_SIZE)
-    ) {
-      return;
-    }
+  if (
+    !validateFile(newProduct.image, "image", MAX_IMAGE_SIZE) ||
+    !validateFile(newProduct.banner_image, "image", MAX_IMAGE_SIZE) ||
+    !validateFile(newProduct.guide_pdf, "pdf", MAX_PDF_SIZE) ||
+    !validateFile(newProduct.video, "video", MAX_VIDEO_SIZE)
+  ) {
+    return;
+  }
 
-    const formData = new FormData();
-    formData.append("category_id", newProduct.category_id);
-    formData.append("name", newProduct.name);
-    formData.append("title", newProduct.title);
-    formData.append("price", newProduct.price);
-    formData.append("price_description", newProduct.price_description);
-    formData.append("availability", newProduct.availability);
-    formData.append("status", newProduct.status);
-    if (newProduct.image) formData.append("image", newProduct.image);
-    if (newProduct.banner_image) formData.append("banner_image", newProduct.banner_image);
-    if (newProduct.guide_pdf) formData.append("guide_pdf", newProduct.guide_pdf);
-    if (newProduct.video) formData.append("video", newProduct.video);
-    formData.append("youtube_link", newProduct.youtube_link);
-    formData.append("instructions", newProduct.instructions);
-    formData.append("description", newProduct.description);
+  const formData = new FormData();
+  formData.append("category_id", newProduct.category_id);
+  formData.append("name", newProduct.name);
+  formData.append("title", newProduct.title);
+  formData.append("your_price", newProduct.your_price);
+  formData.append("base_price", newProduct.base_price);
+  formData.append("preferred_customer_price", newProduct.preferred_customer_price);
+  formData.append("availability", newProduct.availability);
+  formData.append("status", newProduct.status);
+  if (newProduct.image) formData.append("image", newProduct.image);
+  if (newProduct.banner_image) formData.append("banner_image", newProduct.banner_image);
+  if (newProduct.guide_pdf) formData.append("guide_pdf", newProduct.guide_pdf);
+  if (newProduct.video) formData.append("video", newProduct.video);
+  formData.append("video_url", newProduct.video_url);
+  formData.append("instructions", newProduct.instructions);
+  formData.append("description", newProduct.description);
+  formData.append("buy_link", newProduct.buy_link);
 
-    const config = {
-      onUploadProgress: (progressEvent) => {
-        const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-        toast.loading(`Uploading... ${percentCompleted}%`, { id: "upload-progress" });
-      },
-    };
-
-    setIsSubmitting(true);
-    try {
-      const response = await (isEditing
-        ? put(`/tenants/${tenantId}/products/${editId}`, formData, true, config)
-        : post(`/tenants/${tenantId}/products`, formData, true, config));
-      showSuccessToast(isEditing ? "Product updated" : "Product added");
-      await fetchProducts();
-      handleCancel();
-    } catch (err) {
-      console.error("Error saving product:", err.response?.data || err.message);
-      const errorData = err.response?.data;
-      if (errorData?.error === "FILE_ERROR") {
-        showErrorToast(errorData.message || "Invalid file type or size.");
-      } else if (errorData?.error === "MISSING_FIELDS") {
-        showErrorToast(errorData.message || "Please fill in all required fields.");
-      } else if (errorData?.error === "UNAUTHORIZED" || err.response?.status === 401) {
-        showErrorToast("Session expired. Please log in again.");
-        navigate("/backoffice-login");
-      } else {
-        showErrorToast(errorData?.message || "Failed to save product. Please try again.");
-      }
-    } finally {
-      setIsSubmitting(false);
-      toast.dismiss("upload-progress");
-    }
+  const config = {
+    onUploadProgress: (progressEvent) => {
+      const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+      toast.loading(`Uploading... ${percentCompleted}%`, { id: "upload-progress" });
+    },
   };
+
+  setIsSubmitting(true);
+  try {
+    const response = await (isEditing
+      ? put(`/tenants/${tenantId}/products/${editId}`, formData, true, config)
+      : post(`/tenants/${tenantId}/products`, formData, true, config));
+    showSuccessToast(isEditing ? "Product updated" : "Product added");
+    await fetchProducts();
+    handleCancel();
+  } catch (err) {
+    console.error("Error saving product:", err.response?.data || err.message);
+    const errorData = err.response?.data;
+    if (errorData?.error === "FILE_ERROR") {
+      showErrorToast(errorData.message || "Invalid file type or size.");
+    } else if (errorData?.error === "MISSING_FIELDS") {
+      showErrorToast(errorData.message || "Please fill in all required fields.");
+    } else if (errorData?.error === "UNAUTHORIZED" || err.response?.status === 401) {
+      showErrorToast("Session expired. Please log in again.");
+      navigate("/backoffice-login");
+    } else {
+      showErrorToast(errorData?.message || "Failed to save product. Please try again.");
+    }
+  } finally {
+    setIsSubmitting(false);
+    toast.dismiss("upload-progress");
+  }
+};
 
   const handleDelete = async (productId) => {
     if (window.confirm("Are you sure you want to delete this product?")) {
@@ -630,6 +647,123 @@ const ProductEditor = () => {
                 </select>
               </div>
             </div>
+
+            <div>
+    <label htmlFor="your_price" className="block text-sm font-medium text-gray-700 mb-1">
+      Your Price <span className="text-red-500">*</span>
+    </label>
+    <input
+      id="your_price"
+      type="number"
+      value={newProduct.your_price}
+      onChange={(e) => setNewProduct({ ...newProduct, your_price: e.target.value })}
+      disabled={isSubmitting}
+      className="w-full px-4 py-2 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-300 bg-white text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
+      placeholder="Enter your price"
+      min="0"
+      step="0.01"
+      aria-label="Your price"
+    />
+  </div>
+
+  <div>
+    <label htmlFor="base_price" className="block text-sm font-medium text-gray-700 mb-1">
+      Base Price <span className="text-red-500">*</span>
+    </label>
+    <input
+      id="base_price"
+      type="number"
+      value={newProduct.base_price}
+      onChange={(e) => setNewProduct({ ...newProduct, base_price: e.target.value })}
+      disabled={isSubmitting}
+      className="w-full px-4 py-2 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-300 bg-white text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
+      placeholder="Enter base price"
+      min="0"
+      step="0.01"
+      aria-label="Base price"
+    />
+  </div>
+
+  <div>
+    <label htmlFor="preferred_customer_price" className="block text-sm font-medium text-gray-700 mb-1">
+      Preferred Customer Price <span className="text-red-500">*</span>
+    </label>
+    <input
+      id="preferred_customer_price"
+      type="number"
+      value={newProduct.preferred_customer_price}
+      onChange={(e) => setNewProduct({ ...newProduct, preferred_customer_price: e.target.value })}
+      disabled={isSubmitting}
+      className="w-full px-4 py-2 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-300 bg-white text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
+      placeholder="Enter preferred customer price"
+      min="0"
+      step="0.01"
+      aria-label="Preferred customer price"
+    />
+  </div>
+
+  <div>
+    <label htmlFor="buy_link" className="block text-sm font-medium text-gray-700 mb-1">
+      Buy Link
+    </label>
+    <input
+      id="buy_link"
+      type="url"
+      value={newProduct.buy_link}
+      onChange={(e) => setNewProduct({ ...newProduct, buy_link: e.target.value })}
+      disabled={isSubmitting}
+      className="w-full px-4 py-2 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-300 bg-white text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
+      placeholder="Enter buy link (optional)"
+      aria-label="Buy link"
+    />
+  </div>
+
+  <div>
+    <label htmlFor="video_url" className="block text-sm font-medium text-gray-700 mb-1">
+      YouTube Embed Link (Optional)
+    </label>
+    <input
+      id="video_url"
+      type="text"
+      value={newProduct.video_url}
+      onChange={(e) => setNewProduct({ ...newProduct, video_url: e.target.value })}
+      disabled={isSubmitting}
+      className="w-full px-4 py-2 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-300 bg-white text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
+      placeholder="e.g., https://www.youtube.com/embed/VIDEO_ID"
+      aria-label="YouTube embedded link"
+    />
+    <p className="text-xs text-gray-500 mt-1">
+      How to get link: Click Share → Embed → Copy iframe src
+    </p>
+    {newProduct.video_url && (
+      <div className="mt-2">
+        <p className="text-xs text-gray-500">Preview:</p>
+        <iframe
+          src={newProduct.video_url}
+          title="YouTube Preview"
+          className="w-full h-32 rounded-md shadow-sm"
+          frameBorder="0"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowFullScreen
+        />
+      </div>
+    )}
+  </div>
+
+  <div>
+    <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
+      Product Description
+    </label>
+    <RichTextEditor
+      id="description"
+      value={newProduct.description}
+      onChange={(value) => setNewProduct({ ...newProduct, description: value })}
+      placeholder="Enter product description here..."
+      height="200px"
+      readOnly={isSubmitting}
+      aria-label="Product description"
+    />
+  </div>
 
             <div className="space-y-5">
               <div>

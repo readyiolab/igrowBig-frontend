@@ -74,11 +74,13 @@ const Dashboard = () => {
   );
 
   const productCategories = (categoryData || []).map((cat, index) => ({
-    srNo: index + 1,
-    category: cat.name || "Unnamed Category",
-    productCount: productData ? productData.filter((prod) => prod.category_id === cat.id).length : 0,
-    status: cat.status === "active" ? "ACTIVE" : "INACTIVE",
-  }));
+  srNo: index + 1,
+  category: cat.name || "Unnamed Category",
+  productCount: !productLoading && !productError && productData?.data
+    ? productData.data.filter((prod) => prod.category_id === cat.id).length
+    : 0,
+  status: cat.status === "active" ? "ACTIVE" : "INACTIVE",
+}));
 
   const filteredCategories = productCategories.filter((item) =>
     item.category.toLowerCase().includes(searchTerm.toLowerCase())

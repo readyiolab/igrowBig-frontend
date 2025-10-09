@@ -1,6 +1,5 @@
 import React from 'react';
-
-import { Carousel ,CarouselContent,CarouselItem} from '@/components/ui/carousel';
+import { Carousel, CarouselContent, CarouselItem } from '@/components/ui/carousel';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
 import TestimonialsSection from './TestimonialsSection';
@@ -10,31 +9,31 @@ import { BookOpen, CircleEllipsis, User, ArrowRight } from 'lucide-react';
 const banners = [
     {
         id: 1,
-        image: 'https://dev.bitwisewebsolution.in/igb/access/uploads/1/banner_412380163041569773274.jpg',
-        description: 'We Are In 38 Countries, Looking For 100 More. Open New Markets With Us.',
-        ctaText: 'Shop Now',
-        ctaLink: '/shop/omega-3',
+        image: 'https://via.placeholder.com/1200x500',
+        description: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit.',
+        ctaText: 'Lorem Ipsum',
+        ctaLink: '/lorem-ipsum-1',
     },
     {
         id: 2,
-        image: 'https://dev.bitwisewebsolution.in/igb/access/uploads/1/banner_311196308561569773259.jpg',
-        description: 'Great Support System By Industry Top Leaders Committed To Your Success.',
-        ctaText: 'Shop Now',
-        ctaLink: '/shop/slim-shake',
+        image: 'https://via.placeholder.com/1200x500',
+        description: 'Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.',
+        ctaText: 'Lorem Ipsum',
+        ctaLink: '/lorem-ipsum-2',
     },
     {
         id: 3,
-        image: 'https://dev.bitwisewebsolution.in/igb/access/uploads/1/banner_22205257861569773244.jpg',
-        description: 'True Business Opportunity to Achieve True Success',
-        ctaText: 'Shop Now',
-        ctaLink: '/shop/immune-shield',
+        image: 'https://via.placeholder.com/1200x500',
+        description: 'Ut enim ad minim veniam, quis nostrud exercitation ullamco.',
+        ctaText: 'Lorem Ipsum',
+        ctaLink: '/lorem-ipsum-3',
     },
     {
         id: 4,
-        image: 'https://dev.bitwisewebsolution.in/igb/access/uploads/1/banner_115024801361569773184.jpg',
-        description: 'Great Products With Great Results! Scientific And Research Based Products With Patented Technologies.',
-        ctaText: 'Shop Now',
-        ctaLink: '/shop/immune-shield',
+        image: 'https://via.placeholder.com/1200x500',
+        description: 'Duis aute irure dolor in reprehenderit in voluptate velit esse.',
+        ctaText: 'Lorem Ipsum',
+        ctaLink: '/lorem-ipsum-4',
     },
 ];
 
@@ -42,7 +41,7 @@ function Home() {
     return (
         <div className="min-h-screen bg-white">
             {/* Hero Carousel */}
-            <section aria-label="Featured Wellness Products" className="relative">
+            <section aria-label="Featured Section" className="relative">
                 <Carousel className="w-full">
                     <CarouselContent>
                         {banners.map((banner) => (
@@ -50,7 +49,7 @@ function Home() {
                                 <div className="relative h-64 sm:h-80 md:h-96 lg:h-[500px] overflow-hidden">
                                     <img
                                         src={banner.image}
-                                        alt={`NHT Global - ${banner.description}`}
+                                        alt={`Placeholder - ${banner.description}`}
                                         className="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
                                         loading="lazy"
                                     />
@@ -64,49 +63,48 @@ function Home() {
                             </CarouselItem>
                         ))}
                     </CarouselContent>
-                   
                 </Carousel>
             </section>
 
             {/* Welcome Section */}
             <section
-                aria-label="Welcome to NHT Global"
+                aria-label="Welcome Section"
                 className="py-8 sm:py-12 md:py-16 px-4 sm:px-6 lg:px-16 bg-gradient-to-b from-indigo-50 to-white"
             >
                 <div className="max-w-4xl mx-auto text-center">
                     <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-medium mb-4 sm:mb-6 text-teal-900">
-                        Welcome to Our World of Opportunities
+                        Lorem Ipsum Dolor Sit Amet
                     </h2>
                     <p className="text-sm sm:text-md md:text-lg leading-relaxed mb-6 sm:mb-8 text-gray-700 px-2">
-                        We help people attain a better lifestyle, healthy living, sound financial stability, and enriching personal relationships—plus the freedom to spend your time enjoying what makes you happy.
+                        Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
                     </p>
                     <Button
                         asChild
                         className="bg-teal-900 hover:bg-teal-600 text-white transition-all duration-300 rounded-md px-4 py-2 sm:px-6 sm:py-3"
                     >
-                        <Link to="/join-us" className="flex items-center justify-center gap-2">
-                            Join Us Today <User   />
+                        <Link to="/join" className="flex items-center justify-center gap-2">
+                            Lorem Ipsum <User />
                         </Link>
                     </Button>
                 </div>
             </section>
 
-            {/* Distributor Section */}
+            {/* Team Section */}
             <section
-                aria-label="Message from John Ray"
+                aria-label="Message Section"
                 className="py-8 sm:py-12 md:py-16 px-4 sm:px-6 lg:px-16 bg-gradient-to-r from-teal-50 to-white"
             >
                 <div className="max-w-6xl mx-auto">
                     <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-medium mb-4 sm:mb-5 text-gray-900 text-center tracking-tight">
-                        A Message from John Ray
+                        Lorem Ipsum from Placeholder
                     </h2>
                     <div className="w-16 sm:w-24 h-1 bg-black mx-auto mb-6"></div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8 lg:gap-12 items-center">
                         <div className="order-1 md:order-2 relative h-64 sm:h-72 md:h-[400px] lg:h-[500px] overflow-hidden rounded-xl shadow-2xl">
                             <img
-                                src="https://plus.unsplash.com/premium_photo-1733328013343-e5ee77acaf05?q=80&w=1932&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
-                                alt="Team collaborating on business opportunity"
+                                src="https://via.placeholder.com/600x400"
+                                alt="Placeholder image"
                                 className="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
                                 loading="lazy"
                             />
@@ -115,26 +113,22 @@ function Home() {
                         <div className="order-2 md:order-1 flex flex-col justify-center">
                             <div className="space-y-6 sm:space-y-9 text-gray-700">
                                 <p className="text-sm sm:text-md md:text-lg leading-relaxed">
-                                    <span className="font-medium text-gray-900">Hi, I’m John Ray</span>, an independent
-                                    distributor of NHT Global. We’re a global network marketing company dedicated to
-                                    helping people achieve better health and build passive income.
+                                    <span className="font-medium text-gray-900">Lorem ipsum</span>, dolor sit amet consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
                                 </p>
                                 <p className="text-sm sm:text-md md:text-lg leading-relaxed">
-                                    No need to manage products, inventory, shipping, or customer care—just refer
-                                    people to our products and business. You’ll get your own e-commerce site with the
-                                    backend handled by NHT Global.
+                                    Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
                                 </p>
                             </div>
                             <div className="mt-4 sm:mt-5 text-center md:text-left">
                                 <p className="text-sm sm:text-md md:text-lg text-gray-600 mb-4 italic">
-                                    Curious? Explore more on this page.
+                                    Lorem ipsum dolor sit amet?
                                 </p>
                                 <Button
                                     asChild
                                     className="text-white rounded-md px-4 py-2 sm:px-6 sm:py-3 font-medium shadow-md transition-all duration-300"
                                 >
-                                    <Link to="/learn-more" className="flex items-center justify-center gap-2">
-                                        Learn More <CircleEllipsis  />
+                                    <Link to="/learn" className="flex items-center justify-center gap-2">
+                                        Lorem Ipsum <CircleEllipsis />
                                     </Link>
                                 </Button>
                             </div>
@@ -143,48 +137,48 @@ function Home() {
                 </div>
             </section>
 
-            {/* About NHT Global Section */}
+            {/* About Section */}
             <section
-                aria-label="About NHT Global"
+                aria-label="About Placeholder"
                 className="py-8 sm:py-12 md:py-16 px-4 sm:px-6 lg:px-16 bg-gradient-to-r from-teal-50 to-white"
             >
                 <div className="max-w-6xl mx-auto">
                     <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-medium mb-4 sm:mb-5 text-teal-900 text-center tracking-tight">
-                        About NHT Global
+                        About Lorem Ipsum
                     </h2>
                     <div className="w-16 sm:w-24 h-1 bg-teal-900 mx-auto mb-6"></div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-10 lg:gap-14 items-center">
                         <div className="order-2 md:order-1 flex flex-col justify-center">
                             <ol className="text-sm sm:text-md md:text-lg leading-relaxed mb-6 sm:mb-8 text-gray-700 list-decimal pl-4 sm:pl-6 space-y-3 sm:space-y-4">
-                                <li className="font-medium">Proven company with a record-breaking history since 2001.</li>
-                                <li className="font-medium">Revolutionary e-commerce business model.</li>
-                                <li className="font-medium">Operating in over 38 countries.</li>
-                                <li className="font-medium">High-impact products for a healthy lifestyle.</li>
+                                <li className="font-medium">Lorem ipsum dolor sit amet.</li>
+                                <li className="font-medium">Consectetur adipiscing elit.</li>
+                                <li className="font-medium">Sed do eiusmod tempor incididunt.</li>
+                                <li className="font-medium">Ut enim ad minim veniam.</li>
                                 <li>
-                                    <span className="font-medium">A balanced healthy lifestyle through:</span>
+                                    <span className="font-medium">Duis aute irure dolor:</span>
                                     <ul className="list-disc pl-4 sm:pl-6 mt-2 space-y-2 text-gray-600 text-sm sm:text-md">
-                                        <li>Physical health</li>
-                                        <li>Emotional health</li>
-                                        <li>Financial health</li>
+                                        <li>Lorem ipsum</li>
+                                        <li>Dolor sit amet</li>
+                                        <li>Consectetur adipiscing</li>
                                     </ul>
                                 </li>
-                                <li className="font-medium">Training system for your success.</li>
+                                <li className="font-medium">Exercitation ullamco laboris.</li>
                             </ol>
                             <Button
                                 asChild
                                 className="bg-teal-600 hover:bg-teal-700 text-white rounded-lg px-4 py-2 sm:px-6 sm:py-3 font-semibold shadow-lg transition-all duration-300 w-fit mx-auto md:mx-0"
                             >
                                 <Link to="/about" className="flex items-center justify-center gap-2">
-                                    Discover More <CircleEllipsis  />
+                                    Lorem Ipsum <CircleEllipsis />
                                 </Link>
                             </Button>
                         </div>
 
                         <div className="order-1 md:order-2 relative h-64 sm:h-72 md:h-[400px] lg:h-[500px] overflow-hidden rounded-xl shadow-2xl">
                             <img
-                                src="https://images.unsplash.com/photo-1521295121783-8a321d551ad2?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
-                                alt="Healthy lifestyle and wellness"
+                                src="https://via.placeholder.com/600x400"
+                                alt="Placeholder image"
                                 className="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
                                 loading="lazy"
                             />
@@ -193,21 +187,20 @@ function Home() {
 
                     <div className="mt-8 sm:mt-12 p-6 sm:p-8 bg-white border border-teal-100 shadow-md rounded-2xl italic max-w-3xl sm:max-w-4xl mx-auto">
                         <p className="text-sm sm:text-md md:text-lg leading-relaxed text-gray-700 text-center">
-                            <span className="font-semibold font-serif text-teal-800">NHT Global’s mission</span> is to
-                            enhance how you feel about yourself and your work with quality-of-life products and a lucrative compensation plan.
+                            <span className="font-semibold font-serif text-teal-800">Lorem ipsum</span> dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
                         </p>
                     </div>
                 </div>
             </section>
 
-            {/* Why Network Marketing Section */}
+            {/* Why Section */}
             <section
-                aria-label="Why Network Marketing"
+                aria-label="Why Placeholder"
                 className="py-8 sm:py-12 md:py-16 px-4 sm:px-6 lg:px-16 bg-gradient-to-b from-indigo-50 to-white"
             >
                 <div className="max-w-6xl mx-auto">
                     <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-medium mb-4 sm:mb-5 text-center tracking-tight">
-                        Why Network Marketing?
+                        Why Lorem Ipsum?
                     </h2>
                     <div className="w-16 sm:w-24 h-1 bg-black mx-auto mb-6"></div>
 
@@ -216,7 +209,7 @@ function Home() {
                             <div
                                 className="w-full h-full bg-cover bg-center transition-transform duration-500 hover:scale-105"
                                 style={{
-                                    backgroundImage: `url('https://images.unsplash.com/photo-1522071820081-009f0129c71c?ixlib=rb-4.0.3&auto=format&fit=crop&w=1350&q=80')`,
+                                    backgroundImage: `url('https://via.placeholder.com/600x400')`,
                                     backgroundAttachment: 'fixed',
                                     backgroundPosition: 'center',
                                 }}
@@ -225,30 +218,29 @@ function Home() {
 
                         <div className="order-1 md:order-2 flex flex-col justify-center">
                             <ol className="text-sm sm:text-md md:text-lg leading-relaxed mb-6 sm:mb-8 text-gray-700 list-decimal pl-4 sm:pl-6 space-y-3 sm:space-y-4">
-                                <li className="font-medium">Over 50 years of direct selling history.</li>
-                                <li className="font-medium">A $110 billion global industry.</li>
-                                <li className="font-medium">Active in more than 172 countries.</li>
-                                <li className="font-medium">Inclusive of all backgrounds.</li>
-                                <li className="font-medium">Empowers millions globally.</li>
-                                <li className="font-medium">Offers high income potential.</li>
-                                <li className="font-medium">Be your own boss.</li>
-                                <li className="font-medium">No high overhead.</li>
-                                <li className="font-medium">A limitless global opportunity.</li>
+                                <li className="font-medium">Lorem ipsum dolor sit amet.</li>
+                                <li className="font-medium">Consectetur adipiscing elit.</li>
+                                <li className="font-medium">Sed do eiusmod tempor incididunt.</li>
+                                <li className="font-medium">Ut enim ad minim veniam.</li>
+                                <li className="font-medium">Quis nostrud exercitation.</li>
+                                <li className="font-medium">Ullamco laboris nisi.</li>
+                                <li className="font-medium">Aliquip ex ea commodo.</li>
+                                <li className="font-medium">Duis aute irure dolor.</li>
+                                <li className="font-medium">Voluptate velit esse.</li>
                             </ol>
                             <Button
                                 asChild
                                 className="text-white rounded-lg px-4 py-2 sm:px-6 sm:py-3 font-semibold shadow-lg transition-all duration-300 w-fit mx-auto md:mx-0"
                             >
-                                <Link to="/network-marketing" className="flex items-center justify-center gap-2">
-                                    Explore Now <BookOpen  />
+                                <Link to="/explore" className="flex items-center justify-center gap-2">
+                                    Lorem Ipsum <BookOpen />
                                 </Link>
                             </Button>
                         </div>
                     </div>
                 </div>
             </section>
-{/* <TestimonialsSection/> */}
-         
+            {/* <TestimonialsSection /> */}
         </div>
     );
 }

@@ -7,14 +7,14 @@ import { Menu } from 'lucide-react';
 function Header() {
   const [isOpen, setIsOpen] = useState(false);
 
-  // Navigation items array with /template1 prefix
+  // Navigation items array with /template2 prefix
   const navItems = [
-    { path: '/template1', label: 'Home' },
-    { path: '/template1/products', label: 'Products' },
-    { path: '/template1/opportunity', label: 'Opportunity' },
-    { path: '/template1/join-us', label: 'Join Us' },
-    { path: '/template1/contact', label: 'Contact' },
-    { path: '/template1/blog', label: 'Blog' },
+    { path: '/template2', label: 'Home' },
+    { path: '/template2/products', label: 'Products' },
+    { path: '/template2/opportunity', label: 'Opportunity' },
+    { path: '/template2/join-us', label: 'Join Us' },
+    { path: '/template2/contact', label: 'Contact' },
+    { path: '/template2/blog', label: 'Blog' },
   ];
 
   // Handle navigation click
@@ -23,17 +23,28 @@ function Header() {
   };
 
   return (
-    <header className="shadow-xl py-4 bg-gradient-to-b from-indigo-50 to-white">
-      <div className="container mx-auto px-4 flex justify-between items-center">
+    <header 
+      className="py-5 bg-[#f7e5d9] shadow-xl relative z-10"
+      style={{ backgroundColor: '#f7e5d9' }}
+    >
+      <div className="container mx-auto px-6 flex justify-between items-center">
         {/* Logo Section */}
         <div className="flex items-center gap-3">
-          <img
-            src="./1.png"
-            alt="NHT Global Logo"
-            className="w-28 md:w-36 transition-transform duration-300 hover:scale-105"
-          />
-          <p className="text-xs md:text-sm text-black font-light hidden sm:block">
-            An Independent <br /> Distributor of NHT Global
+          <div 
+            className="w-14 h-14 rounded-lg shadow-md transform hover:scale-110 transition-transform duration-400"
+            style={{ backgroundColor: '#822b00' }}
+          >
+            <img
+              src="./1.png"
+              alt="NHT Global Logo"
+              className="w-full h-full rounded-lg object-cover"
+            />
+          </div>
+          <p 
+            className="text-base font-bold hidden sm:block"
+            style={{ color: '#822b00' }}
+          >
+            NHT Global Elite
           </p>
         </div>
 
@@ -45,7 +56,8 @@ function Header() {
                 <Button
                   asChild
                   variant="ghost"
-                  className="text-sm font-medium"
+                  className="text-base font-bold px-5 py-2 rounded-lg hover:bg-[#822b00] hover:text-[#f7e5d9] transition-all duration-300"
+                  style={{ color: '#822b00' }}
                 >
                   <Link to={item.path}>{item.label}</Link>
                 </Button>
@@ -60,21 +72,27 @@ function Header() {
             <Button
               variant="ghost"
               size="icon"
-              className="lg:hidden"
+              className="lg:hidden rounded-lg"
+              style={{ color: '#822b00' }}
               onClick={() => setIsOpen(true)}
             >
-              <Menu className="h-6 w-6" />
+              <Menu className="h-7 w-7" />
             </Button>
           </SheetTrigger>
-          <SheetContent side="right" className="w-[300px] sm:w-[400px]">
-            <nav className="mt-8">
-              <ul className="flex flex-col gap-4">
+          <SheetContent 
+            side="right" 
+            className="w-[300px] sm:w-[400px] bg-[#f7e5d9]"
+            style={{ backgroundColor: '#f7e5d9' }}
+          >
+            <nav className="mt-12">
+              <ul className="flex flex-col gap-5">
                 {navItems.map((item) => (
                   <li key={item.path}>
                     <Button
                       asChild
                       variant="ghost"
-                      className="w-full justify-start text-base font-medium"
+                      className="w-full justify-start text-lg font-bold rounded-lg px-6 py-3 hover:bg-[#822b00] hover:text-[#f7e5d9] transition-all duration-300"
+                      style={{ color: '#822b00' }}
                       onClick={handleNavClick}
                     >
                       <Link to={item.path}>{item.label}</Link>

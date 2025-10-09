@@ -1,4 +1,3 @@
-// BlogPost.jsx
 import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -29,7 +28,7 @@ const blogPosts = [
         excerpt: "The ultimate guide to refreshing your beauty routine this spring.",
         content: "Spring is the perfect time to refresh your beauty routine. In this article, we dive into the must-have products and techniques for a radiant look. From lightweight foundations to vibrant lip colors, discover how to embrace the season’s best trends. Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
         author: "Lily Glam",
-        image: "https://plus.unsplash.com/premium_photo-1689371953070-10782471db47?q=80&w=1974&auto=format&fit=crop",
+        image: "https://plus.unsplash.com/premium_photo-1689371953070-107824b71c47d?q=80&w=1974&auto=format&fit=crop",
         tags: ["beauty", "makeup", "spring"],
         likes: 25,
         views: 980
@@ -43,7 +42,7 @@ const blogPosts = [
         excerpt: "How our brand is revolutionizing eco-friendly style.",
         content: "Sustainability is at the heart of modern fashion. This post highlights our company’s journey towards eco-friendly practices, featuring innovative materials and ethical production methods. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.",
         author: "Sophie Green",
-        image: "https://images.unsplash.com/photo-1595270320786-94dd95d4a1db?q=60&w=600&auto=format&fit=crop",
+        image: "https://images.unsplash.com/photo-1595270210786-94dd53d4a1db?q=60&w=600&auto=format&fit=crop",
         tags: ["company", "sustainability", "fashion"],
         likes: 18,
         views: 750
@@ -57,8 +56,8 @@ const BlogPost = () => {
 
     if (!post) {
         return (
-            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-                <div className="text-center py-12 text-gray-800 text-lg sm:text-xl">
+            <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#f7e5d9' }}>
+                <div className="text-center py-12 text-xl font-semibold" style={{ color: '#822b00' }}>
                     Blog post not found
                 </div>
             </div>
@@ -66,63 +65,76 @@ const BlogPost = () => {
     }
 
     return (
-        <div className="min-h-screen bg-gray-50 flex flex-col">
+        <div className="min-h-screen flex flex-col" style={{ backgroundColor: '#f7e5d9' }}>
             {/* Hero Section */}
-            <section className="relative w-full h-72 sm:h-96 md:h-[500px] overflow-hidden">
+            <section className="relative w-full h-60 sm:h-72 md:h-88 lg:h-[520px] overflow-hidden">
                 <img
                     src={post.image}
                     alt={post.title}
-                    className="w-full h-full object-cover opacity-90 transition-transform duration-500 hover:scale-105"
+                    className="w-full h-full object-cover opacity-95 transition-transform duration-600 hover:scale-110"
                     loading="lazy"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-gray-900/70 to-transparent" />
-                <div className="absolute bottom-6 left-4 sm:left-6 text-white">
-                    <span className="inline-block bg-red-950 text-white text-xs px-2 py-1 rounded mb-2 sm:mb-3">
+                <div 
+                    className="absolute inset-0 bg-gradient-to-r from-[#822b00]/70 to-transparent" 
+                    style={{ background: 'linear-gradient(to right, #822b00 70%, transparent)' }}
+                />
+                <div className="absolute top-1/2 left-6 sm:left-8 lg:left-12 transform -translate-y-1/2 text-center max-w-2xl">
+                    <span 
+                        className="inline-block text-xs px-3 py-1 rounded mb-3 font-semibold"
+                        style={{ backgroundColor: '#822b00', color: '#f7e5d9' }}
+                    >
                         {post.category}
                     </span>
-                    <h1 className="text-2xl sm:text-3xl md:text-4xl font-semibold drop-shadow-md leading-tight">
+                    <h1 
+                        className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold drop-shadow-lg"
+                        style={{ color: '#f7e5d9' }}
+                    >
                         {post.title}
                     </h1>
                 </div>
             </section>
 
             {/* Main Content */}
-            <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 flex-grow">
+            <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-14 flex-grow">
                 <Button
-                    onClick={() => navigate('/blog')}
-                    variant="outline"
-                    className="mb-6 sm:mb-8 text-gray-800 border-gray-300 hover:bg-gray-100 transition-all duration-200 flex items-center gap-2"
+                    onClick={() => navigate('/template2/blog')}
+                    className="mb-8 rounded-lg px-4 py-2 font-semibold shadow-md hover:shadow-lg transition-all duration-400 flex items-center gap-3"
+                    style={{ backgroundColor: '#822b00', color: '#f7e5d9' }}
                 >
-                    <ArrowLeft className="w-4 h-4" /> Back to Blog
+                    <ArrowLeft className="w-5 h-5" /> Back to Blog
                 </Button>
 
-                <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-gray-600 mb-6 sm:mb-8 text-sm sm:text-base">
-                    <div className="flex items-center gap-1 sm:gap-2">
-                        <User className="w-4 h-4" /> {post.author}
+                <div className="flex flex-wrap items-center gap-4 text-base mb-8 rounded-xl shadow-xl p-6" style={{ backgroundColor: '#f7e5d9', color: '#822b00' }}>
+                    <div className="flex items-center gap-2">
+                        <User className="w-5 h-5" /> {post.author}
                     </div>
-                    <div className="flex items-center gap-1 sm:gap-2">
-                        <Clock className="w-4 h-4" /> {post.date} • {post.readTime}m
+                    <div className="flex items-center gap-2">
+                        <Clock className="w-5 h-5" /> {post.date} • {post.readTime}m
                     </div>
-                    <div className="flex items-center gap-1 sm:gap-2">
-                        <Eye className="w-4 h-4" /> {post.views.toLocaleString()}
+                    <div className="flex items-center gap-2">
+                        <Eye className="w-5 h-5" /> {post.views.toLocaleString()}
                     </div>
-                    <div className="flex items-center gap-3">
-                        <button className="flex items-center gap-1 hover:text-red-500 transition-colors">
-                            <Heart className="w-4 h-4" /> {post.likes}
+                    <div className="flex items-center gap-4">
+                        <button className="flex items-center gap-2 hover:text-red-500 transition-colors">
+                            <Heart className="w-5 h-5" /> {post.likes}
                         </button>
-                        <Share2 className="w-4 h-4 hover:text-indigo-500 transition-colors" />
+                        <Share2 className="w-5 h-5 hover:text-[#822b00] transition-colors" />
                     </div>
                 </div>
 
-                <div className="prose prose-sm sm:prose-base max-w-none text-gray-700 leading-relaxed mb-6 sm:mb-8">
+                <div 
+                    className="prose prose-base max-w-none text-base leading-relaxed mb-8 rounded-xl shadow-xl p-6"
+                    style={{ backgroundColor: '#f7e5d9', color: '#822b00' }}
+                >
                     <p>{post.content}</p>
                 </div>
 
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-3">
                     {post.tags.map((tag) => (
                         <span
                             key={tag}
-                            className="text-xs bg-gray-100 px-2 py-1 rounded text-gray-600 hover:bg-gray-200 transition-colors"
+                            className="text-xs px-3 py-1 rounded-lg font-semibold hover:bg-[#822b00] hover:text-[#f7e5d9] transition-all duration-300"
+                            style={{ backgroundColor: '#f7e5d9', color: '#822b00', border: '1px solid #822b00' }}
                         >
                             #{tag}
                         </span>

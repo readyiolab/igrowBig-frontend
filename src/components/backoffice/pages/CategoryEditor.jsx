@@ -39,22 +39,21 @@ const CategoryEditor = () => {
   }, [tenantId, retryCount]);
 
   const fetchCategories = async () => {
-    try {
-      const response = await getAll(`/tenants/${tenantId}/categories`);
-      setCategories(Array.isArray(response) ? response : []);
-      toast.success("Categories loaded!");
-      setRetryCount(0); // Reset retry count on success
-    } catch (err) {
-      console.error("Error fetching categories:", err.response?.data || err.message);
-      if (retryCount < MAX_RETRIES) {
-        // Silently retry without toast
-        setTimeout(() => setRetryCount(retryCount + 1), 2000);
-      } else {
-        toast.error("Unable to load categories. Please try again later.");
-        setCategories([]);
-      }
+  try {
+    const response = await getAll(`/tenants/${tenantId}/categories`);
+    setCategories(Array.isArray(response) ? response : []);
+    toast.success("Categories loaded!");
+    setRetryCount(0);
+  } catch (err) {
+    console.error("Error fetching categories:", err.response?.data || err.message);
+    if (retryCount < MAX_RETRIES) {
+      setTimeout(() => setRetryCount(retryCount + 1), 2000);
+    } else {
+      toast.error("Unable to load categories. Please try again later.");
+      setCategories([]);
     }
-  };
+  }
+};
 
   const debounce = (func, delay) => {
     let timeoutId;

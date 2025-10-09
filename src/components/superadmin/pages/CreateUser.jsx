@@ -3,15 +3,27 @@ import { motion } from "framer-motion";
 import ToastNotification, { showSuccessToast, showErrorToast } from "../../ToastNotification";
 import useTenantApi from "@/hooks/useTenantApi";
 
+// Countries available in the backend
+const AVAILABLE_COUNTRIES = [
+  "Austria", "Belgium", "Bolivia", "Bulgaria", "Canada", "Colombia",
+  "Croatia", "Cyprus", "Czech Republic", "Denmark", "Estonia", "Finland",
+  "France", "Germany", "Greece", "Hungary", "India", "Ireland", "Italy",
+  "Japan", "Malta", "Mexico", "Netherlands", "Norway", "Peru", "Poland",
+  "Portugal", "Romania", "Russia", "Singapore", "Slovak Republic",
+  "Slovenia", "Spain", "Sweden", "UK", "US"
+];
+
 const CreateUser = () => {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [subscriptionPlan, setSubscriptionPlan] = useState("yearly");
+  const [subdomain, setSubdomain] = useState("");
+  const [country, setCountry] = useState("");
+  const [subscriptionPlan, setSubscriptionPlan] = useState("monthly");
   const [templateId, setTemplateId] = useState(null);
   const [templates, setTemplates] = useState([]);
   const [plans, setPlans] = useState({
-    yearly: { price: 156, discount: 20 },
     monthly: { price: 16.25, discount: 0 },
+    quarterly: { price: 45, discount: 8 },
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -37,8 +49,8 @@ const CreateUser = () => {
         }
       } catch (err) {
         console.error("Fetch error:", err);
-        setError(err.message || "Failed to load templates or plans");
-        showErrorToast("Failed to load templates or plans", err.message);
+        setError(err.message || "Failed to load templates");
+        showErrorToast("Failed to load templates", err.message);
       } finally {
         setIsLoading(false);
       }
@@ -49,17 +61,33 @@ const CreateUser = () => {
 
   const validateForm = () => {
     const errors = {};
+    
     if (!name.trim()) {
       errors.name = "Name is required";
     }
+    
     if (!email.trim()) {
       errors.email = "Email is required";
     } else if (!/\S+@\S+\.\S+/.test(email)) {
       errors.email = "Email address is invalid";
     }
+    
+    if (!subdomain.trim()) {
+      errors.subdomain = "Subdomain is required";
+    } else if (!/^[a-z0-9-]+$/.test(subdomain)) {
+      errors.subdomain = "Subdomain can only contain lowercase letters, numbers, and hyphens";
+    } else if (subdomain.length < 3 || subdomain.length > 63) {
+      errors.subdomain = "Subdomain must be between 3 and 63 characters";
+    }
+    
+    if (!country.trim()) {
+      errors.country = "Country is required";
+    }
+    
     if (!templateId) {
       errors.template = "Please select a template";
     }
+    
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -78,36 +106,50 @@ const CreateUser = () => {
       const payload = {
         name,
         email,
+        subdomain,
+        country,
         subscription_plan: subscriptionPlan,
         template_id: templateId,
       };
       console.log("Submitting payload:", payload);
       const response = await post("/admin/create-user", payload);
+      
       setName("");
       setEmail("");
-      setSubscriptionPlan("yearly");
+      setSubdomain("");
+      setCountry("");
+      setSubscriptionPlan("monthly");
       setTemplateId(templates[0]?.id || null);
       setFormErrors({});
+      
       showSuccessToast(response.message || "User created successfully!");
     } catch (error) {
       console.error("Error creating user:", error.response?.data || error.message);
-      showErrorToast(
-        "Failed to create user",
-        error.response?.data?.message || error.message
-      );
+      const errorMsg = error.response?.data?.message || error.message;
+      const errorType = error.response?.data?.error;
+      
+      if (errorType === "INVALID_COUNTRY") {
+        setFormErrors({ country: errorMsg });
+      } else if (errorType === "EMAIL_EXISTS") {
+        setFormErrors({ email: errorMsg });
+      } else if (errorType === "SUBDOMAIN_EXISTS") {
+        setFormErrors({ subdomain: errorMsg });
+      }
+      
+      showErrorToast("Failed to create user", errorMsg);
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const getSubscriptionPriceDisplay = (plan) => {
-    if (plan === "yearly") {
+    if (plan === "quarterly") {
       return (
         <div className="flex items-center">
-          <span className="font-semibold text-black">${plans.yearly.price}/year</span>
-          {plans.yearly.discount > 0 && (
+          <span className="font-semibold text-black">${plans.quarterly.price}/quarter</span>
+          {plans.quarterly.discount > 0 && (
             <span className="ml-2 text-xs bg-gray-200 text-black px-2 py-1 rounded-full">
-              Save {plans.yearly.discount}%
+              Save {plans.quarterly.discount}%
             </span>
           )}
         </div>
@@ -118,7 +160,6 @@ const CreateUser = () => {
   };
 
   const templateOptions = Array.isArray(templates) ? templates : [];
-  console.log("Template options:", templateOptions);
   const isFormDisabled = isSubmitting || templateOptions.length === 0;
 
   if (isLoading || loading) {
@@ -158,8 +199,6 @@ const CreateUser = () => {
           Set up a new user account with customized template
         </p>
       </div>
-
-      
 
       <form onSubmit={handleSubmit} className="p-6 space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -250,6 +289,107 @@ const CreateUser = () => {
               </p>
             )}
           </div>
+
+          <div>
+            <label
+              className="block text-sm font-medium text-gray-700 mb-1"
+              htmlFor="subdomain"
+            >
+              Subdomain
+            </label>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <svg
+                  className="h-5 w-5 text-gray-400"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"
+                  />
+                </svg>
+              </div>
+              <input
+                id="subdomain"
+                type="text"
+                value={subdomain}
+                onChange={(e) => setSubdomain(e.target.value.toLowerCase())}
+                className={`w-full pl-10 pr-4 py-3 border ${
+                  formErrors.subdomain ? "border-gray-800 bg-gray-100" : "border-gray-300"
+                } rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-black transition-colors`}
+                placeholder="mystore"
+                disabled={isSubmitting}
+                aria-label="Subdomain"
+                aria-describedby={formErrors.subdomain ? "subdomain-error" : undefined}
+              />
+            </div>
+            <p className="mt-1 text-xs text-gray-500">
+              Only lowercase letters, numbers, and hyphens (3-63 chars)
+            </p>
+            {formErrors.subdomain && (
+              <p id="subdomain-error" className="mt-1 text-sm text-gray-800">
+                {formErrors.subdomain}
+              </p>
+            )}
+          </div>
+
+          <div>
+            <label
+              className="block text-sm font-medium text-gray-700 mb-1"
+              htmlFor="country"
+            >
+              Country
+            </label>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <svg
+                  className="h-5 w-5 text-gray-400"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+              </div>
+              <select
+                id="country"
+                value={country}
+                onChange={(e) => setCountry(e.target.value)}
+                className={`w-full pl-10 pr-4 py-3 border ${
+                  formErrors.country ? "border-gray-800 bg-gray-100" : "border-gray-300"
+                } rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-black transition-colors appearance-none bg-white`}
+                disabled={isSubmitting}
+                aria-label="Country"
+                aria-describedby={formErrors.country ? "country-error" : undefined}
+              >
+                <option value="">Select a country</option>
+                {AVAILABLE_COUNTRIES.map((countryName) => (
+                  <option key={countryName} value={countryName}>
+                    {countryName}
+                  </option>
+                ))}
+              </select>
+              <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                <svg className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </div>
+            </div>
+            {formErrors.country && (
+              <p id="country-error" className="mt-1 text-sm text-gray-800">
+                {formErrors.country}
+              </p>
+            )}
+          </div>
         </div>
 
         <div className="border-t border-gray-200 pt-6">
@@ -263,29 +403,29 @@ const CreateUser = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div
                 className={`border rounded-lg p-4 cursor-pointer transition-all ${
-                  subscriptionPlan === "yearly"
+                  subscriptionPlan === "quarterly"
                     ? "border-black bg-gray-100 ring-2 ring-gray-300"
                     : "border-gray-200 hover:border-gray-400"
                 }`}
-                onClick={() => setSubscriptionPlan("yearly")}
-                onKeyDown={(e) => e.key === "Enter" && setSubscriptionPlan("yearly")}
+                onClick={() => setSubscriptionPlan("quarterly")}
+                onKeyDown={(e) => e.key === "Enter" && setSubscriptionPlan("quarterly")}
                 role="radio"
-                aria-checked={subscriptionPlan === "yearly"}
+                aria-checked={subscriptionPlan === "quarterly"}
                 tabIndex={0}
               >
                 <div className="flex justify-between items-center">
                   <div>
-                    <div className="font-medium">Yearly Plan</div>
-                    {getSubscriptionPriceDisplay("yearly")}
+                    <div className="font-medium">Quarterly Plan</div>
+                    {getSubscriptionPriceDisplay("quarterly")}
                   </div>
                   <div
                     className={`h-5 w-5 rounded-full border flex items-center justify-center ${
-                      subscriptionPlan === "yearly"
+                      subscriptionPlan === "quarterly"
                         ? "border-black bg-black"
                         : "border-gray-300"
                     }`}
                   >
-                    {subscriptionPlan === "yearly" && (
+                    {subscriptionPlan === "quarterly" && (
                       <svg
                         className="h-3 w-3 text-white"
                         fill="currentColor"
@@ -435,7 +575,7 @@ const CreateUser = () => {
                         >
                           <path
                             fillRule="evenodd"
-                            d="M10 18a8 8 0 100-16 8 8 0 016 0zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                            d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
                             clipRule="evenodd"
                           />
                         </svg>
