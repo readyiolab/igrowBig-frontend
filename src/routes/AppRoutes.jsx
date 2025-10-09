@@ -2,7 +2,6 @@ import {
   createBrowserRouter,
   Navigate,
   useNavigate,
-  useParams,
 } from "react-router-dom";
 import React, { Suspense, lazy, useEffect, useState } from "react";
 import useTenantApi from "@/hooks/useTenantApi";
@@ -208,6 +207,10 @@ const EcommerceBlogPost2 = lazy(() =>
   import("../templates/Template2/pages/BlogPost")
 );
 
+/**
+ * ✅ DYNAMIC TEMPLATE LOADER - Domain-Based Only
+ */
+
 const DynamicTemplateLoader = ({ children }) => {
   const { getAll } = useTenantApi();
   const [templateId, setTemplateId] = useState(null);
@@ -218,43 +221,47 @@ const DynamicTemplateLoader = ({ children }) => {
   useEffect(() => {
     const fetchTenantData = async () => {
       try {
-        const hostname = window.location.hostname;
+        const hostname = window.location.hostname.toLowerCase();
         const baseDomain = process.env.REACT_APP_BASE_DOMAIN || "igrowbig.com";
-        
-        console.log("DynamicTemplateLoader: Hostname:", hostname);
 
-        // Check if it's a subdomain or custom domain
-        const isBaseDomain = [
+        console.log("🔍 DynamicTemplateLoader: Hostname:", hostname);
+
+        // ========== CHECK: Is this the main domain? ==========
+        const isMainDomain = [
           baseDomain,
           `www.${baseDomain}`,
           "localhost",
         ].includes(hostname);
 
-        let endpoint;
-        
-        if (!isBaseDomain) {
-          // It's either a subdomain (store.igrowbig.com) or custom domain (mycustomstore.com)
-          endpoint = "/site/by-domain";
-          console.log("DynamicTemplateLoader: Using domain-based endpoint");
-        } else {
-          // Fallback to main domain
-          console.log("DynamicTemplateLoader: Base domain detected, redirecting to home");
-          navigate("/");
+        if (isMainDomain) {
+          console.log("⚠️ Main domain detected - showing landing page");
+          navigate("/", { replace: true });
+          setLoading(false);
           return;
         }
 
-        const response = await getAll(endpoint);
-        console.log("DynamicTemplateLoader: API response:", response);
+        // ========== FETCH: Tenant by domain ==========
+        console.log("🔍 Fetching tenant for domain:", hostname);
+
+        const response = await getAll("/site/by-domain");
+        console.log("✅ API Response:", response);
 
         if (response?.tenant?.template_id) {
-          console.log("DynamicTemplateLoader: Setting template_id:", response.tenant.template_id);
+          console.log("✅ Setting template_id:", response.tenant.template_id);
           setTemplateId(response.tenant.template_id);
         } else {
-          console.log("DynamicTemplateLoader: No valid tenant found");
+          console.log("❌ No valid tenant found in response");
           setError("Store not found. This domain may not be configured yet.");
         }
       } catch (err) {
-        console.error("DynamicTemplateLoader: Failed to fetch tenant:", err);
+        console.error("❌ DynamicTemplateLoader Error:", err);
+
+        if (err.message === "MAIN_DOMAIN") {
+          navigate("/", { replace: true });
+          setLoading(false);
+          return;
+        }
+
         setError(err.message || "Unable to load store data");
       } finally {
         setLoading(false);
@@ -264,16 +271,20 @@ const DynamicTemplateLoader = ({ children }) => {
     fetchTenantData();
   }, [getAll, navigate]);
 
+  // ========== LOADING STATE ==========
   if (loading) {
-    console.log("DynamicTemplateLoader: Rendering loading state");
+    console.log("⏳ DynamicTemplateLoader: Loading...");
     return <LoadingFallback />;
   }
 
+  // ========== ERROR STATE ==========
   if (error) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50">
         <div className="text-center p-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-4">Store Not Found</h1>
+          <h1 className="text-3xl font-bold text-gray-900 mb-4">
+            Store Not Found
+          </h1>
           <p className="text-gray-600 mb-6">{error}</p>
           <button
             onClick={() => (window.location.href = "/")}
@@ -285,7 +296,6 @@ const DynamicTemplateLoader = ({ children }) => {
       </div>
     );
   }
-
   let TemplateLayout;
   switch (templateId) {
     case 1:
@@ -318,7 +328,6 @@ const DynamicTemplateLoader = ({ children }) => {
     </Suspense>
   );
 };
-
 
 const AdminProtectedRoute = ({ children }) => {
   const navigate = useNavigate();
@@ -546,7 +555,10 @@ const router = createBrowserRouter([
   //   path: "/template2",
   //   element: withSuspense(Template2)(),
   // },
- {
+
+
+   // ========== 5. DYNAMIC TENANT STORE ROUTES ==========
+  {
     path: "/",
     element: <DynamicTemplateLoader />,
     children: [
