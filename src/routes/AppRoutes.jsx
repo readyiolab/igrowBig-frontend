@@ -434,10 +434,11 @@ const withSuspense = (Component) => {
  */
 const RootHandler = () => {
   const [isMainDomain, setIsMainDomain] = useState(null);
+  const [isCustomDomain, setIsCustomDomain] = useState(false);
 
   useEffect(() => {
     const hostname = window.location.hostname.toLowerCase();
-    const baseDomain =  "igrowbig.com";
+    const baseDomain = "igrowbig.com";
 
     const mainDomainCheck = [
       baseDomain,
@@ -448,7 +449,17 @@ const RootHandler = () => {
     console.log("🔍 RootHandler - Hostname:", hostname);
     console.log("🔍 RootHandler - Is Main Domain:", mainDomainCheck);
 
+    // Check if it's a subdomain
+    const isSubdomain = hostname.endsWith(`.${baseDomain}`) && hostname !== `www.${baseDomain}`;
+    
+    // If not main domain and not subdomain, it's a custom domain
+    const customDomain = !mainDomainCheck && !isSubdomain;
+
+    console.log("🔍 RootHandler - Is Subdomain:", isSubdomain);
+    console.log("🔍 RootHandler - Is Custom Domain:", customDomain);
+
     setIsMainDomain(mainDomainCheck);
+    setIsCustomDomain(customDomain);
   }, []);
 
   if (isMainDomain === null) {

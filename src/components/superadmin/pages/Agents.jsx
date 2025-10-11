@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Loader2, ArrowLeft, CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
+import { Loader2, ArrowLeft, CheckCircle, XCircle, AlertTriangle, Mail } from 'lucide-react';
 
 const Agents = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -22,11 +22,12 @@ const Agents = () => {
   const [tenantUsers, setTenantUsers] = useState([]);
   const [settings, setSettings] = useState(null);
   const [validationErrors, setValidationErrors] = useState([]);
-  const { loading, error, getAll, put } = useTenantApi();
+  const [verificationInstructions, setVerificationInstructions] = useState(null);
+  const { loading, error, getAll, put, post } = useTenantApi();
 
   const [websiteData, setWebsiteData] = useState({
-    domain_type: 'path',
-    primary_domain_name: 'begrat.com',
+    domain_type: 'sub_domain',
+    primary_domain_name: '',
     website_link: '',
     first_name: '',
     last_name: '',
@@ -40,6 +41,7 @@ const Agents = () => {
     nht_store_link: '',
     nht_joining_link: '',
     dns_status: 'pending',
+    custom_domain: '',
   });
 
   const fetchTenantUsers = useCallback(async () => {
@@ -86,27 +88,29 @@ const Agents = () => {
       setShowProfile(true);
       setValidationErrors([]);
       setWebsiteStep(0);
+      setVerificationInstructions(null);
 
       try {
         const response = await getAll(`/admin/settings/${agent.tenant_id}`);
         const settingsData = response.settings || {};
         setSettings(settingsData);
         setWebsiteData({
-          domain_type: settingsData.domain_type || 'path',
-          primary_domain_name: settingsData.primary_domain_name || 'begrat.com',
+          domain_type: settingsData.domain_type || 'sub_domain',
+          primary_domain_name: settingsData.primary_domain_name || 'igrowbig.com',
           website_link: settingsData.website_link || '',
           first_name: settingsData.first_name || agent.first_name || '',
           last_name: settingsData.last_name || agent.last_name || '',
           email_id: settingsData.email_id || agent.email_id || '',
           mobile: settingsData.mobile || '',
-          address: settingsData.address || '',
+          address: settingsData.address || 'Not set',
           skype: settingsData.skype || '',
-          site_name: settingsData.site_name || '',
+          site_name: settingsData.site_name || 'Default Site',
           site_logo: null,
           nht_website_link: settingsData.nht_website_link || '',
           nht_store_link: settingsData.nht_store_link || '',
           nht_joining_link: settingsData.nht_joining_link || '',
           dns_status: settingsData.dns_status || 'pending',
+          custom_domain: settingsData.custom_domain || '',
         });
         showSuccessToast(response.message || 'Settings fetched successfully');
       } catch (err) {
@@ -133,12 +137,33 @@ const Agents = () => {
     try {
       const response = await put(`/admin/settings/${selectedAgent.tenant_id}`, formData, true);
       setSettings(response.settings);
+      if (response.verification) {
+        setVerificationInstructions(response.verification);
+      }
       showSuccessToast(response.message || 'Settings updated successfully');
-      await fetchTenantUsers(); // Refresh user list
-      closeProfile();
+      await fetchTenantUsers();
+      if (websiteData.domain_type !== 'custom_domain' || response.verification?.status === 'verified') {
+        closeProfile();
+      }
     } catch (err) {
-      setValidationErrors(err.errors || [{ msg: err.message || 'Failed to update settings' }]);
-      showErrorToast(err.message || 'Failed to update tenant settings');
+      let errorMsg = err.message || 'Failed to update settings';
+      if (err.error === 'DOMAIN_EXISTS') {
+        errorMsg = 'Domain already taken';
+      } else if (err.error === 'VERIFICATION_ERROR') {
+        errorMsg = err.message.includes('email')
+          ? 'Failed to send verification email. Please check the email address and try again or contact support@igrowbig.com.'
+          : 'Failed to start domain verification. Please try again or contact support@igrowbig.com.';
+      } else if (err.error === 'INVALID_TENANT_ID') {
+        errorMsg = 'Invalid tenant ID';
+      } else if (err.error === 'TENANT_NOT_FOUND') {
+        errorMsg = 'Tenant not found';
+      } else if (err.error === 'INVALID_EMAIL') {
+        errorMsg = 'Invalid email address';
+      } else if (err.error === 'INVALID_DOMAIN') {
+        errorMsg = 'Invalid custom domain name';
+      }
+      setValidationErrors(err.errors || [{ msg: errorMsg }]);
+      showErrorToast(errorMsg);
     }
   };
 
@@ -148,19 +173,20 @@ const Agents = () => {
     setWebsiteStep(0);
     setSettings(null);
     setValidationErrors([]);
+    setVerificationInstructions(null);
   };
 
   const handleWebsiteDataChange = (e) => {
     const { name, value, files } = e.target;
     setWebsiteData((prev) => {
       const updated = { ...prev, [name]: files ? files[0] : value };
-      if (['domain_type', 'primary_domain_name'].includes(name)) {
-        const protocol = window.location.protocol; // http: or https:
+      if (name === 'domain_type' || name === 'custom_domain') {
+        const protocol = 'https';
         const baseDomain = process.env.NODE_ENV === 'production' ? 'igrowbig.com' : 'localhost:5173';
         updated.website_link =
-          updated.domain_type === 'path'
-            ? `${protocol}//${baseDomain}/${selectedAgent?.tenant_id || ''}`
-            : `${protocol}//${updated.primary_domain_name || baseDomain}`;
+          updated.domain_type === 'sub_domain'
+            ? `${protocol}://${settings?.subdomain || baseDomain}`
+            : `${protocol}://${updated.custom_domain || baseDomain}`;
       }
       return updated;
     });
@@ -188,6 +214,8 @@ const Agents = () => {
     }
   };
 
+  
+
   const steps = ['Domain Details', 'Agent Information', 'Site Identity', 'Distributor Links', 'Review & Update'];
 
   const nextStep = () => {
@@ -202,10 +230,11 @@ const Agents = () => {
     const errors = [];
     if (websiteStep === 0) {
       if (
-        websiteData.domain_type === 'primary_domain' &&
-        !websiteData.primary_domain_name.match(/^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/)
+        websiteData.domain_type === 'custom_domain' &&
+        websiteData.custom_domain &&
+        !/^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(websiteData.custom_domain)
       ) {
-        errors.push({ msg: 'Invalid primary domain name' });
+        errors.push({ msg: 'Invalid custom domain name (e.g., example.com)' });
       }
     }
     if (websiteStep === 1) {
@@ -217,8 +246,14 @@ const Agents = () => {
       }
     }
     if (websiteStep === 2) {
-      if (websiteData.site_logo && websiteData.site_logo.size > 4 * 1024 * 1024) {
-        errors.push({ msg: 'Site logo must be less than 4MB' });
+      if (websiteData.site_logo) {
+        const validTypes = ['image/png', 'image/jpeg', 'image/jpg'];
+        if (!validTypes.includes(websiteData.site_logo.type)) {
+          errors.push({ msg: 'Site logo must be a PNG or JPG file' });
+        }
+        if (websiteData.site_logo.size > 4 * 1024 * 1024) {
+          errors.push({ msg: 'Site logo must be less than 4MB' });
+        }
       }
       if (!websiteData.site_name) {
         errors.push({ msg: 'Site name is required' });
@@ -242,12 +277,79 @@ const Agents = () => {
       </Alert>
     );
 
+  const renderVerificationInstructions = () =>
+    verificationInstructions && (
+      <Alert className="mb-6">
+        <AlertTriangle className="h-4 w-4" />
+        <AlertTitle>Domain Verification Required</AlertTitle>
+        <AlertDescription>
+          <p className="text-sm">Please configure the following DNS records to verify your custom domain:</p>
+          <ul className="list-disc pl-4 mt-2">
+            {Object.values(verificationInstructions.instructions).map((method, idx) => (
+              <li key={idx} className="text-sm">
+                <strong>{method.type}:</strong> {method.description}<br />
+                Host: <code>{method.host}</code><br />
+                Value: <code>{method.value}</code>
+              </li>
+            ))}
+          </ul>
+          <p className="text-sm mt-2">
+            Verification Token: <code>{verificationInstructions.token}</code>
+          </p>
+          <p className="text-sm mt-2">
+            Status: <Badge>{verificationInstructions.status}</Badge>
+          </p>
+          <p className="text-sm mt-2">
+            Note: Verification email may have failed to send. Please ensure the email address ({websiteData.email_id}) is correct and check your inbox/spam folder. Contact{' '}
+            <a href="mailto:support@igrowbig.com" className="text-blue-600 hover:underline">
+              support@igrowbig.com
+            </a>{' '}
+            if you need assistance.
+          </p>
+          {verificationInstructions.status === 'unverified' && (
+            <div className="mt-2">
+              <p className="text-sm font-medium">Possible Issues:</p>
+              <ul className="list-disc pl-4 text-sm">
+                <li>TXT record not added or incorrect value</li>
+                <li>DNS changes haven't propagated yet (can take up to 48 hours)</li>
+                <li>Records added to wrong domain/subdomain</li>
+                <li>Typo in the verification token</li>
+              </ul>
+              <p className="text-sm mt-2">
+                Check DNS propagation at{' '}
+                <a
+                  href={`https://www.whatsmydns.net/#TXT/_igrowbig-verification.${verificationInstructions.domain}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-600 hover:underline"
+                >
+                  WhatsMyDNS.net
+                </a>
+              </p>
+            </div>
+          )}
+          {verificationInstructions.status === 'partially_verified' && (
+            <div className="mt-2">
+              <p className="text-sm font-medium">Next Steps:</p>
+              <p className="text-sm">Domain ownership verified. Add a CNAME or A record to complete setup.</p>
+            </div>
+          )}
+          <p className="text-sm mt-2">
+            Need help? Contact <a href="mailto:support@igrowbig.com" className="text-blue-600 hover:underline">
+              support@igrowbig.com
+            </a>
+          </p>
+        </AlertDescription>
+      </Alert>
+    );
+
   const renderWebsiteStep = () => {
     switch (websiteStep) {
       case 0:
         return (
           <div className="space-y-6">
             {renderValidationErrors()}
+            {renderVerificationInstructions()}
             <div>
               <Label htmlFor="domain_type">Domain Type</Label>
               <Select
@@ -260,36 +362,37 @@ const Agents = () => {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="path">Path-Based</SelectItem>
-                  <SelectItem value="primary_domain">Custom Domain</SelectItem>
+                  <SelectItem value="sub_domain">Subdomain</SelectItem>
+                  <SelectItem value="custom_domain">Custom Domain</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-            <div>
-              <Label htmlFor="primary_domain_name">
-                Primary Domain Name <span className="text-red-500">*</span>
-              </Label>
-              <Input
-                id="primary_domain_name"
-                name="primary_domain_name"
-                value={websiteData.primary_domain_name}
-                onChange={handleWebsiteDataChange}
-                placeholder="e.g., mydomain.com"
-                disabled={loading || websiteData.domain_type === 'path'}
-              />
-              {websiteData.domain_type === 'primary_domain' && (
-                <div className="mt-2 p-4 bg-gray-50 rounded-md">
-                  <p className="text-sm text-gray-700 font-medium">DNS Setup Instructions:</p>
-                  <p className="text-sm text-gray-600 mt-1">
-                    To use your custom domain, configure an A record in your DNS settings pointing to:
-                  </p>
-                  <p className="text-sm font-mono text-gray-800 mt-1">139.59.3.58</p>
-                  <p className="text-sm text-gray-600 mt-1">
-                    This may take up to 48 hours to propagate. Check the DNS status below.
-                  </p>
-                </div>
-              )}
-            </div>
+            {websiteData.domain_type === 'custom_domain' && (
+              <div>
+                <Label htmlFor="custom_domain">
+                  Custom Domain <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  id="custom_domain"
+                  name="custom_domain"
+                  value={websiteData.custom_domain}
+                  onChange={handleWebsiteDataChange}
+                  placeholder="e.g., example.com"
+                  disabled={loading}
+                />
+              </div>
+            )}
+            {websiteData.domain_type === 'sub_domain' && (
+              <div>
+                <Label htmlFor="primary_domain_name">Subdomain</Label>
+                <Input
+                  id="primary_domain_name"
+                  name="primary_domain_name"
+                  value={settings?.subdomain || websiteData.primary_domain_name}
+                  disabled
+                />
+              </div>
+            )}
             <div>
               <Label htmlFor="website_link">Website Link</Label>
               <Input id="website_link" name="website_link" value={websiteData.website_link} disabled />
@@ -303,6 +406,7 @@ const Agents = () => {
                     verified: 'bg-green-100 text-green-800',
                     unverified: 'bg-red-100 text-red-800',
                     error: 'bg-red-100 text-red-800',
+                    partially_verified: 'bg-orange-100 text-orange-800',
                   }[websiteData.dns_status] || 'bg-gray-100 text-gray-800'
                 }
               >
@@ -312,6 +416,8 @@ const Agents = () => {
                   ? '❌ Unverified'
                   : websiteData.dns_status === 'error'
                   ? '⚠️ Error'
+                  : websiteData.dns_status === 'partially_verified'
+                  ? '⚠️ Partially Verified'
                   : '⏳ Pending'}
               </Badge>
             </div>
@@ -451,7 +557,7 @@ const Agents = () => {
                 name="nht_website_link"
                 value={websiteData.nht_website_link}
                 onChange={handleWebsiteDataChange}
-                placeholder="e.g., http://begrat.com"
+                placeholder="e.g., https://example.com"
                 disabled={loading}
               />
             </div>
@@ -459,10 +565,10 @@ const Agents = () => {
               <Label htmlFor="nht_store_link">NHT Store Link</Label>
               <Input
                 id="nht_store_link"
-                
+                name="nht_store_link"
                 value={websiteData.nht_store_link}
                 onChange={handleWebsiteDataChange}
-                placeholder="e.g., http://begrat.com"
+                placeholder="e.g., https://example.com"
                 disabled={loading}
               />
             </div>
@@ -473,7 +579,7 @@ const Agents = () => {
                 name="nht_joining_link"
                 value={websiteData.nht_joining_link}
                 onChange={handleWebsiteDataChange}
-                placeholder="e.g., http://begrat.com"
+                placeholder="e.g., https://example.com"
                 disabled={loading}
               />
             </div>
@@ -506,6 +612,7 @@ const Agents = () => {
                       verified: 'bg-green-100 text-green-800',
                       unverified: 'bg-red-100 text-red-800',
                       error: 'bg-red-100 text-red-800',
+                      partially_verified: 'bg-orange-100 text-orange-800',
                     }[websiteData.dns_status] || 'bg-gray-100 text-gray-800'
                   }
                 >
@@ -589,7 +696,7 @@ const Agents = () => {
                   <TableHead>DNS Status</TableHead>
                   <TableHead>Account Status</TableHead>
                   <TableHead>Toggle Status</TableHead>
-                  <TableHead>Action</TableHead>
+                  <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -618,6 +725,8 @@ const Agents = () => {
                               ? 'bg-red-100 text-red-800'
                               : agent.dns_status === 'error'
                               ? 'bg-yellow-100 text-yellow-800'
+                              : agent.dns_status === 'partially_verified'
+                              ? 'bg-orange-100 text-orange-800'
                               : 'bg-gray-100 text-gray-800'
                           }
                         >
@@ -659,15 +768,18 @@ const Agents = () => {
                         </Button>
                       </TableCell>
                       <TableCell>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => openProfile(agent)}
-                          disabled={loading}
-                          className="bg-blue-50 text-blue-700 border-blue-300 hover:bg-blue-100"
-                        >
-                          View Profile
-                        </Button>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => openProfile(agent)}
+                            disabled={loading}
+                            className="bg-blue-50 text-blue-700 border-blue-300 hover:bg-blue-100"
+                          >
+                            View Profile
+                          </Button>
+                          
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))
