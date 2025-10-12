@@ -6,6 +6,7 @@ const BASE_URL = config.API_BASE_URL;
 
 const apiClient = axios.create({
   baseURL: BASE_URL,
+  withCredentials: true, // Important for CORS cookies
 });
 
 // Interceptor for handling auth errors globally
@@ -69,8 +70,18 @@ const useTenantApi = () => {
 
       try {
         const headers = {};
-        if (token && !endpoint.startsWith("/site/")) headers.Authorization = `Bearer ${token}`;
-        if (!isFormData) headers["Content-Type"] = "application/json";
+        
+        // Add auth token for non-public endpoints
+        if (token && !endpoint.startsWith("/site/")) {
+          headers.Authorization = `Bearer ${token}`;
+        }
+        
+        // IMPORTANT: Send current hostname to backend for tenant detection
+        headers["X-Tenant-Domain"] = window.location.hostname;
+        
+        if (!isFormData) {
+          headers["Content-Type"] = "application/json";
+        }
 
         const configRequest = {
           method,
@@ -79,14 +90,21 @@ const useTenantApi = () => {
           data: isFormData ? payload : payload ? JSON.stringify(payload) : undefined,
         };
 
-        console.log(`API Request: ${method} ${configRequest.url}`, payload);
+        console.log(`API Request: ${method} ${configRequest.url}`, {
+          hostname: window.location.hostname,
+          payload,
+        });
+        
         const response = await apiClient(configRequest);
         console.log(`API Response: ${method} ${configRequest.url}`, response.data);
 
         setData(response.data);
         return response.data;
       } catch (err) {
-        const errorData = err.response?.data || { message: "API request failed", details: err.message };
+        const errorData = err.response?.data || { 
+          message: "API request failed", 
+          details: err.message 
+        };
         console.error(`API Error: ${method} ${endpoint}`, errorData);
         setError(errorData);
         return Promise.reject(errorData);
@@ -98,8 +116,14 @@ const useTenantApi = () => {
   );
 
   const getAll = useCallback((endpoint) => apiRequest("get", endpoint), [apiRequest]);
-  const post = useCallback((endpoint, data, isFormData = false) => apiRequest("post", endpoint, data, isFormData), [apiRequest]);
-  const put = useCallback((endpoint, data, isFormData = false) => apiRequest("put", endpoint, data, isFormData), [apiRequest]);
+  const post = useCallback(
+    (endpoint, data, isFormData = false) => apiRequest("post", endpoint, data, isFormData), 
+    [apiRequest]
+  );
+  const put = useCallback(
+    (endpoint, data, isFormData = false) => apiRequest("put", endpoint, data, isFormData), 
+    [apiRequest]
+  );
   const del = useCallback((endpoint) => apiRequest("delete", endpoint), [apiRequest]);
 
   const clearError = useCallback(() => setError(null), []);

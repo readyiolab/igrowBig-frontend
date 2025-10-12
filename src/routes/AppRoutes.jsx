@@ -434,7 +434,6 @@ const withSuspense = (Component) => {
  */
 const RootHandler = () => {
   const [isMainDomain, setIsMainDomain] = useState(null);
-  const [isCustomDomain, setIsCustomDomain] = useState(false);
 
   useEffect(() => {
     const hostname = window.location.hostname.toLowerCase();
@@ -459,7 +458,6 @@ const RootHandler = () => {
     console.log("🔍 RootHandler - Is Custom Domain:", customDomain);
 
     setIsMainDomain(mainDomainCheck);
-    setIsCustomDomain(customDomain);
   }, []);
 
   if (isMainDomain === null) {
@@ -468,10 +466,12 @@ const RootHandler = () => {
 
   // Main domain - show landing page
   if (isMainDomain) {
+    console.log("✅ Showing landing page for main domain");
     return withSuspense(Layout)();
   }
 
-  // Subdomain - show dynamic template
+  // Subdomain OR Custom Domain - show dynamic template
+  console.log("✅ Loading dynamic template for subdomain/custom domain");
   return (
     <DynamicTemplateLoader>
       <Suspense fallback={<LoadingFallback />}>
@@ -480,7 +480,6 @@ const RootHandler = () => {
     </DynamicTemplateLoader>
   );
 };
-
 const router = createBrowserRouter([
   // ========== ROOT - Smart routing ==========
   {
