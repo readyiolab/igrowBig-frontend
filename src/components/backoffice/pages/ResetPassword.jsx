@@ -1,8 +1,15 @@
 // src/components/backoffice/pages/ResetPassword.jsx
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { useDispatch,useSelector } from 'react-redux';
-import { resetPasswordAsync, clearError, clearMessage } from '@/store/slices/authSlice'; // Merged
+import { useDispatch, useSelector } from 'react-redux';
+import { 
+  resetPasswordAsync, 
+  clearError, 
+  clearMessage,
+  selectAuthLoading,  // Add this
+  selectAuthError,     // Add this
+  selectAuthMessage    // Add this
+} from '@/store/slices/authSlice';  // Import all from here
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -21,6 +28,7 @@ const ResetPassword = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [localError, setLocalError] = useState('');
 
+  // Now these are defined via the import above
   const loading = useSelector(selectAuthLoading);
   const error = useSelector(selectAuthError);
   const message = useSelector(selectAuthMessage);
