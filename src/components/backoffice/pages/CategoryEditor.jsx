@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback, useState } from "react";
+import React, { useEffect, useCallback, useState, useMemo } from "react";
 import { Plus, Edit, Trash2, Search, X } from "react-feather";
 import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
@@ -231,12 +231,18 @@ const CategoryEditor = () => {
     dispatch(fetchCategories(tenantId));
   };
 
-  const filteredCategories = categories.filter(
-    (category) =>
-      category.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (category.description &&
-        category.description.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  const filteredCategories = useMemo(() => {
+    return categories.filter((category) => {
+      const name = category.name ?? ''; // Safe fallback
+      const description = category.description ?? ''; // Safe fallback
+
+      const lowerSearch = searchTerm.toLowerCase();
+      return (
+        name.toLowerCase().includes(lowerSearch) ||
+        description.toLowerCase().includes(lowerSearch)
+      );
+    });
+  }, [categories, searchTerm]);
 
   // Image Fallback Component
   const ImageWithFallback = ({ src, alt, className }) => {
@@ -402,7 +408,7 @@ const CategoryEditor = () => {
                         {index + 1}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
-                        {category.name}
+                       {category.name ?? 'Unnamed Category'}
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-800">
                         {category.description || "No description"}

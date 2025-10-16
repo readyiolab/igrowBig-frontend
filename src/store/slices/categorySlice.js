@@ -1,14 +1,14 @@
 // src/store/slices/categorySlice.js
-import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import { apiRequest } from '@/utils/apiClient';
+import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
+import { apiRequest } from "@/utils/apiClient";
 
 const initialState = {
   items: [],
   form: {
-    name: '',
-    description: '',
+    name: "",
+    description: "",
     image: null,
-    status: 'active',
+    status: "active",
   },
   loading: false,
   error: null,
@@ -16,65 +16,89 @@ const initialState = {
 
 // Async Thunks
 export const fetchCategories = createAsyncThunk(
-  'categories/fetchAll',
+  "categories/fetchAll",
   async (tenantId, { rejectWithValue }) => {
     try {
-      const response = await apiRequest('get', `/tenants/${tenantId}/categories`);
+      const response = await apiRequest(
+        "get",
+        `/tenants/${tenantId}/categories`
+      );
       return Array.isArray(response) ? response : [];
     } catch (error) {
-      return rejectWithValue(error.response?.data || { message: error.message });
+      return rejectWithValue(
+        error.response?.data || { message: error.message }
+      );
     }
   }
 );
 
 export const createCategory = createAsyncThunk(
-  'categories/create',
+  "categories/create",
   async ({ tenantId, formData }, { rejectWithValue }) => {
     try {
-      const response = await apiRequest('post', `/tenants/${tenantId}/categories`, formData, true);
+      const response = await apiRequest(
+        "post",
+        `/tenants/${tenantId}/categories`,
+        formData,
+        true
+      );
       return response;
     } catch (error) {
-      return rejectWithValue(error.response?.data || { message: error.message });
+      return rejectWithValue(
+        error.response?.data || { message: error.message }
+      );
     }
   }
 );
 
 export const updateCategory = createAsyncThunk(
-  'categories/update',
+  "categories/update",
   async ({ tenantId, categoryId, formData }, { rejectWithValue }) => {
     try {
-      const response = await apiRequest('put', `/tenants/${tenantId}/categories/${categoryId}`, formData, true);
+      const response = await apiRequest(
+        "put",
+        `/tenants/${tenantId}/categories/${categoryId}`,
+        formData,
+        true
+      );
       return response;
     } catch (error) {
-      return rejectWithValue(error.response?.data || { message: error.message });
+      return rejectWithValue(
+        error.response?.data || { message: error.message }
+      );
     }
   }
 );
 
 export const deleteCategory = createAsyncThunk(
-  'categories/delete',
+  "categories/delete",
   async ({ tenantId, categoryId }, { rejectWithValue }) => {
     try {
-      await apiRequest('delete', `/tenants/${tenantId}/categories/${categoryId}`);
+      await apiRequest(
+        "delete",
+        `/tenants/${tenantId}/categories/${categoryId}`
+      );
       return categoryId;
     } catch (error) {
-      return rejectWithValue(error.response?.data || { message: error.message });
+      return rejectWithValue(
+        error.response?.data || { message: error.message }
+      );
     }
   }
 );
 
 const categorySlice = createSlice({
-  name: 'categories',
+  name: "categories",
   initialState,
   reducers: {
     setFormData: (state, action) => {
       state.form = { ...state.form, ...action.payload };
     },
-    
+
     resetForm: (state) => {
       state.form = initialState.form;
     },
-    
+
     clearError: (state) => {
       state.error = null;
     },
@@ -94,7 +118,7 @@ const categorySlice = createSlice({
         state.loading = false;
         state.error = action.payload;
       })
-      
+
       // Create Category
       .addCase(createCategory.pending, (state) => {
         state.loading = true;
@@ -107,30 +131,36 @@ const categorySlice = createSlice({
         state.loading = false;
         state.error = action.payload;
       })
-      
+
       // Update Category
       .addCase(updateCategory.pending, (state) => {
         state.loading = true;
       })
       .addCase(updateCategory.fulfilled, (state, action) => {
         state.loading = false;
-        const index = state.items.findIndex(item => item.id === action.payload.id);
+        const updated = {
+          ...action.payload,
+          name: action.payload.name ?? "",
+          description: action.payload.description ?? "",
+          status: action.payload.status ?? "inactive",
+        };
+        const index = state.items.findIndex((item) => item.id === updated.id);
         if (index !== -1) {
-          state.items[index] = action.payload;
+          state.items[index] = updated;
         }
       })
       .addCase(updateCategory.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
       })
-      
+
       // Delete Category
       .addCase(deleteCategory.pending, (state) => {
         state.loading = true;
       })
       .addCase(deleteCategory.fulfilled, (state, action) => {
         state.loading = false;
-        state.items = state.items.filter(item => item.id !== action.payload);
+        state.items = state.items.filter((item) => item.id !== action.payload);
       })
       .addCase(deleteCategory.rejected, (state, action) => {
         state.loading = false;
