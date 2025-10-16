@@ -39,6 +39,16 @@ const ProductsListing = () => {
     );
   }
 
+  // Helper to generate slug
+  const generateSlug = (name) => {
+    return name
+      .toLowerCase()
+      .replace(/\s+&\s+/g, '-and-')
+      .replace(/\s+/g, '-')
+      .replace(/[^a-z0-9-]/g, '')
+      .trim();
+  };
+
   const filteredCategories = categories.filter((cat) =>
     cat.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -76,32 +86,35 @@ const ProductsListing = () => {
           {/* Categories Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredCategories.length > 0 ? (
-              filteredCategories.map((category) => (
-                <Card
-                  key={category.id}
-                  className="cursor-pointer hover:shadow-lg transition-all duration-300 overflow-hidden group"
-                  onClick={() => navigate(`/products/${category.name.toLowerCase()}`)}
-                >
-                  <CardContent className="p-0">
-                    <div className="relative h-48 overflow-hidden bg-gray-200">
-                      <img
-                        src={category.image_url || "https://via.placeholder.com/400x300"}
-                        alt={category.name}
-                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-                      />
-                    </div>
-                    <div className="p-6">
-                      <h3 className="text-xl font-bold text-black mb-2">{category.name}</h3>
-                      <p className="text-gray-600 text-sm mb-4">
-                        {category.description || "Explore this category"}
-                      </p>
-                      <Button className="w-full bg-black hover:bg-gray-800 text-white">
-                        View Products <ArrowRight className="w-4 h-4 ml-2" />
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))
+              filteredCategories.map((category) => {
+                const catSlug = generateSlug(category.name);
+                return (
+                  <Card
+                    key={category.id}
+                    className="cursor-pointer hover:shadow-lg transition-all duration-300 overflow-hidden group"
+                    onClick={() => navigate(`/products/${catSlug}`)}
+                  >
+                    <CardContent className="p-0">
+                      <div className="relative h-48 overflow-hidden bg-gray-200">
+                        <img
+                          src={category.image_url || "https://via.placeholder.com/400x300"}
+                          alt={category.name}
+                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                        />
+                      </div>
+                      <div className="p-6">
+                        <h3 className="text-xl font-bold text-black mb-2">{category.name}</h3>
+                        <p className="text-gray-600 text-sm mb-4">
+                          {category.description || "Explore this category"}
+                        </p>
+                        <Button className="w-full bg-black hover:bg-gray-800 text-white">
+                          View Products <ArrowRight className="w-4 h-4 ml-2" />
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })
             ) : (
               <div className="col-span-full text-center py-12">
                 <p className="text-gray-600 text-lg">No categories found</p>

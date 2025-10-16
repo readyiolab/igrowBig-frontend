@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { ArrowLeft, Grid3X3, LayoutList, Search } from "lucide-react";
 
 const CategoryProducts = () => {
-  const { category } = useParams();
+  const { category } = useParams(); // This is the slug now
   const navigate = useNavigate();
   const { getAll } = useTenantApi();
   const [siteData, setSiteData] = useState(null);
@@ -64,16 +64,19 @@ const CategoryProducts = () => {
   const products = siteData?.products || [];
   const productPage = siteData?.productPage || {};
 
-  // Normalize category param: replace hyphens with spaces, handle & 
-  const normalizedCategory = decodeURIComponent(category || "")
-    .replace(/-/g, ' ')
-    .replace(/%20/g, ' ')
-    .replace(/&/g, '&')
-    .trim();
+  // Helper to generate slug (consistent across app)
+  const generateSlug = (name) => {
+    return name
+      .toLowerCase()
+      .replace(/\s+&\s+/g, '-and-')  // " & " → "-and-"
+      .replace(/\s+/g, '-')         // Spaces → hyphens
+      .replace(/[^a-z0-9-]/g, '')   // Remove special chars
+      .trim();
+  };
 
-  const selectedCat = categories.find((c) => 
-    c.name.toLowerCase() === normalizedCategory.toLowerCase()
-  );
+  // Find category by slug
+  const categorySlug = decodeURIComponent(category || "").trim();
+  const selectedCat = categories.find((c) => generateSlug(c.name) === categorySlug);
 
   const filteredProducts = selectedCat
     ? products.filter(
@@ -197,79 +200,85 @@ const CategoryProducts = () => {
         {filteredProducts.length > 0 ? (
           viewMode === "grid" ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredProducts.map((product) => (
-                <Card
-                  key={product.id}
-                  className="cursor-pointer hover:shadow-lg transition-all duration-300 overflow-hidden group border border-gray-200"
-                  onClick={() => navigate(`/products/${category}/${product.id}`)}
-                >
-                  <CardContent className="p-0">
-                    <div className="h-48 bg-gray-200 overflow-hidden">
-                      <img
-                        src={product.image_url || "https://via.placeholder.com/300x200"}
-                        alt={product.name}
-                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-                        loading="lazy"
-                      />
-                    </div>
-                    <div className="p-4">
-                      <h3 className="font-bold text-black mb-2 line-clamp-2 group-hover:text-gray-700 transition-colors">{product.name}</h3>
-                      <p className="text-gray-600 text-sm line-clamp-2 mb-4">
-                        {product.description ? (
-                          <div dangerouslySetInnerHTML={{ __html: product.description.substring(0, 100) + "..." }} />
-                        ) : (
-                          "No description"
-                        )}
-                      </p>
-                      {product.price && (
-                        <p className="text-lg font-bold text-black mb-4">₹{product.price}</p>
-                      )}
-                      <Button className="w-full bg-black hover:bg-gray-800 text-white transition-all duration-300 hover:scale-105">
-                        View Details
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {filteredProducts.map((product) => (
-                <Card
-                  key={product.id}
-                  className="cursor-pointer hover:shadow-lg transition-all duration-300 border border-gray-200"
-                  onClick={() => navigate(`/products/${category}/${product.id}`)}
-                >
-                  <CardContent className="p-4">
-                    <div className="flex gap-4">
-                      <div className="w-24 h-24 bg-gray-200 rounded-lg overflow-hidden flex-shrink-0">
+              {filteredProducts.map((product) => {
+                const productSlug = generateSlug(product.name);
+                return (
+                  <Card
+                    key={product.id}
+                    className="cursor-pointer hover:shadow-lg transition-all duration-300 overflow-hidden group border border-gray-200"
+                    onClick={() => navigate(`/products/${categorySlug}/${productSlug}`)}
+                  >
+                    <CardContent className="p-0">
+                      <div className="h-48 bg-gray-200 overflow-hidden">
                         <img
-                          src={product.image_url || "https://via.placeholder.com/100x100"}
+                          src={product.image_url || "https://via.placeholder.com/300x200"}
                           alt={product.name}
-                          className="w-full h-full object-cover"
+                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
                           loading="lazy"
                         />
                       </div>
-                      <div className="flex-1 flex flex-col">
-                        <h3 className="font-bold text-black mb-1 line-clamp-1">{product.name}</h3>
-                        <p className="text-gray-600 text-sm line-clamp-2 mb-2 flex-grow">
+                      <div className="p-4">
+                        <h3 className="font-bold text-black mb-2 line-clamp-2 group-hover:text-gray-700 transition-colors">{product.name}</h3>
+                        <p className="text-gray-600 text-sm line-clamp-2 mb-4">
                           {product.description ? (
-                            <div dangerouslySetInnerHTML={{ __html: product.description.substring(0, 150) + "..." }} />
+                            <div dangerouslySetInnerHTML={{ __html: product.description.substring(0, 100) + "..." }} />
                           ) : (
                             "No description"
                           )}
                         </p>
                         {product.price && (
-                          <p className="font-bold text-black mb-2">₹{product.price}</p>
+                          <p className="text-lg font-bold text-black mb-4">₹{product.price}</p>
                         )}
+                        <Button className="w-full bg-black hover:bg-gray-800 text-white transition-all duration-300 hover:scale-105">
+                          View Details
+                        </Button>
                       </div>
-                      <Button className="bg-black hover:bg-gray-800 text-white self-center px-6 transition-all duration-300 hover:scale-105">
-                        View
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {filteredProducts.map((product) => {
+                const productSlug = generateSlug(product.name);
+                return (
+                  <Card
+                    key={product.id}
+                    className="cursor-pointer hover:shadow-lg transition-all duration-300 border border-gray-200"
+                    onClick={() => navigate(`/products/${categorySlug}/${productSlug}`)}
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex gap-4">
+                        <div className="w-24 h-24 bg-gray-200 rounded-lg overflow-hidden flex-shrink-0">
+                          <img
+                            src={product.image_url || "https://via.placeholder.com/100x100"}
+                            alt={product.name}
+                            className="w-full h-full object-cover"
+                            loading="lazy"
+                          />
+                        </div>
+                        <div className="flex-1 flex flex-col">
+                          <h3 className="font-bold text-black mb-1 line-clamp-1">{product.name}</h3>
+                          <p className="text-gray-600 text-sm line-clamp-2 mb-2 flex-grow">
+                            {product.description ? (
+                              <div dangerouslySetInnerHTML={{ __html: product.description.substring(0, 150) + "..." }} />
+                            ) : (
+                              "No description"
+                            )}
+                          </p>
+                          {product.price && (
+                            <p className="font-bold text-black mb-2">₹{product.price}</p>
+                          )}
+                        </div>
+                        <Button className="bg-black hover:bg-gray-800 text-white self-center px-6 transition-all duration-300 hover:scale-105">
+                          View
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </div>
           )
         ) : (
