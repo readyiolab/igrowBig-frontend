@@ -1,15 +1,14 @@
-// ProductDetail.jsx
+// ProductDetail.jsx - FIXED WITH UNIFIED SLUG LOGIC
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import useTenantApi from "@/hooks/useTenantApi";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Download, ShoppingCart, Heart, Share2, ArrowLeft } from "lucide-react";
 
 const ProductDetail = () => {
-  const { category, id } = useParams();
+  const { category: categorySlug, id: productSlug } = useParams();
   const navigate = useNavigate();
   const { getAll } = useTenantApi();
   const [siteData, setSiteData] = useState(null);
@@ -41,19 +40,53 @@ const ProductDetail = () => {
     );
   }
 
-  const product = siteData?.products.find((p) => p.id === parseInt(id));
-  const categoryObj = siteData?.categories.find((c) => c.name.toLowerCase() === category?.toLowerCase());
+  // UNIFIED generateSlug - Handles '&', spaces, hyphens in product names
+  const generateSlug = (name) => {
+    if (!name) return '';
+    return name
+      .toLowerCase()
+      .replace(/&/g, 'and')           // Replace '&' with 'and'
+      .replace(/[^a-z0-9\s-]/g, '')   // Remove special chars except hyphen and space
+      .replace(/\s+/g, '-')           // Spaces to hyphens
+      .replace(/-+/g, '-')            // Collapse multiple hyphens
+      .replace(/^-+|-+$/g, '')        // Trim hyphens from start/end
+      .trim();
+  };
 
-  if (!product || !categoryObj) {
+  const categories = siteData?.categories || [];
+  const products = siteData?.products || [];
+
+  // Find category by slug
+  const selectedCat = categories.find((c) => generateSlug(c.name) === categorySlug);
+
+  // Find product by slug and category match
+  const product = products.find((p) => 
+    generateSlug(p.name) === productSlug && p.category_id === selectedCat?.id
+  );
+
+  // DEBUG LOGS (Remove in production)
+  console.log('URL Category Slug:', categorySlug);
+  console.log('URL Product Slug:', productSlug);
+  console.log('Generated Category Slugs:', categories.map(c => ({ name: c.name, slug: generateSlug(c.name) })));
+  console.log('Generated Product Slugs:', products.map(p => ({ name: p.name, slug: generateSlug(p.name), catId: p.category_id })));
+  console.log('Selected Category:', selectedCat);
+  console.log('Found Product:', product);
+
+  if (!product || !selectedCat) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-white">
         <p className="text-xl text-gray-700 mb-4">Product not found</p>
+        <p className="text-sm text-gray-500 mb-4">
+          Debug: Category '{categorySlug}', Product '{productSlug}'
+        </p>
         <Button onClick={() => navigate("/products")} variant="outline">
           Back to Products
         </Button>
       </div>
     );
   }
+
+  const catSlugForNav = generateSlug(selectedCat.name);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -68,8 +101,8 @@ const ProductDetail = () => {
             Products
           </Button>
           <span>/</span>
-          <Button variant="link" onClick={() => navigate(`/products/${category}`)} className="p-0">
-            {categoryObj.name}
+          <Button variant="link" onClick={() => navigate(`/products/${catSlugForNav}`)} className="p-0">
+            {selectedCat.name}
           </Button>
           <span>/</span>
           <span className="font-semibold text-black">{product.name}</span>
@@ -80,11 +113,11 @@ const ProductDetail = () => {
       <div className="max-w-6xl mx-auto px-4 py-8">
         <Button
           variant="outline"
-          onClick={() => navigate(`/products/${category}`)}
+          onClick={() => navigate(`/products/${catSlugForNav}`)}
           className="flex items-center gap-2 mb-6"
         >
           <ArrowLeft className="w-4 h-4" />
-          Back to {categoryObj.name}
+          Back to {selectedCat.name}
         </Button>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
@@ -336,32 +369,35 @@ const ProductDetail = () => {
               {siteData.products
                 .filter((p) => p.category_id === product.category_id && p.id !== product.id)
                 .slice(0, 3)
-                .map((relatedProduct) => (
-                  <Card
-                    key={relatedProduct.id}
-                    className="cursor-pointer hover:shadow-lg transition-all duration-300 overflow-hidden group"
-                    onClick={() => navigate(`/products/${category}/${relatedProduct.id}`)}
-                  >
-                    <CardContent className="p-0">
-                      <div className="h-48 bg-gray-200 overflow-hidden">
-                        <img
-                          src={relatedProduct.image_url || "https://via.placeholder.com/300x200"}
-                          alt={relatedProduct.name}
-                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-                        />
-                      </div>
-                      <div className="p-4">
-                        <h3 className="font-bold text-black mb-2">{relatedProduct.name}</h3>
-                        {relatedProduct.your_price && (
-                          <p className="text-lg font-bold text-black mb-4">₹{relatedProduct.your_price}</p>
-                        )}
-                        <Button className="w-full bg-black hover:bg-gray-800 text-white">
-                          View Details
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                .map((relatedProduct) => {
+                  const relatedProductSlug = generateSlug(relatedProduct.name);
+                  return (
+                    <Card
+                      key={relatedProduct.id}
+                      className="cursor-pointer hover:shadow-lg transition-all duration-300 overflow-hidden group"
+                      onClick={() => navigate(`/products/${catSlugForNav}/${relatedProductSlug}`)}
+                    >
+                      <CardContent className="p-0">
+                        <div className="h-48 bg-gray-200 overflow-hidden">
+                          <img
+                            src={relatedProduct.image_url || "https://via.placeholder.com/300x200"}
+                            alt={relatedProduct.name}
+                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                          />
+                        </div>
+                        <div className="p-4">
+                          <h3 className="font-bold text-black mb-2">{relatedProduct.name}</h3>
+                          {relatedProduct.your_price && (
+                            <p className="text-lg font-bold text-black mb-4">₹{relatedProduct.your_price}</p>
+                          )}
+                          <Button className="w-full bg-black hover:bg-gray-800 text-white">
+                            View Details
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
             </div>
           </div>
         )}
