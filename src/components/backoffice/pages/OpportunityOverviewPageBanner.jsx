@@ -1,26 +1,56 @@
+// OpportunityOverviewPageBanner.jsx
 import React, { useState, useEffect, useCallback } from "react";
 import { Plus, Edit, Trash2, Search } from "react-feather";
 import { useParams, useNavigate } from "react-router-dom";
-import useTenantApi from "@/hooks/useTenantApi";
+import { useDispatch, useSelector } from "react-redux";
 import toast, { Toaster } from "react-hot-toast";
+import {
+  fetchOpportunityPage,
+  updateOpportunityPage,
+  createOpportunityPage,
+  deleteOpportunityPage,
+  selectOpportunityPageData,
+  selectOpportunityPageLoading,
+  selectOpportunityPageError,
+} from "@/store/slices/opportunityPageSlice";
+import {
+  openForm,
+  closeForm,
+  setSubmitting,
+  setSearchTerm,
+  selectShowForm,
+  selectIsEditing,
+  selectIsSubmitting,
+  selectSearchTerm,
+} from "@/store/slices/uiSlice";
 
 const OpportunityOverviewPageBanner = () => {
   const { tenantId: paramTenantId } = useParams();
   const navigate = useNavigate();
-  const { data, isLoading, error, getAll, post, put, del } = useTenantApi();
+  const dispatch = useDispatch();
+
+  const data = useSelector(selectOpportunityPageData);
+  const loading = useSelector(selectOpportunityPageLoading);
+  const error = useSelector(selectOpportunityPageError);
+  const showForm = useSelector(selectShowForm);
+  const isEditing = useSelector(selectIsEditing);
+  const searchTerm = useSelector(selectSearchTerm);
+  const isSubmitting = useSelector(selectIsSubmitting);
 
   const [tenantId, setTenantId] = useState(null);
-  const [showForm, setShowForm] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [banner, setBanner] = useState(null);
   const [newBanner, setNewBanner] = useState({
     banner_content: "",
     banner_image: null,
   });
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Check authentication and tenant ID
+  const banner = data.banner_content
+    ? {
+        id: data.id,
+        title: data.banner_content,
+        image: data.banner_image_url || null,
+      }
+    : null;
+
   useEffect(() => {
     const storedTenantId = localStorage.getItem("tenant_id");
     const token = localStorage.getItem("token");
@@ -32,52 +62,24 @@ const OpportunityOverviewPageBanner = () => {
     }
   }, [navigate]);
 
-  // Fetch banner when tenantId is set
-  const fetchBanner = useCallback(async () => {
-    if (!tenantId) return;
-    try {
-      const response = await toast.promise(
-        getAll(`/tenants/${tenantId}/opportunity-page`),
-        {
-          loading: "Fetching banner...",
-          success: "Banner loaded!",
-          error: "Failed to load banner.",
-        }
-      );
-      if (response?.banner_content) {
-        setBanner({
-          id: response.id,
-          title: response.banner_content,
-          image: response.banner_image_url || null,
-        });
-      } else {
-        setBanner(null);
-      }
-    } catch (err) {
-      console.error("Fetch banner error:", err);
-      setBanner(null);
-    }
-  }, [tenantId, getAll]);
-
   useEffect(() => {
-    fetchBanner();
-  }, [fetchBanner]);
+    if (tenantId) {
+      dispatch(fetchOpportunityPage(tenantId));
+    }
+  }, [tenantId, dispatch]);
 
   const handleAddNew = () => {
-    setShowForm(true);
-    setIsEditing(false);
+    dispatch(openForm({ isEditing: false }));
     setNewBanner({ banner_content: "", banner_image: null });
   };
 
   const handleEdit = () => {
-    setShowForm(true);
-    setIsEditing(true);
+    dispatch(openForm({ isEditing: true, editId: banner.id }));
     setNewBanner({ banner_content: banner.title, banner_image: null });
   };
 
   const handleCancel = () => {
-    setShowForm(false);
-    setIsEditing(false);
+    dispatch(closeForm());
     setNewBanner({ banner_content: "", banner_image: null });
   };
 
@@ -115,23 +117,23 @@ const OpportunityOverviewPageBanner = () => {
     formData.append("banner_content", newBanner.banner_content);
     if (newBanner.banner_image) formData.append("banner_image", newBanner.banner_image);
 
-    setIsSubmitting(true);
+    dispatch(setSubmitting(true));
     try {
-      const endpoint = `/tenants/${tenantId}/opportunity-page`;
-      await toast.promise(
-        (banner ? put : post)(endpoint, formData, true),
-        {
-          loading: banner ? "Updating banner..." : "Creating banner...",
-          success: banner ? "Banner updated!" : "Banner created!",
-          error: (err) => `Failed to save banner: ${err.message || "Unknown error"}`,
-        }
-      );
-      await fetchBanner();
+      const promise = banner
+        ? dispatch(updateOpportunityPage({ tenantId, formData })).unwrap()
+        : dispatch(createOpportunityPage({ tenantId, formData })).unwrap();
+
+      await toast.promise(promise, {
+        loading: banner ? "Updating banner..." : "Creating banner...",
+        success: banner ? "Banner updated!" : "Banner created!",
+        error: (err) => `Failed to save banner: ${err.message || "Unknown error"}`,
+      });
+      dispatch(fetchOpportunityPage(tenantId));
       handleCancel();
     } catch (err) {
       console.error("Save banner error:", err);
     } finally {
-      setIsSubmitting(false);
+      dispatch(setSubmitting(false));
     }
   };
 
@@ -141,25 +143,28 @@ const OpportunityOverviewPageBanner = () => {
       return;
     }
 
-    setIsSubmitting(true);
+    dispatch(setSubmitting(true));
     try {
       await toast.promise(
-        del(`/tenants/${tenantId}/opportunity-page`),
+        dispatch(deleteOpportunityPage(tenantId)).unwrap(),
         {
           loading: "Deleting banner...",
           success: "Banner deleted!",
           error: (err) => `Failed to delete banner: ${err.message || "Unknown error"}`,
         }
       );
-      setBanner(null);
     } catch (err) {
       console.error("Delete banner error:", err);
     } finally {
-      setIsSubmitting(false);
+      dispatch(setSubmitting(false));
     }
   };
 
   const filteredBanner = banner && banner.title.toLowerCase().includes(searchTerm.toLowerCase()) ? banner : null;
+
+  const handleSearchChange = (e) => {
+    dispatch(setSearchTerm(e.target.value));
+  };
 
   return (
     <div className="container mx-auto px-4 py-6">
@@ -182,7 +187,7 @@ const OpportunityOverviewPageBanner = () => {
               type="text"
               placeholder="Search banner..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={handleSearchChange}
               className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-full focus:outline-none focus:ring-2 focus:ring-gray-300 transition-all shadow-sm"
             />
             <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -191,10 +196,10 @@ const OpportunityOverviewPageBanner = () => {
       </div>
 
       {/* Error/Loading States */}
-      {error && !isLoading && (
+      {error && !loading && (
         <p className="text-red-500 mb-4 text-center font-medium">{error.message || "An error occurred."}</p>
       )}
-      {!tenantId && !isLoading && (
+      {!tenantId && !loading && (
         <p className="text-red-500 mb-4 text-center font-medium">Please log in.</p>
       )}
 
@@ -211,7 +216,7 @@ const OpportunityOverviewPageBanner = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {isLoading ? (
+              {loading ? (
                 <tr>
                   <td colSpan="4" className="px-6 py-4 text-center">
                     <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-gray-900 mx-auto"></div>

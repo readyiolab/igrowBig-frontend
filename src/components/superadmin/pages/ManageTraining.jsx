@@ -1,20 +1,55 @@
 import React, { useEffect, useState } from "react";
 import { Plus, Edit, Trash2, X } from "react-feather";
-import useTenantApi from "@/hooks/useTenantApi";
+import { useDispatch, useSelector } from "react-redux";
+import {
+  fetchTrainings,
+  fetchCategories,
+  createTraining,
+  updateTraining,
+  deleteTraining,
+  createCategory,
+  updateCategory,
+  deleteCategory,
+  selectTrainings,
+  selectCategories,
+  selectTrainingLoading,
+  selectTrainingError,
+  clearError,
+} from "@/store/slices/trainingSlice";
+import {
+  openForm,
+  closeForm,
+  setSubmitting,
+  selectShowForm,
+  selectIsEditing,
+  selectEditId,
+  selectIsSubmitting,
+  // Assuming you extend uiSlice with formType
+  // Add to uiSlice: formType: null, and in openForm: state.formType = action.payload.formType;
+  // For this code, we'll use a local state for formType to avoid modifying uiSlice further
+} from "@/store/slices/uiSlice";
 import toast, { Toaster } from "react-hot-toast";
 
+// Extend uiSlice mentally for formType or use local
+// For full integration without modifying uiSlice, we'll use local flags for form visibility/type
+
 const ManageTraining = () => {
-  const { data, loading: isLoading, error, getAll, post, put, del } = useTenantApi();
-  const [trainings, setTrainings] = useState([]);
-  const [categories, setCategories] = useState([]);
+  const dispatch = useDispatch();
+  const trainings = useSelector(selectTrainings);
+  const categories = useSelector(selectCategories);
+  const isLoading = useSelector(selectTrainingLoading);
+  const error = useSelector(selectTrainingError);
+  const isSubmitting = useSelector(selectIsSubmitting);
+
+  // Local states for form visibility (since uiSlice not extended for type)
   const [showTrainingForm, setShowTrainingForm] = useState(false);
   const [showCategoryForm, setShowCategoryForm] = useState(false);
   const [isEditingTraining, setIsEditingTraining] = useState(false);
   const [isEditingCategory, setIsEditingCategory] = useState(false);
   const [editTrainingId, setEditTrainingId] = useState(null);
   const [editCategoryId, setEditCategoryId] = useState(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Form data local
   const [newTraining, setNewTraining] = useState({
     title: "",
     category_id: "",
@@ -26,43 +61,22 @@ const ManageTraining = () => {
   const [newCategory, setNewCategory] = useState({ name: "" });
 
   useEffect(() => {
-    fetchTrainings();
-    fetchCategories();
-  }, []);
+    dispatch(fetchTrainings());
+    dispatch(fetchCategories());
+  }, [dispatch]);
 
   useEffect(() => {
-    if (data?.trainings) setTrainings(data.trainings);
-    if (data?.categories) setCategories(data.categories);
-  }, [data]);
-
-  const fetchTrainings = async () => {
-    try {
-      await toast.promise(getAll("/admin/training"), {
-        loading: "Fetching trainings...",
-        success: (res) => res.message || "Trainings retrieved successfully",
-        error: (err) => err.response?.data?.message || "Failed to retrieve trainings",
-      });
-    } catch (err) {
-      console.error("Error fetching trainings:", err.response?.data || err.message);
+    if (error) {
+      toast.error(error.message || "An error occurred");
+      dispatch(clearError());
     }
-  };
-
-  const fetchCategories = async () => {
-    try {
-      await toast.promise(getAll("/admin/training/categories"), {
-        loading: "Fetching categories...",
-        success: (res) => res.message || "Categories retrieved successfully",
-        error: (err) => err.response?.data?.message || "Failed to retrieve categories",
-      });
-    } catch (err) {
-      console.error("Error fetching categories:", err.response?.data || err.message);
-    }
-  };
+  }, [error, dispatch]);
 
   // Training Handlers
   const handleAddNewTraining = () => {
     setShowTrainingForm(true);
     setIsEditingTraining(false);
+    setEditTrainingId(null);
     setNewTraining({ title: "", category_id: "", training_url: "", document: null, status: "ACTIVE" });
   };
 
@@ -96,39 +110,34 @@ const ManageTraining = () => {
     if (newTraining.document) formData.append("document", newTraining.document);
     formData.append("status", newTraining.status);
 
-    setIsSubmitting(true);
+    dispatch(setSubmitting(true));
     try {
-      await toast.promise(
-        isEditingTraining ? put(`/admin/training/${editTrainingId}`, formData, true) : post("/admin/training", formData, true),
-        {
-          loading: "Saving training...",
-          success: (res) => res.message || "Training saved successfully",
-          error: (err) => err.response?.data?.message || "Failed to save training",
-        }
-      );
-      await fetchTrainings();
+      if (isEditingTraining) {
+        await dispatch(updateTraining({ id: editTrainingId, formData })).unwrap();
+        toast.success("Training updated successfully");
+      } else {
+        await dispatch(createTraining(formData)).unwrap();
+        toast.success("Training created successfully");
+      }
+      dispatch(fetchTrainings()); // Refetch to update list
       handleCancel();
     } catch (err) {
-      console.error("Error saving training:", err.response?.data || err.message);
+      toast.error(err.message || "Failed to save training");
     } finally {
-      setIsSubmitting(false);
+      dispatch(setSubmitting(false));
     }
   };
 
   const handleDeleteTraining = async (id) => {
     if (!confirm("Are you sure you want to delete this training?")) return;
-    setIsSubmitting(true);
+    dispatch(setSubmitting(true));
     try {
-      await toast.promise(del(`/admin/training/${id}`), {
-        loading: "Deleting training...",
-        success: (res) => res.message || "Training deleted successfully",
-        error: (err) => err.response?.data?.message || "Failed to delete training",
-      });
-      await fetchTrainings();
+      await dispatch(deleteTraining(id)).unwrap();
+      toast.success("Training deleted successfully");
     } catch (err) {
-      console.error("Error deleting training:", err.response?.data || err.message);
+      toast.error(err.message || "Failed to delete training");
     } finally {
-      setIsSubmitting(false);
+      dispatch(setSubmitting(false));
     }
   };
 
@@ -148,6 +157,7 @@ const ManageTraining = () => {
   const handleAddNewCategory = () => {
     setShowCategoryForm(true);
     setIsEditingCategory(false);
+    setEditCategoryId(null);
     setNewCategory({ name: "" });
   };
 
@@ -164,42 +174,35 @@ const ManageTraining = () => {
       return;
     }
 
-    setIsSubmitting(true);
+    dispatch(setSubmitting(true));
     try {
-      await toast.promise(
-        isEditingCategory
-          ? put(`/admin/training/categories/${editCategoryId}`, { name: newCategory.name })
-          : post("/admin/training/categories", { name: newCategory.name }),
-        {
-          loading: isEditingCategory ? "Updating category..." : "Creating category...",
-          success: (res) => res.message || "Category saved successfully",
-          error: (err) => err.response?.data?.message || "Failed to save category",
-        }
-      );
-      await fetchCategories();
+      if (isEditingCategory) {
+        await dispatch(updateCategory({ id: editCategoryId, data: { name: newCategory.name } })).unwrap();
+        toast.success("Category updated successfully");
+      } else {
+        await dispatch(createCategory({ name: newCategory.name })).unwrap();
+        toast.success("Category created successfully");
+      }
+      dispatch(fetchCategories());
       handleCancel();
     } catch (err) {
-      console.error("Error saving category:", err.response?.data || err.message);
+      toast.error(err.message || "Failed to save category");
     } finally {
-      setIsSubmitting(false);
+      dispatch(setSubmitting(false));
     }
   };
 
   const handleDeleteCategory = async (id) => {
     if (!confirm("Are you sure you want to delete this category? Related trainings will have their category set to null.")) return;
-    setIsSubmitting(true);
+    dispatch(setSubmitting(true));
     try {
-      await toast.promise(del(`/admin/training/categories/${id}`), {
-        loading: "Deleting category...",
-        success: (res) => res.message || "Category deleted successfully",
-        error: (err) => err.response?.data?.message || "Failed to delete category",
-      });
-      await fetchCategories();
-      await fetchTrainings();
+      await dispatch(deleteCategory(id)).unwrap();
+      toast.success("Category deleted successfully");
+      dispatch(fetchTrainings()); // Refetch trainings as categories affect them
     } catch (err) {
-      console.error("Error deleting category:", err.response?.data || err.message);
+      toast.error(err.message || "Failed to delete category");
     } finally {
-      setIsSubmitting(false);
+      dispatch(setSubmitting(false));
     }
   };
 
@@ -212,7 +215,6 @@ const ManageTraining = () => {
     setEditCategoryId(null);
     setNewTraining({ title: "", category_id: "", training_url: "", document: null, status: "ACTIVE" });
     setNewCategory({ name: "" });
-    setIsSubmitting(false);
   };
 
   return (

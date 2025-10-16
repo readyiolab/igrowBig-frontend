@@ -1,5 +1,33 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import useTenantApi from '@/hooks/useTenantApi';
+// src/pages/Agents/Agents.jsx
+import React, { useEffect, useCallback } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import {
+  fetchAgents,
+  fetchAgentSettings,
+  updateAgentSettings,
+  toggleAgentStatus,
+  setSearchTerm,
+  setEntriesPerPage,
+  setWebsiteStep,
+  updateWebsiteFormData,
+  setValidationErrors,
+  clearValidationErrors,
+  nextWebsiteStep,
+  previousWebsiteStep,
+  openAgentProfile,
+  closeAgentProfile,
+  selectDisplayedAgents,
+  selectSelectedAgent,
+  selectAgentSettings,
+  selectVerificationInstructions,
+  selectAgentsLoading,
+  selectValidationErrors,
+  selectSearchTerm,
+  selectEntriesPerPage,
+  selectShowProfile,
+  selectWebsiteStep,
+  selectWebsiteFormData,
+} from '@/store/slices/agentsSlice';
 import ToastNotification, { showSuccessToast, showErrorToast } from '../../ToastNotification';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -11,223 +39,144 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Loader2, ArrowLeft, CheckCircle, XCircle, AlertTriangle, Mail } from 'lucide-react';
+import { Loader2, ArrowLeft, CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
 
 const Agents = () => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [entries, setEntries] = useState(10);
-  const [selectedAgent, setSelectedAgent] = useState(null);
-  const [showProfile, setShowProfile] = useState(false);
-  const [websiteStep, setWebsiteStep] = useState(0);
-  const [tenantUsers, setTenantUsers] = useState([]);
-  const [settings, setSettings] = useState(null);
-  const [validationErrors, setValidationErrors] = useState([]);
-  const [verificationInstructions, setVerificationInstructions] = useState(null);
-  const { loading, error, getAll, put, post } = useTenantApi();
+  const dispatch = useDispatch();
+  
+  // Selectors
+  const displayedAgents = useSelector(selectDisplayedAgents);
+  const selectedAgent = useSelector(selectSelectedAgent);
+  const settings = useSelector(selectAgentSettings);
+  const verificationInstructions = useSelector(selectVerificationInstructions);
+  const loading = useSelector(selectAgentsLoading);
+  const validationErrors = useSelector(selectValidationErrors);
+  const searchTerm = useSelector(selectSearchTerm);
+  const entriesPerPage = useSelector(selectEntriesPerPage);
+  const showProfile = useSelector(selectShowProfile);
+  const websiteStep = useSelector(selectWebsiteStep);
+  const websiteData = useSelector(selectWebsiteFormData);
 
-  const [websiteData, setWebsiteData] = useState({
-    domain_type: 'sub_domain',
-    primary_domain_name: '',
-    website_link: '',
-    first_name: '',
-    last_name: '',
-    email_id: '',
-    mobile: '',
-    address: '',
-    skype: '',
-    site_name: '',
-    site_logo: null,
-    nht_website_link: '',
-    nht_store_link: '',
-    nht_joining_link: '',
-    dns_status: 'pending',
-    custom_domain: '',
-  });
-
-  const fetchTenantUsers = useCallback(async () => {
-    try {
-      const response = await getAll('/admin/tenant-users');
-      if (response?.users?.length) {
-        const mappedUsers = response.users.map((user) => ({
-          id: user.id,
-          first_name: user.name.split(' ')[0] || user.name,
-          last_name: user.name.split(' ')[1] || '',
-          email_id: user.email,
-          website_link: user.website_link || '',
-          subscription_status: user.status || 'active',
-          tenant_id: user.tenant_id,
-          plan: user.plan || 'none',
-          dns_status: user.dns_status || 'pending',
-        }));
-        setTenantUsers(mappedUsers);
-        showSuccessToast(response.message || 'Tenant users fetched successfully');
-      } else {
-        setTenantUsers([]);
-        showSuccessToast('No tenant users found');
-      }
-    } catch (err) {
-      showErrorToast(err.message || 'Failed to fetch tenant users');
-      setTenantUsers([]);
-    }
-  }, [getAll]);
-
+  // Fetch agents on mount
   useEffect(() => {
-    fetchTenantUsers();
-  }, [fetchTenantUsers]);
+    dispatch(fetchAgents())
+      .unwrap()
+      .then((response) => {
+        showSuccessToast(response.message || 'Tenant users fetched successfully');
+      })
+      .catch((error) => {
+        showErrorToast(error.message || 'Failed to fetch tenant users');
+      });
+  }, [dispatch]);
 
-  const filteredAgents = tenantUsers.filter(
-    (agent) =>
-      `${agent.first_name} ${agent.last_name}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      agent.email_id.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-  const displayedAgents = filteredAgents.slice(0, entries);
-
-  const openProfile = useCallback(
+  // Open agent profile
+  const handleOpenProfile = useCallback(
     async (agent) => {
-      setSelectedAgent(agent);
-      setShowProfile(true);
-      setValidationErrors([]);
-      setWebsiteStep(0);
-      setVerificationInstructions(null);
-
+      dispatch(openAgentProfile(agent));
+      
       try {
-        const response = await getAll(`/admin/settings/${agent.tenant_id}`);
-        const settingsData = response.settings || {};
-        setSettings(settingsData);
-        setWebsiteData({
-          domain_type: settingsData.domain_type || 'sub_domain',
-          primary_domain_name: settingsData.primary_domain_name || 'igrowbig.com',
-          website_link: settingsData.website_link || '',
-          first_name: settingsData.first_name || agent.first_name || '',
-          last_name: settingsData.last_name || agent.last_name || '',
-          email_id: settingsData.email_id || agent.email_id || '',
-          mobile: settingsData.mobile || '',
-          address: settingsData.address || 'Not set',
-          skype: settingsData.skype || '',
-          site_name: settingsData.site_name || 'Default Site',
-          site_logo: null,
-          nht_website_link: settingsData.nht_website_link || '',
-          nht_store_link: settingsData.nht_store_link || '',
-          nht_joining_link: settingsData.nht_joining_link || '',
-          dns_status: settingsData.dns_status || 'pending',
-          custom_domain: settingsData.custom_domain || '',
-        });
+        const response = await dispatch(fetchAgentSettings(agent.tenant_id)).unwrap();
         showSuccessToast(response.message || 'Settings fetched successfully');
-      } catch (err) {
-        showErrorToast(err.message || 'Failed to fetch tenant settings');
-        setSettings({});
+      } catch (error) {
+        showErrorToast(error.message || 'Failed to fetch tenant settings');
       }
     },
-    [getAll]
+    [dispatch]
   );
 
-  const updateWebsiteDetails = async () => {
+  // Update website details
+  const handleUpdateWebsiteDetails = async () => {
     const errors = validateStep();
     if (errors.length) {
-      setValidationErrors(errors);
+      dispatch(setValidationErrors(errors));
       return;
     }
 
     const formData = new FormData();
     Object.entries(websiteData).forEach(([key, value]) => {
-      if (key === 'site_logo' && value) formData.append(key, value);
-      else if (value && key !== 'website_link' && key !== 'dns_status') formData.append(key, value);
+      if (key === 'site_logo' && value) {
+        formData.append(key, value);
+      } else if (value && key !== 'website_link' && key !== 'dns_status') {
+        formData.append(key, value);
+      }
     });
 
     try {
-      const response = await put(`/admin/settings/${selectedAgent.tenant_id}`, formData, true);
-      setSettings(response.settings);
-      if (response.verification) {
-        setVerificationInstructions(response.verification);
-      }
+      const response = await dispatch(
+        updateAgentSettings({ tenantId: selectedAgent.tenant_id, formData })
+      ).unwrap();
+      
       showSuccessToast(response.message || 'Settings updated successfully');
-      await fetchTenantUsers();
-      if (websiteData.domain_type !== 'custom_domain' || response.verification?.status === 'verified') {
-        closeProfile();
-      }
-    } catch (err) {
-      let errorMsg = err.message || 'Failed to update settings';
-      if (err.error === 'DOMAIN_EXISTS') {
+      
+      // Refresh agents list to show updated data in table
+      await dispatch(fetchAgents()).unwrap();
+      
+      // Always close profile and return to table after successful update
+      dispatch(closeAgentProfile());
+    } catch (error) {
+      let errorMsg = error.message || 'Failed to update settings';
+      
+      if (error.error === 'DOMAIN_EXISTS') {
         errorMsg = 'Domain already taken';
-      } else if (err.error === 'VERIFICATION_ERROR') {
-        errorMsg = err.message.includes('email')
+      } else if (error.error === 'VERIFICATION_ERROR') {
+        errorMsg = error.message.includes('email')
           ? 'Failed to send verification email. Please check the email address and try again or contact support@igrowbig.com.'
           : 'Failed to start domain verification. Please try again or contact support@igrowbig.com.';
-      } else if (err.error === 'INVALID_TENANT_ID') {
+      } else if (error.error === 'INVALID_TENANT_ID') {
         errorMsg = 'Invalid tenant ID';
-      } else if (err.error === 'TENANT_NOT_FOUND') {
+      } else if (error.error === 'TENANT_NOT_FOUND') {
         errorMsg = 'Tenant not found';
-      } else if (err.error === 'INVALID_EMAIL') {
+      } else if (error.error === 'INVALID_EMAIL') {
         errorMsg = 'Invalid email address';
-      } else if (err.error === 'INVALID_DOMAIN') {
+      } else if (error.error === 'INVALID_DOMAIN') {
         errorMsg = 'Invalid custom domain name';
       }
-      setValidationErrors(err.errors || [{ msg: errorMsg }]);
+      
       showErrorToast(errorMsg);
     }
   };
 
-  const closeProfile = () => {
-    setShowProfile(false);
-    setSelectedAgent(null);
-    setWebsiteStep(0);
-    setSettings(null);
-    setValidationErrors([]);
-    setVerificationInstructions(null);
-  };
-
-  const handleWebsiteDataChange = (e) => {
-    const { name, value, files } = e.target;
-    setWebsiteData((prev) => {
-      const updated = { ...prev, [name]: files ? files[0] : value };
-      if (name === 'domain_type' || name === 'custom_domain') {
-        const protocol = 'https';
-        const baseDomain = process.env.NODE_ENV === 'production' ? 'igrowbig.com' : 'localhost:5173';
-        updated.website_link =
-          updated.domain_type === 'sub_domain'
-            ? `${protocol}://${settings?.subdomain || baseDomain}`
-            : `${protocol}://${updated.custom_domain || baseDomain}`;
-      }
-      return updated;
-    });
-    setValidationErrors([]);
-  };
-
-  const toggleUserStatus = async (agent) => {
+  // Toggle user status
+  const handleToggleUserStatus = async (agent) => {
     const newStatus = agent.subscription_status === 'active' ? 'inactive' : 'active';
+    
     try {
-      const response = await put('/admin/user-status', {
-        user_id: agent.id,
-        subscription_status: newStatus,
-      });
+      const response = await dispatch(
+        toggleAgentStatus({ userId: agent.id, newStatus })
+      ).unwrap();
+      
       showSuccessToast(response.message || 'User status updated successfully');
-      setTenantUsers((prev) =>
-        prev.map((user) =>
-          user.id === agent.id ? { ...user, subscription_status: newStatus } : user
-        )
-      );
-      if (selectedAgent?.id === agent.id) {
-        setSelectedAgent((prev) => ({ ...prev, subscription_status: newStatus }));
-      }
-    } catch (err) {
-      showErrorToast(err.message || 'Failed to update user status');
+    } catch (error) {
+      showErrorToast(error.message || 'Failed to update user status');
     }
   };
 
-  
-
-  const steps = ['Domain Details', 'Agent Information', 'Site Identity', 'Distributor Links', 'Review & Update'];
-
-  const nextStep = () => {
-    const errors = validateStep();
-    if (!errors.length) setWebsiteStep((prev) => Math.min(prev + 1, steps.length - 1));
-    else setValidationErrors(errors);
+  // Handle form data changes
+  const handleWebsiteDataChange = (e) => {
+    const { name, value, files } = e.target;
+    const updates = { [name]: files ? files[0] : value };
+    
+    if (name === 'domain_type' || name === 'custom_domain') {
+      const protocol = 'https';
+      const baseDomain = process.env.NODE_ENV === 'production' ? 'igrowbig.com' : 'localhost:5173';
+      
+      const domainType = name === 'domain_type' ? value : websiteData.domain_type;
+      const customDomain = name === 'custom_domain' ? value : websiteData.custom_domain;
+      
+      updates.website_link =
+        domainType === 'sub_domain'
+          ? `${protocol}://${settings?.subdomain || baseDomain}`
+          : `${protocol}://${customDomain || baseDomain}`;
+    }
+    
+    dispatch(updateWebsiteFormData(updates));
+    dispatch(clearValidationErrors());
   };
 
-  const prevStep = () => setWebsiteStep((prev) => Math.max(prev - 1, 0));
-
+  // Validation
   const validateStep = () => {
     const errors = [];
+    
     if (websiteStep === 0) {
       if (
         websiteData.domain_type === 'custom_domain' &&
@@ -237,6 +186,7 @@ const Agents = () => {
         errors.push({ msg: 'Invalid custom domain name (e.g., example.com)' });
       }
     }
+    
     if (websiteStep === 1) {
       if (websiteData.email_id && !/\S+@\S+\.\S+/.test(websiteData.email_id)) {
         errors.push({ msg: 'Please provide a valid email address' });
@@ -245,6 +195,7 @@ const Agents = () => {
         errors.push({ msg: 'First name is required' });
       }
     }
+    
     if (websiteStep === 2) {
       if (websiteData.site_logo) {
         const validTypes = ['image/png', 'image/jpeg', 'image/jpg'];
@@ -259,9 +210,27 @@ const Agents = () => {
         errors.push({ msg: 'Site name is required' });
       }
     }
+    
     return errors;
   };
 
+  // Step navigation
+  const handleNextStep = () => {
+    const errors = validateStep();
+    if (!errors.length) {
+      dispatch(nextWebsiteStep());
+    } else {
+      dispatch(setValidationErrors(errors));
+    }
+  };
+
+  const handlePreviousStep = () => {
+    dispatch(previousWebsiteStep());
+  };
+
+  const steps = ['Domain Details', 'Agent Information', 'Site Identity', 'Distributor Links', 'Review & Update'];
+
+  // Render validation errors
   const renderValidationErrors = () =>
     validationErrors.length > 0 && (
       <Alert variant="destructive" className="mb-6">
@@ -277,6 +246,7 @@ const Agents = () => {
       </Alert>
     );
 
+  // Render verification instructions
   const renderVerificationInstructions = () =>
     verificationInstructions && (
       <Alert className="mb-6">
@@ -306,43 +276,11 @@ const Agents = () => {
             </a>{' '}
             if you need assistance.
           </p>
-          {verificationInstructions.status === 'unverified' && (
-            <div className="mt-2">
-              <p className="text-sm font-medium">Possible Issues:</p>
-              <ul className="list-disc pl-4 text-sm">
-                <li>TXT record not added or incorrect value</li>
-                <li>DNS changes haven't propagated yet (can take up to 48 hours)</li>
-                <li>Records added to wrong domain/subdomain</li>
-                <li>Typo in the verification token</li>
-              </ul>
-              <p className="text-sm mt-2">
-                Check DNS propagation at{' '}
-                <a
-                  href={`https://www.whatsmydns.net/#TXT/_igrowbig-verification.${verificationInstructions.domain}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-blue-600 hover:underline"
-                >
-                  WhatsMyDNS.net
-                </a>
-              </p>
-            </div>
-          )}
-          {verificationInstructions.status === 'partially_verified' && (
-            <div className="mt-2">
-              <p className="text-sm font-medium">Next Steps:</p>
-              <p className="text-sm">Domain ownership verified. Add a CNAME or A record to complete setup.</p>
-            </div>
-          )}
-          <p className="text-sm mt-2">
-            Need help? Contact <a href="mailto:support@igrowbig.com" className="text-blue-600 hover:underline">
-              support@igrowbig.com
-            </a>
-          </p>
         </AlertDescription>
       </Alert>
     );
 
+  // Render website step content
   const renderWebsiteStep = () => {
     switch (websiteStep) {
       case 0:
@@ -427,7 +365,7 @@ const Agents = () => {
         return (
           <div className="space-y-6">
             {renderValidationErrors()}
-            <p className="text-sm text-gray-500">This information will appear on your website’s Contact page.</p>
+            <p className="text-sm text-gray-500">This information will appear on your website's Contact page.</p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="first_name">
@@ -594,7 +532,7 @@ const Agents = () => {
               {Object.entries(websiteData).map(([key, value]) => (
                 key !== 'site_logo' && key !== 'website_link' && key !== 'dns_status' && (
                   <div key={key} className="flex flex-col">
-                    <span className="font-medium text-gray-700 capitalize">{key.replace('_', ' ')}:</span>
+                    <span className="font-medium text-gray-700 capitalize">{key.replace(/_/g, ' ')}:</span>
                     <span>{value || 'N/A'}</span>
                   </div>
                 )
@@ -647,7 +585,10 @@ const Agents = () => {
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
               <div className="flex items-center gap-4">
                 <span className="text-sm text-gray-600">Show</span>
-                <Select value={entries.toString()} onValueChange={(value) => setEntries(Number(value))}>
+                <Select
+                  value={entriesPerPage.toString()}
+                  onValueChange={(value) => dispatch(setEntriesPerPage(Number(value)))}
+                >
                   <SelectTrigger className="w-24">
                     <SelectValue />
                   </SelectTrigger>
@@ -666,7 +607,7 @@ const Agents = () => {
                   type="text"
                   placeholder="Search by name or email..."
                   value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onChange={(e) => dispatch(setSearchTerm(e.target.value))}
                   className="w-64"
                   disabled={loading}
                 />
@@ -678,13 +619,6 @@ const Agents = () => {
               <div className="flex justify-center items-center py-6">
                 <Loader2 className="h-6 w-6 animate-spin text-gray-600" />
               </div>
-            )}
-            {error && !tenantUsers.length && (
-              <Alert variant="destructive">
-                <AlertTriangle className="h-4 w-4" />
-                <AlertTitle>Error</AlertTitle>
-                <AlertDescription>{error.message}</AlertDescription>
-              </Alert>
             )}
             <Table>
               <TableHeader>
@@ -748,7 +682,7 @@ const Agents = () => {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => toggleUserStatus(agent)}
+                          onClick={() => handleToggleUserStatus(agent)}
                           disabled={loading}
                           className={
                             agent.subscription_status === 'inactive'
@@ -768,18 +702,15 @@ const Agents = () => {
                         </Button>
                       </TableCell>
                       <TableCell>
-                        <div className="flex gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => openProfile(agent)}
-                            disabled={loading}
-                            className="bg-blue-50 text-blue-700 border-blue-300 hover:bg-blue-100"
-                          >
-                            View Profile
-                          </Button>
-                          
-                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleOpenProfile(agent)}
+                          disabled={loading}
+                          className="bg-blue-50 text-blue-700 border-blue-300 hover:bg-blue-100"
+                        >
+                          View Profile
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))
@@ -802,7 +733,7 @@ const Agents = () => {
             <CardTitle className="text-2xl font-semibold text-gray-900">Agent Profile</CardTitle>
             <Button
               variant="outline"
-              onClick={closeProfile}
+              onClick={() => dispatch(closeAgentProfile())}
               disabled={loading}
               className="flex items-center gap-2"
             >
@@ -854,14 +785,14 @@ const Agents = () => {
                   <div className="flex justify-between mt-6">
                     <Button
                       variant="outline"
-                      onClick={prevStep}
+                      onClick={handlePreviousStep}
                       disabled={websiteStep === 0 || loading}
                       className="w-32"
                     >
                       Previous
                     </Button>
                     <Button
-                      onClick={websiteStep === steps.length - 1 ? updateWebsiteDetails : nextStep}
+                      onClick={websiteStep === steps.length - 1 ? handleUpdateWebsiteDetails : handleNextStep}
                       disabled={loading}
                       className="w-32 bg-blue-600 hover:bg-blue-700 text-white"
                     >

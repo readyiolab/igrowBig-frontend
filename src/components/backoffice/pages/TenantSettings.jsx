@@ -1,7 +1,7 @@
+// src/components/TenantSettings.jsx
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import useTenantApi from '@/hooks/useTenantApi';
-import ToastNotification, { showSuccessToast, showErrorToast } from '../../ToastNotification';
+import { useSelector, useDispatch } from 'react-redux';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,36 +11,63 @@ import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Loader2, ArrowLeft, AlertTriangle, CheckCircle, Info, Copy, ExternalLink, RefreshCw } from 'lucide-react';
+import ToastNotification, { showSuccessToast, showErrorToast } from '../../ToastNotification';
+
+import {
+  fetchTenantSettings,
+  updateTenantSettings,
+  refreshDNSStatus,
+  setFormData,
+  setFormField,
+  setLogoFileName,
+  setWebsiteStep,
+  setValidationErrors,
+  setVerificationData,
+  setShowDNSInstructions,
+  openForm,
+  closeForm,
+  clearError,
+  selectTenantSettings,
+  selectTenantForm,
+  selectTenantLoading,
+  selectTenantError,
+  selectShowForm,
+  selectWebsiteStep,
+  selectValidationErrors,
+  selectVerificationData,
+  selectShowDNSInstructions,
+  selectDNSLoading,
+} from '@/store/slices/tenantSettingsSlice';
 
 const TenantSettings = () => {
   const navigate = useNavigate();
-  const { loading, error, getAll, put } = useTenantApi();
-  const [tenantId, setTenantId] = useState(null);
-  const [settings, setSettings] = useState(null);
-  const [showForm, setShowForm] = useState(false);
-  const [websiteStep, setWebsiteStep] = useState(0);
-  const [validationErrors, setValidationErrors] = useState([]);
-  const [verificationData, setVerificationData] = useState(null);
-  const [showDNSInstructions, setShowDNSInstructions] = useState(false);
-  const [copiedField, setCopiedField] = useState('');
+  const dispatch = useDispatch();
 
-  const [websiteData, setWebsiteData] = useState({
-    domain_type: 'sub_domain',
-    custom_domain: '',
-    first_name: '',
-    last_name: '',
-    email_id: '',
-    mobile: '',
-    address: '',
-    skype: '',
-    site_name: '',
-    site_logo: null,
-    nht_website_link: '',
-    nht_store_link: '',
-    nht_joining_link: '',
-    dns_status: 'pending',
-    publish_on_site: false,
-  });
+  // Local state
+  const [tenantId, setTenantId] = useState(null);
+  const [copiedField, setCopiedField] = useState('');
+  const [logoFile, setLogoFile] = useState(null);
+
+  // Redux state
+  const settings = useSelector(selectTenantSettings);
+  const form = useSelector(selectTenantForm);
+  const loading = useSelector(selectTenantLoading);
+  const error = useSelector(selectTenantError);
+  const showForm = useSelector(selectShowForm);
+  const websiteStep = useSelector(selectWebsiteStep);
+  const validationErrors = useSelector(selectValidationErrors);
+  const verificationData = useSelector(selectVerificationData);
+  const showDNSInstructions = useSelector(selectShowDNSInstructions);
+  const dnsLoading = useSelector(selectDNSLoading);
+
+  // Steps configuration
+  const steps = [
+    'Domain Setup',
+    'Contact Info',
+    'Branding',
+    'Distributor Links',
+    'Review',
+  ];
 
   // Authentication check
   useEffect(() => {
@@ -54,68 +81,51 @@ const TenantSettings = () => {
     }
   }, [navigate]);
 
-  // Fetch settings
-  const fetchSettings = useCallback(async () => {
-    if (!tenantId) return;
-    try {
-      const response = await getAll(`/tenants/${tenantId}/settings`);
-      const settingsData = response.settings || {};
-
-      setSettings(settingsData);
-      setWebsiteData({
-        domain_type: settingsData.domain_type || 'sub_domain',
-        custom_domain: settingsData.custom_domain || '',
-        first_name: settingsData.first_name || '',
-        last_name: settingsData.last_name || '',
-        email_id: settingsData.email_id || '',
-        mobile: settingsData.mobile || '',
-        address: settingsData.address || '',
-        skype: settingsData.skype || '',
-        site_name: settingsData.site_name || '',
-        site_logo: null,
-        nht_website_link: settingsData.nht_website_link || '',
-        nht_store_link: settingsData.nht_store_link || '',
-        nht_joining_link: settingsData.nht_joining_link || '',
-        dns_status: settingsData.dns_status || 'pending',
-        publish_on_site: !!settingsData.publish_on_site,
-      });
-
-      if (response.message) {
-        showSuccessToast(response.message);
-      }
-    } catch (err) {
-      console.error('Error fetching settings:', err);
-      setSettings({});
-      handleAPIError(err);
-    }
-  }, [tenantId, getAll]);
-
+  // Fetch settings when tenantId changes
   useEffect(() => {
-    fetchSettings();
-  }, [fetchSettings]);
+    if (tenantId) {
+      dispatch(fetchTenantSettings(tenantId)).catch((err) => {
+        if (err?.status === 401) {
+          showErrorToast('Session expired. Please log in again.');
+          navigate('/backoffice-login');
+        }
+      });
+    }
+  }, [tenantId, dispatch, navigate]);
+
+  // Handle error changes
+  useEffect(() => {
+    if (error) {
+      handleAPIError(error);
+      dispatch(clearError());
+    }
+  }, [error, dispatch]);
 
   // Enhanced error handler
-  const handleAPIError = (err) => {
-    const errorData = err.response?.data;
+  const handleAPIError = useCallback((err) => {
+    const errorData = err;
     const errorCode = errorData?.error;
     const errorMessage = errorData?.message;
-    const validationErrors = errorData?.errors;
+    const validationErrorsData = errorData?.errors;
 
-    if (validationErrors && Array.isArray(validationErrors)) {
-      setValidationErrors(validationErrors.map(e => ({ msg: e.msg || e.message })));
+    if (validationErrorsData && Array.isArray(validationErrorsData)) {
+      dispatch(setValidationErrors(validationErrorsData.map(e => ({ msg: e.msg || e.message }))));
       showErrorToast('Please fix the validation errors');
       return;
     }
 
+    let apiValidationErrors = [];
+
     switch (errorCode) {
       case 'SUBDOMAIN_EXISTS':
       case 'DOMAIN_EXISTS':
-        setValidationErrors([{ msg: errorMessage || 'This domain is already taken' }]);
-        setWebsiteStep(0);
+      case 'DOMAIN_TAKEN':
+        apiValidationErrors = [{ msg: errorMessage || 'This domain is already taken' }];
+        dispatch(setWebsiteStep(0));
         break;
       case 'INVALID_DOMAIN':
-        setValidationErrors([{ msg: errorMessage || 'Invalid domain format' }]);
-        setWebsiteStep(0);
+        apiValidationErrors = [{ msg: errorMessage || 'Invalid domain format' }];
+        dispatch(setWebsiteStep(0));
         break;
       case 'UNAUTHORIZED':
         showErrorToast('You are not authorized to perform this action');
@@ -126,218 +136,278 @@ const TenantSettings = () => {
         navigate('/backoffice-login');
         break;
       case 'VERIFICATION_ERROR':
-        setValidationErrors([{ msg: errorMessage || 'Domain verification failed' }]);
+      case 'VERIFICATION_FAILED':
+        apiValidationErrors = [{ msg: errorMessage || 'Domain verification failed' }];
         break;
       case 'UPLOAD_ERROR':
-        setValidationErrors([{ msg: errorMessage || 'Failed to upload logo' }]);
-        setWebsiteStep(2);
+        apiValidationErrors = [{ msg: errorMessage || 'Failed to upload logo' }];
+        dispatch(setWebsiteStep(2));
         break;
       default:
-        setValidationErrors([{ msg: errorMessage || 'An error occurred. Please try again.' }]);
+        apiValidationErrors = [{ msg: errorMessage || 'An error occurred. Please try again.' }];
+    }
+
+    if (apiValidationErrors.length > 0) {
+      dispatch(setValidationErrors(apiValidationErrors));
     }
 
     showErrorToast(errorMessage || 'Operation failed');
-  };
+  }, [dispatch, navigate]);
 
   // Copy to clipboard helper
-  const copyToClipboard = (text, fieldName) => {
+  const copyToClipboard = useCallback((text, fieldName) => {
     navigator.clipboard.writeText(text).then(() => {
       setCopiedField(fieldName);
       showSuccessToast(`${fieldName} copied to clipboard`);
       setTimeout(() => setCopiedField(''), 2000);
     });
-  };
+  }, []);
 
   // Handle form input changes
-  const handleWebsiteDataChange = (e) => {
+  const handleWebsiteDataChange = useCallback((e) => {
     const { name, value, files, type, checked } = e.target;
     if (name === 'email_id') return;
-
-    setWebsiteData((prev) => ({
-      ...prev,
-      [name]: files ? files[0] : type === 'checkbox' ? checked : value,
-    }));
-    setValidationErrors([]);
-  };
+    
+    if (name === 'site_logo' && files && files[0]) {
+      setLogoFile(files[0]);
+      dispatch(setLogoFileName(files[0].name));
+    } else {
+      dispatch(setFormField({ name, value, type, checked }));
+    }
+    
+    dispatch(setValidationErrors([]));
+  }, [dispatch]);
 
   // Handle domain type change
-  const handleDomainTypeChange = (value) => {
-    setWebsiteData((prev) => ({
-      ...prev,
+  const handleDomainTypeChange = useCallback((value) => {
+    dispatch(setFormData({
       domain_type: value,
-      custom_domain: value === 'sub_domain' ? '' : prev.custom_domain,
+      custom_domain: value === 'sub_domain' ? '' : form.custom_domain,
     }));
-    setValidationErrors([]);
-    setShowDNSInstructions(false);
-  };
+    dispatch(setValidationErrors([]));
+    dispatch(setShowDNSInstructions(false));
+  }, [dispatch, form.custom_domain]);
 
   // Validate form steps
-  const validateStep = () => {
+  const validateStep = useCallback(() => {
     const errors = [];
 
     if (websiteStep === 0) {
-      if (websiteData.domain_type === 'custom_domain') {
-        if (!websiteData.custom_domain) {
+      if (form.domain_type === 'custom_domain') {
+        if (!form.custom_domain) {
           errors.push({ msg: 'Custom domain is required' });
-        } else if (!/^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(websiteData.custom_domain)) {
+        } else if (!/^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(form.custom_domain)) {
           errors.push({ msg: 'Invalid domain format (e.g., example.com)' });
         }
       }
     } else if (websiteStep === 1) {
-      if (!websiteData.first_name?.trim()) {
+      if (!form.first_name?.trim()) {
         errors.push({ msg: 'First name is required' });
       }
-      if (!websiteData.address?.trim()) {
+      if (!form.address?.trim()) {
         errors.push({ msg: 'Address is required' });
       }
-      if (websiteData.mobile && !/^\+?[1-9]\d{1,14}$/.test(websiteData.mobile)) {
+      if (form.mobile && !/^\+?[1-9]\d{1,14}$/.test(form.mobile)) {
         errors.push({ msg: 'Invalid mobile number format (e.g., +1234567890)' });
       }
     } else if (websiteStep === 2) {
-      if (!websiteData.site_name?.trim()) {
+      if (!form.site_name?.trim()) {
         errors.push({ msg: 'Site name is required' });
       }
-      if (websiteData.site_logo) {
-        if (websiteData.site_logo.size > 4 * 1024 * 1024) {
+      if (logoFile) {
+        if (logoFile.size > 4 * 1024 * 1024) {
           errors.push({ msg: 'Site logo must be less than 4MB' });
         }
-        if (!/image\/(jpeg|jpg|png)/.test(websiteData.site_logo.type)) {
+        if (!/image\/(jpeg|jpg|png)/.test(logoFile.type)) {
           errors.push({ msg: 'Site logo must be JPEG, JPG, or PNG format' });
         }
       }
     } else if (websiteStep === 3) {
       const urlPattern = /^https?:\/\/.+/;
-      if (websiteData.nht_website_link && !urlPattern.test(websiteData.nht_website_link)) {
+      if (form.nht_website_link && !urlPattern.test(form.nht_website_link)) {
         errors.push({ msg: 'NHT Website Link must be a valid URL' });
       }
-      if (websiteData.nht_store_link && !urlPattern.test(websiteData.nht_store_link)) {
+      if (form.nht_store_link && !urlPattern.test(form.nht_store_link)) {
         errors.push({ msg: 'NHT Store Link must be a valid URL' });
       }
-      if (websiteData.nht_joining_link && !urlPattern.test(websiteData.nht_joining_link)) {
+      if (form.nht_joining_link && !urlPattern.test(form.nht_joining_link)) {
         errors.push({ msg: 'NHT Joining Link must be a valid URL' });
       }
     }
 
     return errors;
-  };
+  }, [websiteStep, form, logoFile]);
+
+  // Check if domain already verified
+  const checkExistingDomain = useCallback(() => {
+    if (!settings || !form.custom_domain) return false;
+    
+    if (settings.custom_domain === form.custom_domain && 
+        settings.custom_domain_status === "verified") {
+      showSuccessToast("This domain is already verified!");
+      dispatch(closeForm());
+      return true;
+    }
+    return false;
+  }, [settings, form.custom_domain, dispatch]);
 
   // Update settings
-  const updateWebsiteDetails = async () => {
+  const updateWebsiteDetails = useCallback(async () => {
     const errors = validateStep();
     if (errors.length) {
-      setValidationErrors(errors);
+      dispatch(setValidationErrors(errors));
       return;
     }
 
+    if (!tenantId) {
+      showErrorToast('Tenant ID not found. Please log in again.');
+      navigate('/backoffice-login');
+      return;
+    }
+
+    if (form.domain_type === 'custom_domain' && form.custom_domain) {
+      const alreadyVerified = checkExistingDomain();
+      if (alreadyVerified) return;
+    }
+
     const formData = new FormData();
-    Object.entries(websiteData).forEach(([key, value]) => {
-      if (key === 'site_logo' && value) {
-        formData.append(key, value);
-      } else if (key === 'publish_on_site') {
+    Object.entries(form).forEach(([key, value]) => {
+      if (key === 'site_logo_name') {
+        return;
+      }
+      if (key === 'publish_on_site') {
         formData.append(key, value ? '1' : '0');
-      } else if (value !== null && value !== undefined && key !== 'dns_status') {
+      } else if (value !== null && value !== undefined && 
+                 key !== 'dns_status' && key !== 'custom_domain_status') {
         formData.append(key, value);
       }
     });
 
+    if (logoFile) {
+      formData.append('site_logo', logoFile);
+    }
+
     try {
-      const response = await put(`/tenants/${tenantId}/settings`, formData, true);
-      setSettings(response.settings);
-      showSuccessToast(response.message || 'Settings updated successfully');
-
+      const response = await dispatch(updateTenantSettings({ tenantId, formData })).unwrap();
+      
       if (response.verification) {
-        setVerificationData(response.verification);
-        setShowDNSInstructions(true);
-        setWebsiteStep(0); // Stay on domain step for DNS setup
+        dispatch(setVerificationData(response.verification));
+        dispatch(setShowDNSInstructions(true));
+        dispatch(setWebsiteStep(0));
+        showSuccessToast(response.message || 'Domain verification started. Check DNS instructions below.');
+        setLogoFile(null);
+      } else if (response.settings?.custom_domain_status === "verified") {
+        showSuccessToast('Domain is already verified!');
+        dispatch(closeForm());
+        setLogoFile(null);
       } else {
-        setShowForm(false);
-        setWebsiteStep(0);
+        showSuccessToast(response.message || 'Settings updated successfully');
+        dispatch(closeForm());
+        setLogoFile(null);
       }
-
-      setValidationErrors([]);
-      await fetchSettings();
     } catch (err) {
       console.error('Update error:', err);
-      handleAPIError(err);
+      // Don't call handleAPIError here - it's handled by useEffect
     }
-  };
+  }, [validateStep, tenantId, form, logoFile, dispatch, navigate, checkExistingDomain]);
 
   // Refresh DNS status
-  const refreshDNSStatus = async () => {
+  const handleRefreshDNSStatus = useCallback(async () => {
+    if (!tenantId) return;
     try {
-      const response = await getAll(`/tenants/${tenantId}/settings`);
-      const settingsData = response.settings || {};
-      setSettings(settingsData);
-      setWebsiteData((prev) => ({
-        ...prev,
-        dns_status: settingsData.dns_status || 'pending',
-      }));
-      showSuccessToast('DNS status refreshed');
+      const response = await dispatch(refreshDNSStatus(tenantId)).unwrap();
+      if (response.settings?.custom_domain_status === 'verified') {
+        showSuccessToast('Domain verified successfully! 🎉');
+      } else {
+        showSuccessToast('DNS status refreshed');
+      }
     } catch (err) {
       showErrorToast('Failed to refresh DNS status');
     }
-  };
+  }, [tenantId, dispatch]);
 
   // Form navigation
-  const nextStep = () => {
+  const nextStep = useCallback(() => {
     const errors = validateStep();
     if (!errors.length) {
-      setWebsiteStep((prev) => Math.min(prev + 1, steps.length - 1));
+      dispatch(setWebsiteStep(Math.min(websiteStep + 1, steps.length - 1)));
     } else {
-      setValidationErrors(errors);
+      dispatch(setValidationErrors(errors));
     }
-  };
+  }, [validateStep, websiteStep, dispatch, steps.length]);
 
-  const prevStep = () => {
-    setWebsiteStep((prev) => Math.max(prev - 1, 0));
-    setValidationErrors([]);
-  };
+  const prevStep = useCallback(() => {
+    dispatch(setWebsiteStep(Math.max(websiteStep - 1, 0)));
+    dispatch(setValidationErrors([]));
+  }, [websiteStep, dispatch]);
 
-  // Reset form
-  const resetForm = () => {
-    setShowForm(false);
-    setWebsiteStep(0);
-    setValidationErrors([]);
-    setVerificationData(null);
-    setShowDNSInstructions(false);
-    setWebsiteData({
-      domain_type: settings?.domain_type || 'sub_domain',
-      custom_domain: settings?.custom_domain || '',
-      first_name: settings?.first_name || '',
-      last_name: settings?.last_name || '',
-      email_id: settings?.email_id || '',
-      mobile: settings?.mobile || '',
-      address: settings?.address || '',
-      skype: settings?.skype || '',
-      site_name: settings?.site_name || '',
-      site_logo: null,
-      nht_website_link: settings?.nht_website_link || '',
-      nht_store_link: settings?.nht_store_link || '',
-      nht_joining_link: settings?.nht_joining_link || '',
-      dns_status: settings?.dns_status || 'pending',
-      publish_on_site: !!settings?.publish_on_site,
-    });
-  };
+  const handleResetForm = useCallback(() => {
+    dispatch(closeForm());
+    setLogoFile(null);
+  }, [dispatch]);
 
-  // Render DNS instructions (specific, after submission)
-  const renderDNSInstructions = () => {
-    if (!verificationData || !showDNSInstructions) return null;
+  // Render DNS instructions
+  const renderDNSInstructions = useCallback(() => {
+    const shouldShowInstructions = verificationData || 
+      (settings?.custom_domain && settings?.custom_domain_status === "pending");
 
-    const { instructions, note, domain } = verificationData;
+    if (!shouldShowInstructions) return null;
+
+    // Build default instructions structure
+    const defaultInstructions = {
+      step1: { 
+        title: "Step 1: Verify Domain Ownership",
+        type: "TXT",
+        host: `_igrowbig-verification.${settings?.custom_domain || 'yourdomain.com'}`,
+        value: "Check your email for the verification token",
+        description: "Add the TXT record sent to your email to verify domain ownership."
+      },
+      step2: {
+        title: "Step 2: Point Domain to Platform", 
+        type: "CNAME",
+        host: settings?.custom_domain?.replace(/^www\./, '') || 'yourdomain.com',
+        value: "igrowbig.com",
+        description: "Routes traffic to our platform. Add after verification."
+      },
+      step3_alternative: {
+        title: "Step 3: Alternative A Record",
+        type: "A", 
+        value: "139.59.8.68",
+        description: "Use if your DNS provider doesn't support CNAME for root domain."
+      }
+    };
+
+    const verification = verificationData || {
+      domain: settings?.custom_domain,
+      instructions: defaultInstructions,
+      note: "Configure your DNS records to verify domain ownership. These instructions will remain visible until verification is complete."
+    };
+
+    // Ensure instructions exist and merge with defaults
+    const instructions = verification.instructions || defaultInstructions;
+    const note = verification.note || "Configure your DNS records to verify domain ownership. These instructions will remain visible until verification is complete.";
+    const domain = verification.domain || settings?.custom_domain;
+
+    // Safety check - if instructions still don't have the required properties, return null
+    if (!instructions.step1 || !instructions.step2 || !instructions.step3_alternative) {
+      return null;
+    }
 
     return (
-      <div className="max-w-6xl mx-auto mt-8 text-gray-900">
+      <div className="max-w-6xl mx-auto mt-8 text-gray-900 bg-blue-50 p-6 rounded-lg border-2 border-blue-300">
         <div className="flex items-center gap-3 mb-4">
           <Info className="h-5 w-5 text-blue-600" />
-          <h2 className="text-lg font-semibold">Configure DNS for {domain}</h2>
+          <h2 className="text-lg font-semibold">Configure DNS for {domain || settings?.custom_domain}</h2>
+          <Badge className="bg-yellow-500 text-white">⏳ Verification Pending</Badge>
         </div>
-        <p className="text-sm text-gray-600 mb-8 leading-relaxed">{note}</p>
+        <p className="text-sm text-gray-600 mb-6 leading-relaxed">{note}</p>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Step 1: TXT Record */}
           <Card className="border border-gray-200 shadow-sm bg-white">
             <CardHeader>
-              <CardTitle className="text-sm font-semibold text-gray-900">{instructions.step1.title}</CardTitle>
+              <CardTitle className="text-sm font-semibold text-gray-900">
+                {instructions.step1.title}
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-2 text-sm">
               <div className="flex justify-between items-center">
@@ -347,7 +417,7 @@ const TenantSettings = () => {
               <div className="flex justify-between items-center">
                 <span className="font-medium">Host:</span>
                 <div className="flex items-center gap-2">
-                  <span className="font-mono bg-gray-100 px-2 py-1 rounded text-xs truncate w-[180px]">
+                  <span className="font-mono bg-gray-100 px-2 py-1 rounded text-xs truncate max-w-[180px]">
                     {instructions.step1.host}
                   </span>
                   <Button
@@ -363,7 +433,7 @@ const TenantSettings = () => {
               <div className="flex justify-between items-center">
                 <span className="font-medium">Value:</span>
                 <div className="flex items-center gap-2">
-                  <span className="font-mono bg-gray-100 px-2 py-1 rounded text-xs truncate w-[180px]">
+                  <span className="font-mono bg-gray-100 px-2 py-1 rounded text-xs truncate max-w-[180px]">
                     {instructions.step1.value}
                   </span>
                   <Button
@@ -380,10 +450,11 @@ const TenantSettings = () => {
             </CardContent>
           </Card>
 
-          {/* Step 2: CNAME Record */}
           <Card className="border border-gray-200 shadow-sm bg-white">
             <CardHeader>
-              <CardTitle className="text-sm font-semibold text-gray-900">{instructions.step2.title}</CardTitle>
+              <CardTitle className="text-sm font-semibold text-gray-900">
+                {instructions.step2.title}
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-2 text-sm">
               <div className="flex justify-between items-center">
@@ -393,7 +464,7 @@ const TenantSettings = () => {
               <div className="flex justify-between items-center">
                 <span className="font-medium">Host:</span>
                 <div className="flex items-center gap-2">
-                  <span className="font-mono bg-gray-100 px-2 py-1 rounded text-xs truncate w-[180px]">
+                  <span className="font-mono bg-gray-100 px-2 py-1 rounded text-xs truncate max-w-[180px]">
                     {instructions.step2.host}
                   </span>
                   <Button
@@ -409,7 +480,7 @@ const TenantSettings = () => {
               <div className="flex justify-between items-center">
                 <span className="font-medium">Value:</span>
                 <div className="flex items-center gap-2">
-                  <span className="font-mono bg-gray-100 px-2 py-1 rounded text-xs truncate w-[180px]">
+                  <span className="font-mono bg-gray-100 px-2 py-1 rounded text-xs truncate max-w-[180px]">
                     {instructions.step2.value}
                   </span>
                   <Button
@@ -426,10 +497,11 @@ const TenantSettings = () => {
             </CardContent>
           </Card>
 
-          {/* Step 3: A Record (Alternative) */}
           <Card className="border border-gray-200 shadow-sm bg-white">
             <CardHeader>
-              <CardTitle className="text-sm font-semibold text-gray-900">{instructions.step3_alternative.title}</CardTitle>
+              <CardTitle className="text-sm font-semibold text-gray-900">
+                {instructions.step3_alternative.title}
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-2 text-sm">
               <div className="flex justify-between items-center">
@@ -438,14 +510,14 @@ const TenantSettings = () => {
               </div>
               <div className="flex justify-between items-center">
                 <span className="font-medium">Host:</span>
-                <span className="font-mono bg-gray-100 px-2 py-1 rounded text-xs truncate w-[180px]">
-                  {domain}
+                <span className="font-mono bg-gray-100 px-2 py-1 rounded text-xs truncate max-w-[180px]">
+                  {domain || settings?.custom_domain}
                 </span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="font-medium">Value:</span>
                 <div className="flex items-center gap-2">
-                  <span className="font-mono bg-gray-100 px-2 py-1 rounded text-xs truncate w-[180px]">
+                  <span className="font-mono bg-gray-100 px-2 py-1 rounded text-xs truncate max-w-[180px]">
                     {instructions.step3_alternative.value}
                   </span>
                   <Button
@@ -463,34 +535,48 @@ const TenantSettings = () => {
           </Card>
         </div>
 
+        <Alert className="mt-6 bg-blue-50 border-blue-300">
+          <Info className="h-4 w-4 text-blue-600" />
+          <AlertTitle className="text-blue-900">DNS Verification Status</AlertTitle>
+          <AlertDescription className="text-blue-800">
+            Your domain verification is in progress. These instructions will remain visible until your domain is fully verified.
+            DNS changes can take up to 48 hours to propagate. Click "Check DNS" to verify status.
+          </AlertDescription>
+        </Alert>
+
         <div className="flex justify-between items-center mt-6">
           <Button
             variant="outline"
             onClick={() => {
-              setShowDNSInstructions(false);
-              setShowForm(false);
-              setWebsiteStep(0);
+              dispatch(setShowDNSInstructions(false));
+              dispatch(closeForm());
             }}
             className="w-32"
           >
             Close
           </Button>
           <Button
-            onClick={refreshDNSStatus}
-            disabled={loading}
+            onClick={handleRefreshDNSStatus}
+            disabled={dnsLoading || loading}
             className="w-32 bg-blue-600 hover:bg-blue-700 text-white"
           >
-            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
-            Check DNS
+            {dnsLoading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <>
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Check DNS
+              </>
+            )}
           </Button>
         </div>
       </div>
     );
-  };
+  }, [verificationData, settings, dnsLoading, loading, dispatch, copyToClipboard, handleRefreshDNSStatus]);
 
-  // Render general DNS preview instructions (shown on select custom_domain, before submission)
-  const renderGeneralDNSPreview = () => {
-    const domain = websiteData.custom_domain || 'yourdomain.com';
+  // Render general DNS preview
+  const renderGeneralDNSPreview = useCallback(() => {
+    const domain = form.custom_domain || 'yourdomain.com';
     const baseDomain = 'igrowbig.com';
     const serverIP = '139.59.8.68';
 
@@ -498,10 +584,10 @@ const TenantSettings = () => {
       <div className="max-w-6xl mx-auto mt-8 text-gray-900">
         <div className="flex items-center gap-3 mb-4">
           <Info className="h-5 w-5 text-gray-700" />
-          <h2 className="text-lg font-semibold">DNS Setup for Your Custom Domain</h2>
+          <h2 className="text-lg font-semibold">DNS Setup Preview</h2>
         </div>
         <p className="text-sm text-gray-600 mb-8 leading-relaxed">
-          After saving, you'll receive a unique verification token via email and here.
+          After saving, you'll receive a unique verification token via email.
           Use it to configure your DNS. DNS changes can take up to 48 hours to propagate.
         </p>
 
@@ -517,13 +603,13 @@ const TenantSettings = () => {
               </div>
               <div className="flex justify-between items-center">
                 <span className="font-medium">Host:</span>
-                <span className="font-mono bg-gray-100 px-2 py-1 rounded text-xs truncate w-[180px]">
+                <span className="font-mono bg-gray-100 px-2 py-1 rounded text-xs truncate max-w-[180px]">
                   _igrowbig-verification.{domain}
                 </span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="font-medium">Value:</span>
-                <span className="font-mono bg-gray-100 px-2 py-1 rounded text-xs text-gray-500 truncate w-[180px]">
+                <span className="font-mono bg-gray-100 px-2 py-1 rounded text-xs text-gray-500 truncate max-w-[180px]">
                   [Token after saving]
                 </span>
               </div>
@@ -542,13 +628,13 @@ const TenantSettings = () => {
               </div>
               <div className="flex justify-between items-center">
                 <span className="font-medium">Host:</span>
-                <span className="font-mono bg-gray-100 px-2 py-1 rounded text-xs truncate w-[180px]">
+                <span className="font-mono bg-gray-100 px-2 py-1 rounded text-xs truncate max-w-[180px]">
                   {domain.replace(/^www\./, '')}
                 </span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="font-medium">Value:</span>
-                <span className="font-mono bg-gray-100 px-2 py-1 rounded text-xs truncate w-[180px]">
+                <span className="font-mono bg-gray-100 px-2 py-1 rounded text-xs truncate max-w-[180px]">
                   {baseDomain}
                 </span>
               </div>
@@ -567,26 +653,26 @@ const TenantSettings = () => {
               </div>
               <div className="flex justify-between items-center">
                 <span className="font-medium">Host:</span>
-                <span className="font-mono bg-gray-100 px-2 py-1 rounded text-xs truncate w-[180px]">
+                <span className="font-mono bg-gray-100 px-2 py-1 rounded text-xs truncate max-w-[180px]">
                   {domain}
                 </span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="font-medium">Value:</span>
-                <span className="font-mono bg-gray-100 px-2 py-1 rounded text-xs truncate w-[180px]">
+                <span className="font-mono bg-gray-100 px-2 py-1 rounded text-xs truncate max-w-[180px]">
                   {serverIP}
                 </span>
               </div>
-              <p className="text-xs text-gray-500 mt-2">Use if CNAME doesn’t work.</p>
+              <p className="text-xs text-gray-500 mt-2">Use if CNAME doesn't work.</p>
             </CardContent>
           </Card>
         </div>
       </div>
     );
-  };
+  }, [form.custom_domain]);
 
   // Render validation errors
-  const renderValidationErrors = () =>
+  const renderValidationErrors = useCallback(() => 
     validationErrors.length > 0 && (
       <Alert variant="destructive" className="mb-6">
         <AlertTriangle className="h-4 w-4" />
@@ -599,19 +685,10 @@ const TenantSettings = () => {
           </ul>
         </AlertDescription>
       </Alert>
-    );
-
-  // Steps configuration
-  const steps = [
-    'Domain Setup',
-    'Contact Info',
-    'Branding',
-    'Distributor Links',
-    'Review',
-  ];
+    ), [validationErrors]);
 
   // Render form steps
-  const renderWebsiteStep = () => {
+  const renderWebsiteStep = useCallback(() => {
     switch (websiteStep) {
       case 0:
         return (
@@ -622,7 +699,7 @@ const TenantSettings = () => {
             <div>
               <Label htmlFor="domain_type">Domain Type</Label>
               <Select
-                value={websiteData.domain_type}
+                value={form.domain_type}
                 onValueChange={handleDomainTypeChange}
                 disabled={loading}
               >
@@ -636,28 +713,30 @@ const TenantSettings = () => {
               </Select>
             </div>
 
-            {websiteData.domain_type === 'custom_domain' && (
-              <div>
-                <Label htmlFor="custom_domain">
-                  Custom Domain <span className="text-red-500">*</span>
-                </Label>
-                <Input
-                  id="custom_domain"
-                  name="custom_domain"
-                  value={websiteData.custom_domain}
-                  onChange={handleWebsiteDataChange}
-                  placeholder="example.com"
-                  disabled={loading}
-                />
-                <p className="text-sm text-gray-600 mt-1">
-                  Enter your domain without www (e.g., example.com)
-                </p>
-              </div>
+            {form.domain_type === 'custom_domain' && (
+              <>
+                <div>
+                  <Label htmlFor="custom_domain">
+                    Custom Domain <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    id="custom_domain"
+                    name="custom_domain"
+                    value={form.custom_domain}
+                    onChange={handleWebsiteDataChange}
+                    placeholder="example.com"
+                    disabled={loading}
+                  />
+                  <p className="text-sm text-gray-600 mt-1">
+                    Enter your domain without www (e.g., example.com)
+                  </p>
+                </div>
+
+                {!showDNSInstructions && renderGeneralDNSPreview()}
+              </>
             )}
 
-            {websiteData.domain_type === 'custom_domain' && renderGeneralDNSPreview()}
-
-            {websiteData.domain_type === 'sub_domain' && settings?.subdomain && (
+            {form.domain_type === 'sub_domain' && settings?.subdomain && (
               <Alert className="bg-green-50 border-green-200">
                 <CheckCircle className="h-4 w-4 text-green-600" />
                 <AlertTitle className="text-green-900">Your Store URL</AlertTitle>
@@ -678,31 +757,31 @@ const TenantSettings = () => {
               </Alert>
             )}
 
-            {websiteData.dns_status && websiteData.domain_type === 'custom_domain' && (
+            {form.custom_domain_status && form.domain_type === 'custom_domain' && (
               <div className="flex items-center gap-4">
                 <div>
                   <Label>DNS Status</Label>
                   <Badge
                     className={
-                      websiteData.dns_status === 'verified'
+                      form.custom_domain_status === 'verified'
                         ? 'bg-green-500'
-                        : websiteData.dns_status === 'pending'
+                        : form.custom_domain_status === 'pending'
                         ? 'bg-yellow-500'
                         : 'bg-red-500'
                     }
                   >
-                    {websiteData.dns_status === 'verified' ? '✅ Verified' : 
-                     websiteData.dns_status === 'pending' ? '⏳ Pending' : '❌ Unverified'}
+                    {form.custom_domain_status === 'verified' ? '✅ Verified' : 
+                     form.custom_domain_status === 'pending' ? '⏳ Pending' : '❌ Unverified'}
                   </Badge>
                 </div>
-                {websiteData.dns_status !== 'verified' && (
+                {form.custom_domain_status !== 'verified' && (
                   <Button
                     size="sm"
                     variant="outline"
-                    onClick={refreshDNSStatus}
-                    disabled={loading}
+                    onClick={handleRefreshDNSStatus}
+                    disabled={dnsLoading || loading}
                   >
-                    <RefreshCw className="h-4 w-4 mr-2" />
+                    {dnsLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
                     Check Status
                   </Button>
                 )}
@@ -727,7 +806,7 @@ const TenantSettings = () => {
                 <Input
                   id="first_name"
                   name="first_name"
-                  value={websiteData.first_name}
+                  value={form.first_name}
                   onChange={handleWebsiteDataChange}
                   disabled={loading}
                 />
@@ -737,7 +816,7 @@ const TenantSettings = () => {
                 <Input
                   id="last_name"
                   name="last_name"
-                  value={websiteData.last_name}
+                  value={form.last_name}
                   onChange={handleWebsiteDataChange}
                   disabled={loading}
                 />
@@ -749,7 +828,7 @@ const TenantSettings = () => {
               <Input
                 id="email_id"
                 name="email_id"
-                value={websiteData.email_id}
+                value={form.email_id}
                 disabled
                 className="bg-gray-100"
               />
@@ -761,7 +840,7 @@ const TenantSettings = () => {
               <Input
                 id="mobile"
                 name="mobile"
-                value={websiteData.mobile}
+                value={form.mobile}
                 onChange={handleWebsiteDataChange}
                 placeholder="+1234567890"
                 disabled={loading}
@@ -775,7 +854,7 @@ const TenantSettings = () => {
               <Input
                 id="address"
                 name="address"
-                value={websiteData.address}
+                value={form.address}
                 onChange={handleWebsiteDataChange}
                 disabled={loading}
               />
@@ -786,7 +865,7 @@ const TenantSettings = () => {
               <Input
                 id="skype"
                 name="skype"
-                value={websiteData.skype}
+                value={form.skype}
                 onChange={handleWebsiteDataChange}
                 placeholder="skype_username"
                 disabled={loading}
@@ -798,7 +877,7 @@ const TenantSettings = () => {
                 id="publish_on_site"
                 name="publish_on_site"
                 type="checkbox"
-                checked={websiteData.publish_on_site}
+                checked={form.publish_on_site}
                 onChange={handleWebsiteDataChange}
                 className="h-4 w-4"
                 disabled={loading}
@@ -825,7 +904,7 @@ const TenantSettings = () => {
               <Input
                 id="site_name"
                 name="site_name"
-                value={websiteData.site_name}
+                value={form.site_name}
                 onChange={handleWebsiteDataChange}
                 placeholder="My Store"
                 disabled={loading}
@@ -846,13 +925,13 @@ const TenantSettings = () => {
                 PNG, JPG or JPEG (max 4MB, 170×65px recommended)
               </p>
 
-              {websiteData.site_logo && (
+              {logoFile && (
                 <p className="text-sm text-green-600 mt-2">
-                  Selected: {websiteData.site_logo.name}
+                  Selected: {logoFile.name}
                 </p>
               )}
 
-              {settings?.site_logo_url && !websiteData.site_logo && (
+              {settings?.site_logo_url && !logoFile && (
                 <div className="mt-2">
                   <p className="text-sm text-gray-600 mb-1">Current logo:</p>
                   <img
@@ -879,7 +958,7 @@ const TenantSettings = () => {
               <Input
                 id="nht_website_link"
                 name="nht_website_link"
-                value={websiteData.nht_website_link}
+                value={form.nht_website_link}
                 onChange={handleWebsiteDataChange}
                 placeholder="https://example.com"
                 disabled={loading}
@@ -891,7 +970,7 @@ const TenantSettings = () => {
               <Input
                 id="nht_store_link"
                 name="nht_store_link"
-                value={websiteData.nht_store_link}
+                value={form.nht_store_link}
                 onChange={handleWebsiteDataChange}
                 placeholder="https://example.com"
                 disabled={loading}
@@ -903,7 +982,7 @@ const TenantSettings = () => {
               <Input
                 id="nht_joining_link"
                 name="nht_joining_link"
-                value={websiteData.nht_joining_link}
+                value={form.nht_joining_link}
                 onChange={handleWebsiteDataChange}
                 placeholder="https://example.com"
                 disabled={loading}
@@ -923,15 +1002,25 @@ const TenantSettings = () => {
               <div className="grid grid-cols-2 gap-2 text-sm">
                 <span className="text-gray-600">Type:</span>
                 <span className="font-medium">
-                  {websiteData.domain_type === 'custom_domain' ? 'Custom Domain' : 'Subdomain'}
+                  {form.domain_type === 'custom_domain' ? 'Custom Domain' : 'Subdomain'}
                 </span>
-                {websiteData.domain_type === 'custom_domain' && websiteData.custom_domain && (
+                {form.domain_type === 'custom_domain' && form.custom_domain && (
                   <>
                     <span className="text-gray-600">Domain:</span>
-                    <span className="font-medium">{websiteData.custom_domain}</span>
+                    <span className="font-medium">{form.custom_domain}</span>
+                    <span className="text-gray-600">Status:</span>
+                    <Badge
+                      className={
+                        form.custom_domain_status === 'verified'
+                          ? 'bg-green-500'
+                          : 'bg-yellow-500'
+                      }
+                    >
+                      {form.custom_domain_status === 'verified' ? '✅ Verified' : '⏳ Pending'}
+                    </Badge>
                   </>
                 )}
-                {websiteData.domain_type === 'sub_domain' && settings?.subdomain && (
+                {form.domain_type === 'sub_domain' && settings?.subdomain && (
                   <>
                     <span className="text-gray-600">URL:</span>
                     <span className="font-medium">https://{settings.subdomain}</span>
@@ -945,19 +1034,19 @@ const TenantSettings = () => {
               <div className="grid grid-cols-2 gap-2 text-sm">
                 <span className="text-gray-600">Name:</span>
                 <span className="font-medium">
-                  {websiteData.first_name} {websiteData.last_name}
+                  {form.first_name} {form.last_name}
                 </span>
                 <span className="text-gray-600">Email:</span>
-                <span className="font-medium">{websiteData.email_id}</span>
+                <span className="font-medium">{form.email_id}</span>
                 <span className="text-gray-600">Mobile:</span>
-                <span className="font-medium">{websiteData.mobile || 'Not set'}</span>
+                <span className="font-medium">{form.mobile || 'Not set'}</span>
                 <span className="text-gray-600">Address:</span>
-                <span className="font-medium">{websiteData.address || 'Not set'}</span>
+                <span className="font-medium">{form.address || 'Not set'}</span>
                 <span className="text-gray-600">Skype:</span>
-                <span className="font-medium">{websiteData.skype || 'Not set'}</span>
+                <span className="font-medium">{form.skype || 'Not set'}</span>
                 <span className="text-gray-600">Publish:</span>
                 <span className="font-medium">
-                  {websiteData.publish_on_site ? 'Yes' : 'No'}
+                  {form.publish_on_site ? 'Yes' : 'No'}
                 </span>
               </div>
             </div>
@@ -966,11 +1055,11 @@ const TenantSettings = () => {
               <h3 className="font-semibold text-lg">Branding</h3>
               <div className="grid grid-cols-2 gap-2 text-sm">
                 <span className="text-gray-600">Site Name:</span>
-                <span className="font-medium">{websiteData.site_name}</span>
+                <span className="font-medium">{form.site_name}</span>
                 <span className="text-gray-600">Logo:</span>
                 <span className="font-medium">
-                  {websiteData.site_logo
-                    ? `New: ${websiteData.site_logo.name}`
+                  {logoFile
+                    ? `New: ${logoFile.name}`
                     : settings?.site_logo_url
                     ? 'Current logo'
                     : 'Not set'}
@@ -983,15 +1072,15 @@ const TenantSettings = () => {
               <div className="grid grid-cols-2 gap-2 text-sm">
                 <span className="text-gray-600">Website:</span>
                 <span className="font-medium break-all">
-                  {websiteData.nht_website_link || 'Not set'}
+                  {form.nht_website_link || 'Not set'}
                 </span>
                 <span className="text-gray-600">Store:</span>
                 <span className="font-medium break-all">
-                  {websiteData.nht_store_link || 'Not set'}
+                  {form.nht_store_link || 'Not set'}
                 </span>
                 <span className="text-gray-600">Joining:</span>
                 <span className="font-medium break-all">
-                  {websiteData.nht_joining_link || 'Not set'}
+                  {form.nht_joining_link || 'Not set'}
                 </span>
               </div>
             </div>
@@ -1001,9 +1090,22 @@ const TenantSettings = () => {
       default:
         return null;
     }
-  };
+  }, [
+    websiteStep, 
+    renderValidationErrors, 
+    renderDNSInstructions, 
+    form, 
+    settings, 
+    loading, 
+    dnsLoading,
+    logoFile,
+    handleDomainTypeChange, 
+    handleWebsiteDataChange, 
+    handleRefreshDNSStatus,
+    showDNSInstructions,
+    renderGeneralDNSPreview
+  ]);
 
-  // Loading state
   if (!tenantId) {
     return (
       <div className="p-6 bg-white min-h-screen">
@@ -1017,7 +1119,7 @@ const TenantSettings = () => {
   }
 
   return (
-    <div className="bg-white min-h-screen">
+    <div className="bg-white min-h-screen p-6">
       <ToastNotification />
 
       {loading && !settings && (
@@ -1026,22 +1128,11 @@ const TenantSettings = () => {
         </div>
       )}
 
-      {error && !settings && (
-        <Alert variant="destructive" className="mb-6">
-          <AlertTriangle className="h-4 w-4" />
-          <AlertTitle>Error Loading Settings</AlertTitle>
-          <AlertDescription>
-            {error.message || 'Failed to load settings. Please try again.'}
-          </AlertDescription>
-        </Alert>
-      )}
-
-      {/* View Mode */}
-      {!showForm && settings && (
+      {!showForm && settings && !loading && (
         <Card>
           <CardHeader className="flex flex-row justify-between items-center">
             <CardTitle className="text-2xl font-semibold">Store Settings</CardTitle>
-            <Button onClick={() => setShowForm(true)}>
+            <Button onClick={() => dispatch(openForm())}>
               Edit Settings
             </Button>
           </CardHeader>
@@ -1080,15 +1171,15 @@ const TenantSettings = () => {
                         <div className="mt-1">
                           <Badge
                             className={
-                              settings.dns_status === 'verified'
+                              settings.custom_domain_status === 'verified'
                                 ? 'bg-green-500'
-                                : settings.dns_status === 'pending'
+                                : settings.custom_domain_status === 'pending'
                                 ? 'bg-yellow-500'
                                 : 'bg-red-500'
                             }
                           >
-                            {settings.dns_status === 'verified' ? '✅ Verified' : 
-                             settings.dns_status === 'pending' ? '⏳ Pending Verification' : '❌ Unverified'}
+                            {settings.custom_domain_status === 'verified' ? '✅ Verified' : 
+                             settings.custom_domain_status === 'pending' ? '⏳ Pending Verification' : '❌ Unverified'}
                           </Badge>
                         </div>
                       </div>
@@ -1195,14 +1286,13 @@ const TenantSettings = () => {
         </Card>
       )}
 
-      {/* Edit Mode */}
       {showForm && (
         <Card>
           <CardHeader className="flex flex-row justify-between items-center">
             <CardTitle className="text-2xl font-semibold">Edit Store Settings</CardTitle>
             <Button
               variant="outline"
-              onClick={resetForm}
+              onClick={handleResetForm}
               disabled={loading}
             >
               <ArrowLeft className="h-4 w-4 mr-2" />

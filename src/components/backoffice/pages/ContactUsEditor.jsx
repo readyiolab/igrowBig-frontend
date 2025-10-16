@@ -1,80 +1,89 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { Plus, Edit, Trash2, Search } from "react-feather";
-import { useParams, useNavigate } from "react-router-dom";
-import useTenantApi from "@/hooks/useTenantApi";
+import { useParams } from "react-router-dom";
+import { useDispatch, useSelector } from "react-redux";
 import toast, { Toaster } from "react-hot-toast";
+
+// Redux imports
+import {
+  fetchContactUs,
+  createContactUs,
+  updateContactUs,
+  deleteContactUs,
+  setFormData,
+  resetForm,
+  selectContactUs,
+  selectContactUsForm,
+  selectContactUsLoading,
+  selectContactUsError,
+} from "@/store/slices/contactUsSlice";
+
+import {
+  openForm,
+  closeForm,
+  setSearchTerm,
+  setSubmitting,
+  selectShowForm,
+  selectIsEditing,
+  selectEditId,
+  selectSearchTerm,
+  selectIsSubmitting,
+} from "@/store/slices/uiSlice";
+
+import { selectTenantId } from "@/store/slices/authSlice";
+
+const MAX_FILE_SIZE = 4 * 1024 * 1024;
 
 const ContactUsEditor = () => {
   const { tenantId: paramTenantId } = useParams();
-  const navigate = useNavigate();
-  const { data, loading: isLoading, error, getAll, post, put, request } = useTenantApi();
+  const dispatch = useDispatch();
 
-  const [tenantId, setTenantId] = useState(null);
-  const [showForm, setShowForm] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
-  const [editId, setEditId] = useState(null);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [pages, setPages] = useState([]);
-  const [newPage, setNewPage] = useState({
-    image: null,
-    text: "",
-  });
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [retryCount, setRetryCount] = useState(0);
-  const MAX_FILE_SIZE = 4 * 1024 * 1024; // 4MB in bytes
+  // Redux state
+  const pages = useSelector(selectContactUs);
+  const form = useSelector(selectContactUsForm);
+  const loading = useSelector(selectContactUsLoading);
+  const error = useSelector(selectContactUsError);
+  const tenantId = useSelector(selectTenantId);
+  
+  const showForm = useSelector(selectShowForm);
+  const isEditing = useSelector(selectIsEditing);
+  const editId = useSelector(selectEditId);
+  const searchTerm = useSelector(selectSearchTerm);
+  const isSubmitting = useSelector(selectIsSubmitting);
 
+  // Local state for File object (non-serializable)
+  const [selectedImage, setSelectedImage] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
+
+  const editingPage = pages.find((page) => page.id === editId);
+
+  // Fetch on mount
   useEffect(() => {
-    const storedTenantId = localStorage.getItem("tenant_id");
-    if (storedTenantId && tenantId !== storedTenantId) {
-      if (paramTenantId && paramTenantId !== storedTenantId) {
-        toast.error("Unauthorized access. Tenant ID mismatch.");
-        navigate("/backoffice-login");
+    if (!tenantId) {
+      const storedTenantId = localStorage.getItem("tenant_id");
+      if (!storedTenantId) {
+        toast.error("Please log in to continue.");
         return;
       }
-      setTenantId(storedTenantId);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (tenantId) {
-      fetchPages();
-    }
-  }, [tenantId, retryCount]);
-
-  const fetchPages = async () => {
-    try {
-      const response = await toast.promise(
-        getAll(`/tenants/${tenantId}/contactus`),
-        {
-          loading: "Fetching contact us pages...",
-          success: "Pages loaded successfully!",
-          error: "Failed to load pages.",
-        }
-      );
-      if (response && Array.isArray(response)) {
-        setPages(
-          response.map((page) => ({
-            id: page.id,
-            image: page.contactus_image || "",
-            text: page.contactus_text || "",
-            created_at: page.created_at ? page.created_at.split("T")[0] : "",
-          }))
-        );
-      } else {
-        setPages([]);
+      if (paramTenantId && paramTenantId !== storedTenantId) {
+        toast.error("Unauthorized access. Tenant ID mismatch.");
+        return;
       }
-    } catch (err) {
-      console.error("Error fetching contact us pages:", err.response?.data || err.message);
-      if (retryCount < 3) {
-        toast.error(`Failed to load pages. Retrying... (${retryCount + 1}/3)`);
-        setTimeout(() => setRetryCount(retryCount + 1), 2000);
-      } else {
-        toast.error("Unable to load pages. Please try again later.");
-        setPages([]);
-      }
+      return;
     }
-  };
 
+    dispatch(fetchContactUs(tenantId))
+      .unwrap()
+      .then(() => {
+        toast.success("Pages loaded successfully!");
+      })
+      .catch((err) => {
+        console.error("Error fetching contact us pages:", err);
+        toast.error(err.message || "Unable to load pages. Please try again later.");
+      });
+  }, [tenantId, dispatch, paramTenantId]);
+
+  // Debounced search
   const debounce = (func, delay) => {
     let timeoutId;
     return (...args) => {
@@ -85,33 +94,34 @@ const ContactUsEditor = () => {
 
   const handleSearchChange = useCallback(
     debounce((value) => {
-      setSearchTerm(value);
+      dispatch(setSearchTerm(value));
     }, 300),
-    []
+    [dispatch]
   );
 
+  // Handlers
   const handleAddNew = () => {
-    setShowForm(true);
-    setIsEditing(false);
-    setNewPage({ image: null, text: "" });
+    dispatch(openForm({ isEditing: false }));
+    dispatch(resetForm());
+    setSelectedImage(null);
+    setImagePreview(null);
   };
 
   const handleEdit = (page) => {
-    setShowForm(true);
-    setIsEditing(true);
-    setEditId(page.id);
-    setNewPage({
-      image: null,
-      text: page.text,
-      currentImage: page.image,
-    });
+    dispatch(openForm({ isEditing: true, editId: page.id }));
+    dispatch(setFormData({
+      text: page.text || '',
+      currentImage: page.image || null,
+    }));
+    setSelectedImage(null);
+    setImagePreview(page.image || null);
   };
 
   const handleCancel = () => {
-    setShowForm(false);
-    setIsEditing(false);
-    setEditId(null);
-    setNewPage({ image: null, text: "" });
+    dispatch(closeForm());
+    dispatch(resetForm());
+    setSelectedImage(null);
+    setImagePreview(null);
   };
 
   const validateFile = (file) => {
@@ -129,107 +139,118 @@ const ContactUsEditor = () => {
 
   const handleImageUpload = (e) => {
     const file = e.target.files[0];
-    if (file && validateFile(file)) {
-      setNewPage({ ...newPage, image: file });
+    if (validateFile(file)) {
+      setSelectedImage(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+      toast.info("Image selected!");
+    } else {
+      e.target.value = '';
     }
+  };
+
+  const handleRemoveImage = () => {
+    setSelectedImage(null);
+    setImagePreview(isEditing ? form.currentImage : null);
   };
 
   const handleSave = async () => {
     if (!tenantId) {
       toast.error("Tenant ID not found. Please log in again.");
-      navigate("/backoffice-login");
       return;
     }
 
-    if (!newPage.text.trim()) {
+    if (!form.text.trim()) {
       toast.error("Text is required.");
       return;
     }
 
-    if (!isEditing && !newPage.image) {
+    if (!isEditing && !selectedImage) {
       toast.error("Image is required for new pages.");
       return;
     }
 
-    if (newPage.image && !validateFile(newPage.image)) {
+    if (selectedImage && !validateFile(selectedImage)) {
       return;
     }
 
     const formData = new FormData();
-    if (newPage.image) formData.append("contactus_image", newPage.image);
-    formData.append("contactus_text", newPage.text);
+    if (selectedImage) formData.append("contactus_image", selectedImage);
+    formData.append("contactus_text", form.text);
 
-    setIsSubmitting(true);
+    dispatch(setSubmitting(true));
+
     try {
       if (isEditing) {
         await toast.promise(
-          put(`/tenants/${tenantId}/contactus/${editId}`, formData, true),
+          dispatch(updateContactUs({ tenantId, pageId: editId, formData })).unwrap(),
           {
             loading: "Updating page...",
             success: "Page updated successfully!",
-            error: (err) => `Failed to update: ${err.response?.data?.message || err.message}`,
+            error: (err) => `Failed to update: ${err.message || 'Unknown error'}`,
           }
         );
       } else {
         await toast.promise(
-          post(`/tenants/${tenantId}/contactus`, formData, true),
+          dispatch(createContactUs({ tenantId, formData })).unwrap(),
           {
             loading: "Creating page...",
             success: "Page created successfully!",
-            error: (err) => `Failed to create: ${err.response?.data?.message || err.message}`,
+            error: (err) => `Failed to create: ${err.message || 'Unknown error'}`,
           }
         );
       }
-      await fetchPages();
+      
+      await dispatch(fetchContactUs(tenantId));
       handleCancel();
     } catch (err) {
-      console.error("Error saving contact us page:", err.response?.data || err.message);
-      if (err.response?.status === 401) {
+      console.error("Error saving contact us page:", err);
+      if (err.status === 401) {
         toast.error("Session expired. Please log in again.");
-        navigate("/backoffice-login");
+      } else {
+        toast.error(err.message || "Failed to save page. Please try again.");
       }
     } finally {
-      setIsSubmitting(false);
+      dispatch(setSubmitting(false));
     }
   };
 
-  const handleDelete = async (id) => {
+  const handleDelete = async (pageId) => {
     if (window.confirm("Are you sure you want to delete this page?")) {
-      setIsSubmitting(true);
+      dispatch(setSubmitting(true));
       try {
         await toast.promise(
-          request("delete", `/tenants/${tenantId}/contactus/${id}`),
+          dispatch(deleteContactUs({ tenantId, pageId })).unwrap(),
           {
             loading: "Deleting page...",
             success: "Page deleted successfully!",
-            error: (err) => `Failed to delete: ${err.response?.data?.message || err.message}`,
+            error: (err) => `Failed to delete: ${err.message || 'Unknown error'}`,
           }
         );
-        await fetchPages();
+        await dispatch(fetchContactUs(tenantId));
       } catch (err) {
-        console.error("Error deleting contact us page:", err.response?.data || err.message);
-        if (err.response?.status === 401) {
+        console.error("Error deleting contact us page:", err);
+        if (err.status === 401) {
           toast.error("Session expired. Please log in again.");
-          navigate("/backoffice-login");
+        } else {
+          toast.error(err.message || "Failed to delete page. Please try again.");
         }
       } finally {
-        setIsSubmitting(false);
+        dispatch(setSubmitting(false));
       }
     }
   };
 
-  const handleRetry = () => {
-    setRetryCount(0);
-    fetchPages();
-  };
-
-  const filteredPages = pages.filter((page) =>
-    (page.text || "").toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredPages = pages.filter(
+    (page) => (page.text || "").toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
     <div className="container mx-auto p-4">
-      <Toaster position="top-right" toastOptions={{ duration: 3000 }} />
+      <Toaster position="top-right" />
 
       <div className="flex justify-between items-center mb-6">
         {!showForm && (
@@ -258,58 +279,19 @@ const ContactUsEditor = () => {
         )}
       </div>
 
-      {isLoading && (
+      {loading && (
         <div className="text-center py-6">
           <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-gray-900 mx-auto"></div>
           <span className="text-gray-500 text-lg mt-2 block animate-pulse">Loading pages...</span>
         </div>
       )}
 
-      {error && retryCount >= 3 && !isLoading && (
-        <div className="p-12 text-center bg-white shadow-lg rounded-xl border border-gray-200">
-          <svg
-            className="mx-auto h-24 w-24 text-gray-400 mb-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2"
-              d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-            />
-          </svg>
-          <h3 className="text-xl font-semibold text-gray-700 mb-2">Unable to Load Pages</h3>
-          <p className="text-gray-500 mb-6">
-            {error.message || "An error occurred while loading pages. You can start adding a page or try again."}
-          </p>
-          <div className="flex justify-center gap-4">
-            <button
-              onClick={handleAddNew}
-              className="bg-black text-white px-6 py-2 rounded-full transition-all duration-200 hover:scale-105"
-              aria-label="Add new contact us page"
-            >
-              Add Page
-            </button>
-            <button
-              onClick={handleRetry}
-              className="border border-gray-200 text-gray-700 px-6 py-2 rounded-full hover:bg-gray-100 transition-all duration-200"
-              aria-label="Retry loading pages"
-            >
-              Retry
-            </button>
-          </div>
-        </div>
-      )}
-
-      {!tenantId && !isLoading && (
+      {!tenantId && !loading && (
         <div className="p-12 text-center bg-white shadow-lg rounded-xl border border-gray-200">
           <h3 className="text-xl font-semibold text-gray-700 mb-2">Authentication Required</h3>
           <p className="text-gray-500 mb-6">No tenant ID found. Please log in to continue.</p>
           <button
-            onClick={() => navigate("/backoffice-login")}
+            onClick={() => window.location.href = "/backoffice-login"}
             className="bg-black text-white px-6 py-2 rounded-full transition-all duration-200 hover:scale-105"
             aria-label="Go to login page"
           >
@@ -318,7 +300,7 @@ const ContactUsEditor = () => {
         </div>
       )}
 
-      {!showForm && !isLoading && tenantId && !error && (
+      {!showForm && !loading && tenantId && !error && (
         <div className="bg-white shadow-lg rounded-xl overflow-hidden border border-gray-200 transition-all duration-300">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-900 text-white">
@@ -396,8 +378,8 @@ const ContactUsEditor = () => {
                 <input
                   id="text"
                   type="text"
-                  value={newPage.text}
-                  onChange={(e) => setNewPage({ ...newPage, text: e.target.value })}
+                  value={form.text}
+                  onChange={(e) => dispatch(setFormData({ text: e.target.value }))}
                   disabled={isSubmitting}
                   className="w-full px-3 py-2 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-300 hover:border-gray-300 transition-all duration-200 bg-gray-50 disabled:bg-gray-100 disabled:cursor-not-allowed"
                   placeholder="Enter text"
@@ -419,35 +401,28 @@ const ContactUsEditor = () => {
                   className="w-full text-sm text-gray-600 file:mr-3 file:py-2 file:px-3 file:rounded-full file:border-0 file:text-sm file:font-medium file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200 transition-all duration-200 disabled:opacity-50"
                   aria-label="Upload contact us image"
                 />
-                {newPage.image && (
-                  <div className="mt-2 relative">
-                    <p className="text-xs text-gray-500">Preview:</p>
+                {imagePreview && (
+                  <div className="mt-2 relative inline-block">
+                    <p className="text-xs text-gray-500 mb-1">Preview:</p>
                     <img
-                      src={URL.createObjectURL(newPage.image)}
+                      src={imagePreview}
                       alt="Preview"
                       className="w-20 h-10 object-cover rounded shadow-sm"
-                    />
-                    <button
-                      onClick={() => setNewPage({ ...newPage, image: null })}
-                      disabled={isSubmitting}
-                      className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full hover:bg-red-600 transition-colors duration-200 disabled:opacity-50"
-                      aria-label="Remove selected image"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
-                  </div>
-                )}
-                {isEditing && newPage.currentImage && !newPage.image && (
-                  <p className="text-xs text-gray-500 mt-1">
-                    Current: <img
-                      src={newPage.currentImage}
-                      alt="Current"
-                      className="w-20 h-10 object-cover rounded inline-block"
                       onError={(e) => (e.target.src = "/placeholder-image.jpg")}
                     />
-                  </p>
+                    {selectedImage && (
+                      <button
+                        onClick={handleRemoveImage}
+                        disabled={isSubmitting}
+                        className="absolute -top-2 -right-2 bg-red-500 text-white p-1 rounded-full hover:bg-red-600 transition-colors duration-200 disabled:opacity-50"
+                        aria-label="Remove selected image"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    )}
+                  </div>
                 )}
               </div>
             </div>

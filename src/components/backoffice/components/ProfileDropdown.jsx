@@ -3,6 +3,7 @@ import { ChevronDown, LogOut } from 'lucide-react';
 import { theme } from '@/constants/backofficeConfig';
 import useTenantApi from '@/hooks/useTenantApi';
 import { useNavigate } from 'react-router-dom';
+import useLogout from "@/hooks/useLogout";
 
 const ProfileDropdown = ({ isOpen, toggle, ref }) => {
   const { data, loading, error, getAll } = useTenantApi();

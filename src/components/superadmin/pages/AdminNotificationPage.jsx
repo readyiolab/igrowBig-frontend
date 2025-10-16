@@ -1,39 +1,41 @@
-import React, { useState } from "react";
-import axios from "axios";
+import React, { useState, useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import {
+  sendAdminNotification,
+  clearAdminNotificationStatus,
+} from "@/store/slices/adminNotificationSlice";
 
 const AdminNotificationPage = () => {
   const [title, setTitle] = useState("");
   const [message, setMessage] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [response, setResponse] = useState(null);
-  const [error, setError] = useState(null);
+  
+  const dispatch = useDispatch();
+  const { loading, success, error, lastNotification } = useSelector(
+    (state) => state.adminNotification
+  );
 
-  const token = localStorage.getItem("adminToken"); // Admin JWT token
+  // Clear status messages after 5 seconds
+  useEffect(() => {
+    if (success || error) {
+      const timer = setTimeout(() => {
+        dispatch(clearAdminNotificationStatus());
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [success, error, dispatch]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
-    setError(null);
-    setResponse(null);
 
     try {
-      const res = await axios.post(
-        "http://localhost:3001/api/admin/notifications",
-        { title, message },
-        {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-      setResponse(res.data);
+      await dispatch(sendAdminNotification({ title, message })).unwrap();
+      
+      // Clear form on success
       setTitle("");
       setMessage("");
     } catch (err) {
-      setError(err.response?.data || { message: "An error occurred" });
-    } finally {
-      setLoading(false);
+      // Error is handled by Redux state
+      console.error("Failed to send notification:", err);
     }
   };
 
@@ -42,9 +44,13 @@ const AdminNotificationPage = () => {
       <h2 className="text-2xl font-bold text-center text-gray-800 mb-6">
         Send Notification to Tenants
       </h2>
+      
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="space-y-2">
-          <label htmlFor="title" className="block text-sm font-medium text-gray-700">
+          <label
+            htmlFor="title"
+            className="block text-sm font-medium text-gray-700"
+          >
             Title
           </label>
           <input
@@ -54,11 +60,16 @@ const AdminNotificationPage = () => {
             onChange={(e) => setTitle(e.target.value)}
             placeholder="Enter notification title"
             required
-            className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+            disabled={loading}
+            className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
           />
         </div>
+
         <div className="space-y-2">
-          <label htmlFor="message" className="block text-sm font-medium text-gray-700">
+          <label
+            htmlFor="message"
+            className="block text-sm font-medium text-gray-700"
+          >
             Message
           </label>
           <textarea
@@ -67,27 +78,34 @@ const AdminNotificationPage = () => {
             onChange={(e) => setMessage(e.target.value)}
             placeholder="Enter your message"
             required
-            className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 h-32 resize-y"
+            disabled={loading}
+            className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 h-32 resize-y disabled:bg-gray-100 disabled:cursor-not-allowed"
           />
         </div>
+
         <button
           type="submit"
           disabled={loading}
           className={`w-full py-3 text-white font-semibold rounded-md ${
-            loading ? "bg-green-400 cursor-not-allowed" : "bg-green-600 hover:bg-green-700"
+            loading
+              ? "bg-green-400 cursor-not-allowed"
+              : "bg-green-600 hover:bg-green-700"
           } transition-colors`}
         >
           {loading ? "Sending..." : "Send Notification"}
         </button>
       </form>
-      {response && (
+
+      {success && lastNotification && (
         <div className="mt-4 p-3 bg-green-100 text-green-800 rounded-md">
-          {response.message} (ID: {response.notification_id}, Sent to: {response.recipients_count} tenants)
+          {success} (ID: {lastNotification.notification_id}, Sent to:{" "}
+          {lastNotification.recipients_count} tenants)
         </div>
       )}
+
       {error && (
         <div className="mt-4 p-3 bg-red-100 text-red-800 rounded-md">
-          Error: {error.error} - {error.message}
+          Error: {error.error || "Unknown error"} - {error.message}
         </div>
       )}
     </div>

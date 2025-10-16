@@ -1,19 +1,38 @@
+// src/components/admin/SendTenantNotification.jsx
 import React, { useState, useEffect } from "react";
 import { toast, Toaster } from "react-hot-toast";
 import { motion } from "framer-motion";
-import useTenantApi from "@/hooks/useTenantApi";
+import { useDispatch, useSelector } from "react-redux";
+import {
+  fetchMessages,
+  sendNotification,
+  selectMessages,
+  selectNotificationLoading,
+  selectNotificationError,
+  clearError,
+} from "@/store/slices/notificationSlice";
 
 const SendTenantNotification = () => {
+  const dispatch = useDispatch();
+  const messages = useSelector(selectMessages);
+  const loading = useSelector(selectNotificationLoading);
+  const error = useSelector(selectNotificationError);
+
   const [title, setTitle] = useState("");
   const [message, setMessage] = useState("");
   const [formErrors, setFormErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { data: sendData, loading: sendLoading, error: sendError, post } = useTenantApi();
-  const { data: messagesData, loading: messagesLoading, error: messagesError, getAll } = useTenantApi();
 
   useEffect(() => {
-    getAll("/admin/messages");
-  }, [getAll]);
+    dispatch(fetchMessages());
+  }, [dispatch]);
+
+  useEffect(() => {
+    if (error) {
+      toast.error(error.message || "An error occurred");
+      dispatch(clearError());
+    }
+  }, [error, dispatch]);
 
   const validateForm = () => {
     const errors = {};
@@ -34,49 +53,47 @@ const SendTenantNotification = () => {
     setIsSubmitting(true);
 
     try {
-      await toast.promise(
-        post("/admin/notifications", { title, message }),
-        {
-          loading: "Sending notification...",
-          success: (response) => {
-            setTitle("");
-            setMessage("");
-            setFormErrors({});
-            getAll("/admin/messages");
-            return response.message || "Notification sent successfully!";
-          },
-          error: (err) => {
-            return err.response?.data?.message || "Failed to send notification";
-          },
-        }
-      );
-    } catch (error) {
-      console.error("Error sending notification:", error);
+      await dispatch(sendNotification({ title, message })).unwrap();
+      setTitle("");
+      setMessage("");
+      setFormErrors({});
+      toast.success("Notification sent successfully!");
+    } catch (err) {
+      toast.error(err.message || "Failed to send notification");
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const messages = messagesData?.messages || [];
+  const handleRefresh = () => {
+    dispatch(fetchMessages());
+  };
 
   return (
     <div className="m-4 border-2 bg-white rounded-xl shadow-sm overflow-hidden">
+      <Toaster 
+        position="top-center"
+        reverseOrder={false}
+        toastOptions={{
+          style: {
+            background: '#1a1a1a',
+            color: '#fff',
+            borderRadius: '8px',
+            padding: '16px',
+          },
+          success: {
+            iconTheme: { primary: '#ffffff', secondary: '#000000' },
+          },
+          error: {
+            iconTheme: { primary: '#ffffff', secondary: '#000000' },
+          },
+        }}
+      />
+
       <div className="bg-black p-6 text-white">
         <h2 className="text-2xl font-bold">Send Tenant Notification</h2>
         <p className="text-gray-300 mt-1">Broadcast a message to all tenants</p>
       </div>
-
-      {sendError && (
-        <div className="mx-6 mt-6 p-4 bg-gray-100 border-l-4 border-gray-800 text-gray-800 rounded-md flex items-start">
-          <svg className="h-5 w-5 mr-3 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-          </svg>
-          <div>
-            <p className="font-medium">Error</p>
-            <p className="text-sm mt-1">{sendError.message}</p>
-          </div>
-        </div>
-      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 p-6">
         {/* Form Section */}
@@ -94,13 +111,13 @@ const SendTenantNotification = () => {
                   type="text"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  className={`w-full pl-10 pr-4 py-3 border ${formErrors.title ? 'border-gray-800 bg-gray-100' : 'border-gray-300'} rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-black transition-colors`}
+                  className={`w-full pl-10 pr-4 py-3 border ${formErrors.title ? 'border-red-500 bg-red-50' : 'border-gray-300'} rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-black transition-colors`}
                   placeholder="Enter notification title"
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || loading}
                 />
               </div>
               {formErrors.title && (
-                <p className="mt-1 text-sm text-gray-800">{formErrors.title}</p>
+                <p className="mt-1 text-sm text-red-600">{formErrors.title}</p>
               )}
             </div>
 
@@ -115,28 +132,28 @@ const SendTenantNotification = () => {
                 <textarea
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
-                  className={`w-full pl-10 pr-4 py-3 border ${formErrors.message ? 'border-gray-800 bg-gray-100' : 'border-gray-300'} rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-black transition-colors h-32 resize-y`}
+                  className={`w-full pl-10 pr-4 py-3 border ${formErrors.message ? 'border-red-500 bg-red-50' : 'border-gray-300'} rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-black transition-colors h-32 resize-y`}
                   placeholder="Enter notification message"
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || loading}
                 />
               </div>
               {formErrors.message && (
-                <p className="mt-1 text-sm text-gray-800">{formErrors.message}</p>
+                <p className="mt-1 text-sm text-red-600">{formErrors.message}</p>
               )}
             </div>
 
             <motion.button
               type="submit"
-              disabled={isSubmitting}
+              disabled={isSubmitting || loading}
               className={`w-full py-3 px-4 rounded-lg font-medium transition-all flex items-center justify-center ${
-                isSubmitting
-                  ? "bg-gray-400 cursor-not-allowed"
+                isSubmitting || loading
+                  ? "bg-gray-400 cursor-not-allowed text-white"
                   : "bg-black hover:bg-gray-900 cursor-pointer text-white shadow-md hover:shadow-lg"
               }`}
-              whileHover={{ scale: isSubmitting ? 1 : 1.02 }}
-              whileTap={{ scale: isSubmitting ? 1 : 0.98 }}
+              whileHover={{ scale: (isSubmitting || loading) ? 1 : 1.02 }}
+              whileTap={{ scale: (isSubmitting || loading) ? 1 : 0.98 }}
             >
-              {isSubmitting ? (
+              {loading ? (
                 <>
                   <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
@@ -162,24 +179,21 @@ const SendTenantNotification = () => {
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-medium text-gray-900">Message History</h3>
               <button
-                onClick={() => getAll("/admin/messages")}
-                className="bg-gray-100 hover:bg-gray-200 text-gray-800 px-3 py-1 rounded-lg text-sm font-medium transition-colors"
+                onClick={handleRefresh}
+                className="bg-gray-100 hover:bg-gray-200 text-gray-800 px-3 py-1 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+                disabled={loading}
               >
                 Refresh
               </button>
             </div>
 
-            {messagesLoading ? (
+            {loading && messages.length === 0 ? (
               <div className="flex flex-col justify-center items-center py-12">
                 <svg className="animate-spin h-12 w-12 text-gray-800 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
                 <p className="text-gray-700 font-medium">Loading messages...</p>
-              </div>
-            ) : messagesError ? (
-              <div className="bg-gray-100 border-l-4 border-gray-800 p-4 rounded-md">
-                <p className="text-sm text-gray-800">{messagesError.message}</p>
               </div>
             ) : messages.length === 0 ? (
               <div className="text-center py-12 text-gray-500">
@@ -190,35 +204,35 @@ const SendTenantNotification = () => {
                 <p className="text-xs">Start by sending your first notification.</p>
               </div>
             ) : (
-              <div className="overflow-x-auto rounded-lg border">
+              <div className="overflow-x-auto rounded-lg border border-gray-200">
                 <table className="w-full border-collapse">
-                  <thead>
-                    <tr className="bg-gray-100">
-                      <th className="p-2 text-left text-xs font-semibold text-gray-600 uppercase">ID</th>
-                      <th className="p-2 text-left text-xs font-semibold text-gray-600 uppercase">Title</th>
-                      <th className="p-2 text-left text-xs font-semibold text-gray-600 uppercase">Message</th>
-                      <th className="p-2 text-left text-xs font-semibold text-gray-600 uppercase">Status</th>
-                      <th className="p-2 text-left text-xs font-semibold text-gray-600 uppercase">Created At</th>
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="p-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">ID</th>
+                      <th className="p-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Title</th>
+                      <th className="p-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Message</th>
+                      <th className="p-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</th>
+                      <th className="p-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Created At</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
                     {messages.map((msg) => (
-                      <tr key={msg.id} className="hover:bg-gray-50">
-                        <td className="p-2 text-xs text-gray-800">{msg.id}</td>
-                        <td className="p-2 text-xs text-gray-800 font-medium">{msg.title}</td>
-                        <td className="p-2 text-xs text-gray-800">
-                          {msg.message.length > 50 ? msg.message.substring(0, 50) + '...' : msg.message}
+                      <tr key={msg.id} className="hover:bg-gray-50 transition-colors">
+                        <td className="p-3 text-sm text-gray-800">{msg.id}</td>
+                        <td className="p-3 text-sm text-gray-800 font-medium">{msg.title}</td>
+                        <td className="p-3 text-sm text-gray-800">
+                          {msg.message.length > 50 ? `${msg.message.substring(0, 50)}...` : msg.message}
                         </td>
-                        <td className="p-2">
-                          <span className={`inline-flex text-xs px-2 py-0.5 rounded-full font-medium 
-                            ${msg.status === 'sent' ? 'bg-gray-800 text-white' : 
-                              msg.status === 'draft' ? 'bg-gray-200 text-gray-800' : 
-                              msg.status === 'failed' ? 'bg-gray-300 text-black' : 
+                        <td className="p-3">
+                          <span className={`inline-flex text-xs px-2 py-1 rounded-full font-medium 
+                            ${msg.status === 'sent' ? 'bg-green-100 text-green-800' : 
+                              msg.status === 'draft' ? 'bg-yellow-100 text-yellow-800' : 
+                              msg.status === 'failed' ? 'bg-red-100 text-red-800' : 
                               'bg-gray-100 text-gray-800'}`}>
-                            {msg.status}
+                            {msg.status.charAt(0).toUpperCase() + msg.status.slice(1)}
                           </span>
                         </td>
-                        <td className="p-2 text-xs text-gray-500 whitespace-nowrap">
+                        <td className="p-3 text-sm text-gray-500 whitespace-nowrap">
                           {new Date(msg.created_at).toLocaleString()}
                         </td>
                       </tr>
@@ -236,28 +250,9 @@ const SendTenantNotification = () => {
           <svg className="h-5 w-5 text-gray-400 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
-          Notifications will be sent to all active tenants
+          Notifications will be sent to all active tenants via email and in-app alerts.
         </div>
       </div>
-
-      <Toaster 
-        position="top-center"
-        reverseOrder={false}
-        toastOptions={{
-          style: {
-            background: '#1a1a1a',
-            color: '#fff',
-            borderRadius: '8px',
-            padding: '16px',
-          },
-          success: {
-            iconTheme: { primary: '#ffffff', secondary: '#000000' },
-          },
-          error: {
-            iconTheme: { primary: '#ffffff', secondary: '#000000' },
-          },
-        }}
-      />
     </div>
   );
 };

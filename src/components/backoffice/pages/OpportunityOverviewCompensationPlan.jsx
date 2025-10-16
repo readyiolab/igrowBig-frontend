@@ -1,23 +1,47 @@
+// OpportunityOverviewCompensationPlan.jsx
 import React, { useState, useEffect, useCallback } from "react";
 import { Plus, Edit, Trash2, Search, X } from "react-feather";
 import { useParams, useNavigate } from "react-router-dom";
-import useTenantApi from "@/hooks/useTenantApi";
+import { useDispatch, useSelector } from "react-redux";
 import toast, { Toaster } from "react-hot-toast";
+import {
+  fetchOpportunityPage,
+  updateOpportunityPage,
+  createOpportunityPage,
+  deleteOpportunityPage,
+  selectOpportunityPageData,
+  selectOpportunityPageLoading,
+  selectOpportunityPageError,
+} from "@/store/slices/opportunityPageSlice";
+import {
+  openForm,
+  closeForm,
+  setSubmitting,
+  setSearchTerm,
+  selectShowForm,
+  selectIsEditing,
+  selectIsSubmitting,
+  selectSearchTerm,
+} from "@/store/slices/uiSlice";
 
 const OpportunityOverviewCompensationPlan = () => {
   const { tenantId: paramTenantId } = useParams();
   const navigate = useNavigate();
-  const { data, loading: isLoading, error, getAll, post, put, request } = useTenantApi();
+  const dispatch = useDispatch();
+
+  const data = useSelector(selectOpportunityPageData);
+  const loading = useSelector(selectOpportunityPageLoading);
+  const error = useSelector(selectOpportunityPageError);
+  const showForm = useSelector(selectShowForm);
+  const isEditing = useSelector(selectIsEditing);
+  const searchTerm = useSelector(selectSearchTerm);
+  const isSubmitting = useSelector(selectIsSubmitting);
 
   const [tenantId, setTenantId] = useState(null);
-  const [showForm, setShowForm] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [plans, setPlans] = useState([]);
   const [newPlan, setNewPlan] = useState({ plan_document: null });
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [retryCount, setRetryCount] = useState(0);
   const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB in bytes
+
+  const plans = data.plan_document_url ? [{ id: data.id, plan_document_url: data.plan_document_url }] : [];
 
   useEffect(() => {
     const storedTenantId = localStorage.getItem("tenant_id");
@@ -29,40 +53,13 @@ const OpportunityOverviewCompensationPlan = () => {
       }
       setTenantId(storedTenantId);
     }
-  }, []);
+  }, [paramTenantId, tenantId, navigate]);
 
   useEffect(() => {
     if (tenantId) {
-      fetchPlan();
+      dispatch(fetchOpportunityPage(tenantId));
     }
-  }, [tenantId, retryCount]);
-
-  const fetchPlan = async () => {
-    try {
-      const response = await toast.promise(
-        getAll(`/tenants/${tenantId}/opportunity-page`),
-        {
-          loading: "Fetching compensation plan...",
-          success: "Plan loaded successfully!",
-          error: "Failed to load plan.",
-        }
-      );
-      if (response && response.plan_document_url) {
-        setPlans([{ id: response.id, plan_document_url: response.plan_document_url }]);
-      } else {
-        setPlans([]);
-      }
-    } catch (err) {
-      console.error("Error fetching opportunity page plan:", err.response?.data || err.message);
-      if (retryCount < 3) {
-        toast.error(`Failed to load plan. Retrying... (${retryCount + 1}/3)`);
-        setTimeout(() => setRetryCount(retryCount + 1), 2000);
-      } else {
-        toast.error("Unable to load plan. Please try again later.");
-        setPlans([]);
-      }
-    }
-  };
+  }, [tenantId, dispatch]);
 
   const debounce = (func, delay) => {
     let timeoutId;
@@ -74,26 +71,23 @@ const OpportunityOverviewCompensationPlan = () => {
 
   const handleSearchChange = useCallback(
     debounce((value) => {
-      setSearchTerm(value);
+      dispatch(setSearchTerm(value));
     }, 300),
-    []
+    [dispatch]
   );
 
   const handleAddNew = () => {
-    setShowForm(true);
-    setIsEditing(false);
+    dispatch(openForm({ isEditing: false }));
     setNewPlan({ plan_document: null });
   };
 
   const handleEdit = (plan) => {
-    setShowForm(true);
-    setIsEditing(true);
+    dispatch(openForm({ isEditing: true, editId: plan.id }));
     setNewPlan({ plan_document: null });
   };
 
   const handleCancel = () => {
-    setShowForm(false);
-    setIsEditing(false);
+    dispatch(closeForm());
     setNewPlan({ plan_document: null });
   };
 
@@ -139,29 +133,28 @@ const OpportunityOverviewCompensationPlan = () => {
     }
     formData.append("update_type", "plan_document_only");
 
-    setIsSubmitting(true);
+    dispatch(setSubmitting(true));
     try {
-      const existingPage = await getAll(`/tenants/${tenantId}/opportunity-page`);
-      await toast.promise(
-        existingPage && existingPage.id
-          ? put(`/tenants/${tenantId}/opportunity-page`, formData, true)
-          : post(`/tenants/${tenantId}/opportunity-page`, formData, true),
-        {
-          loading: "Saving plan document...",
-          success: "Plan document saved successfully!",
-          error: (err) => `Failed to save: ${err.response?.data?.message || err.message}`,
-        }
-      );
-      await fetchPlan();
+      const existingPage = data;
+      const promise = existingPage && existingPage.id
+        ? dispatch(updateOpportunityPage({ tenantId, formData })).unwrap()
+        : dispatch(createOpportunityPage({ tenantId, formData })).unwrap();
+
+      await toast.promise(promise, {
+        loading: "Saving plan document...",
+        success: "Plan document saved successfully!",
+        error: (err) => `Failed to save: ${err.message || "Unknown error"}`,
+      });
+      dispatch(fetchOpportunityPage(tenantId));
       handleCancel();
     } catch (err) {
-      console.error("Error saving opportunity page plan:", err.response?.data || err.message);
-      if (err.response?.status === 401) {
+      console.error("Error saving opportunity page plan:", err);
+      if (err.status === 401) {
         toast.error("Session expired. Please log in again.");
         navigate("/backoffice-login");
       }
     } finally {
-      setIsSubmitting(false);
+      dispatch(setSubmitting(false));
     }
   };
 
@@ -171,32 +164,30 @@ const OpportunityOverviewCompensationPlan = () => {
       return;
     }
     if (window.confirm("Are you sure you want to delete this plan document?")) {
-      setIsSubmitting(true);
+      dispatch(setSubmitting(true));
       try {
         await toast.promise(
-          request("delete", `/tenants/${tenantId}/opportunity-page`),
+          dispatch(deleteOpportunityPage(tenantId)).unwrap(),
           {
             loading: "Deleting plan document...",
             success: "Plan document deleted successfully!",
-            error: (err) => `Failed to delete: ${err.response?.data?.message || err.message}`,
+            error: (err) => `Failed to delete: ${err.message || "Unknown error"}`,
           }
         );
-        setPlans([]);
       } catch (err) {
-        console.error("Error deleting opportunity page plan:", err.response?.data || err.message);
-        if (err.response?.status === 401) {
+        console.error("Error deleting opportunity page plan:", err);
+        if (err.status === 401) {
           toast.error("Session expired. Please log in again.");
           navigate("/backoffice-login");
         }
       } finally {
-        setIsSubmitting(false);
+        dispatch(setSubmitting(false));
       }
     }
   };
 
   const handleRetry = () => {
-    setRetryCount(0);
-    fetchPlan();
+    dispatch(fetchOpportunityPage(tenantId));
   };
 
   const filteredPlans = plans.filter((plan) =>
@@ -216,6 +207,7 @@ const OpportunityOverviewCompensationPlan = () => {
                 <input
                   type="text"
                   placeholder="Search plans..."
+                  value={searchTerm}
                   onChange={(e) => handleSearchChange(e.target.value)}
                   className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-full focus:outline-none focus:ring-2 focus:ring-gray-300 hover:border-gray-300 transition-all duration-200 shadow-sm text-sm"
                   aria-label="Search compensation plans"
@@ -234,14 +226,14 @@ const OpportunityOverviewCompensationPlan = () => {
         )}
       </div>
 
-      {isLoading && (
+      {loading && (
         <div className="text-center py-6">
           <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-gray-900 mx-auto"></div>
           <span className="text-gray-500 text-lg mt-2 block animate-pulse">Loading compensation plans...</span>
         </div>
       )}
 
-      {error && retryCount >= 3 && !isLoading && (
+      {error && !loading && (
         <div className="p-12 text-center bg-white shadow-lg rounded-xl border border-gray-200">
           <svg
             className="mx-auto h-24 w-24 text-gray-400 mb-4"
@@ -280,7 +272,7 @@ const OpportunityOverviewCompensationPlan = () => {
         </div>
       )}
 
-      {!tenantId && !isLoading && (
+      {!tenantId && !loading && (
         <div className="p-12 text-center bg-white shadow-lg rounded-xl border border-gray-200">
           <h3 className="text-xl font-semibold text-gray-700 mb-2">Authentication Required</h3>
           <p className="text-gray-500 mb-6">No tenant ID found. Please log in to continue.</p>
@@ -294,7 +286,7 @@ const OpportunityOverviewCompensationPlan = () => {
         </div>
       )}
 
-      {!isLoading && !error && !showForm && tenantId && (
+      {!loading && !error && !showForm && tenantId && (
         <div className="bg-white shadow-md rounded-xl overflow-hidden border border-gray-200 transition-all duration-300 hover:shadow-lg">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gradient-to-r from-gray-800 to-black text-white">

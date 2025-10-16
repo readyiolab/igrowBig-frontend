@@ -1,351 +1,226 @@
 import React, { useState, useEffect } from "react";
-import { Link, useParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import useTenantApi from "@/hooks/useTenantApi";
-
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import {
-    Dialog, DialogContent,
-    DialogHeader,
-    DialogTitle,
-} from "@/components/ui/dialog";
-import {
-    Card, CardContent,
-    CardHeader,
-    CardTitle,
-} from "@/components/ui/card";
-import {
-    Carousel, CarouselContent,
-    CarouselItem,
-    CarouselPrevious,
-    CarouselNext,
-} from "@/components/ui/carousel";
-import Autoplay from "embla-carousel-autoplay";
-import {
-    Clock,
-    User,
-    Share2,
-    Heart,
-    ArrowRight,
-    Search,
-    Eye,
-} from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Clock, Eye, Heart, Share2, Search } from "lucide-react";
 
 const Blog = () => {
-    const { id } = useParams(); // For individual post ID if needed, but not for fetch
-    const { getAll } = useTenantApi();
-    const [data, setData] = useState(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
-    const [selectedPost, setSelectedPost] = useState(null);
-    const [searchQuery, setSearchQuery] = useState("");
-    const [activeCategory, setActiveCategory] = useState("ALL");
-    const [filteredPosts, setFilteredPosts] = useState([]);
-    const [sortBy, setSortBy] = useState("date");
+  const navigate = useNavigate();
+  const { getAll } = useTenantApi();
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [activeCategory, setActiveCategory] = useState("ALL");
+  const [filteredPosts, setFilteredPosts] = useState([]);
+  const [sortBy, setSortBy] = useState("date");
+  const [liked, setLiked] = useState({});
 
-    useEffect(() => {
-        const fetchData = async () => {
-            try {
-                console.log("Blog: Fetching data");
-                const response = await getAll("/site/data");
-                console.log("Blog: Response:", response);
-                setData(response.site_data);
-            } catch (err) {
-                console.error("Blog: Error:", err);
-                setError(err.message);
-            } finally {
-                setLoading(false);
-            }
-        };
-        fetchData();
-    }, [getAll]);
-
-    useEffect(() => {
-        if (!data?.blog) return;
-        let updatedPosts = [...data.blog];
-        if (activeCategory !== "ALL") {
-            updatedPosts = updatedPosts.filter((post) => post.category === activeCategory);
-        }
-        updatedPosts = updatedPosts.filter(
-            (post) =>
-                post.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                post.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                post.tags?.some((tag) => tag.toLowerCase().includes(searchQuery.toLowerCase()))
-        );
-        if (sortBy === "likes") {
-            updatedPosts.sort((a, b) => (b.likes || 0) - (a.likes || 0));
-        } else if (sortBy === "views") {
-            updatedPosts.sort((a, b) => (b.views || 0) - (a.views || 0));
-        } else {
-            updatedPosts.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-        }
-        setFilteredPosts(updatedPosts);
-    }, [data, searchQuery, activeCategory, sortBy]);
-
-    const handleLike = (postId) => {
-        setFilteredPosts((prevPosts) =>
-            prevPosts.map((post) =>
-                post.id === postId ? { ...post, likes: (post.likes || 0) + 1 } : post
-            )
-        );
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const response = await getAll("/site/data");
+        setData(response.site_data);
+      } catch (err) {
+        setError(err.message);
+        setData({});
+      } finally {
+        setLoading(false);
+      }
     };
+    fetchData();
+  }, [getAll]);
 
-    if (loading) {
-        return (
-            <div className="flex items-center justify-center min-h-screen bg-accent">
-                <div className="text-gray-800 text-xl font-semibold animate-pulse">Loading...</div>
-            </div>
-        );
+  useEffect(() => {
+    if (!data?.blogs) return;
+    
+    let updatedPosts = [...data.blogs];
+    
+    if (activeCategory !== "ALL") {
+      updatedPosts = updatedPosts.filter((post) => post.category === activeCategory);
     }
-    if (error) {
-        return (
-            <div className="flex items-center justify-center min-h-screen bg-accent">
-                <div className="text-red-600 text-xl font-semibold">Error: {error}</div>
-            </div>
-        );
-    }
-
-    const blogPosts = data?.blog || [];
-    const blogBanners = data?.blog_banners || [];
-    const categories = [
-        "ALL",
-        ...new Set(blogPosts.map((post) => post.category).filter(Boolean)),
-    ];
-
-    return (
-        <div className="min-h-screen bg-accent flex flex-col">
-            
-
-            {/* Carousel Section */}
-            <section className="relative w-full">
-                <Carousel className="w-full" plugins={[Autoplay({ delay: 4000 })]}>
-                    <CarouselContent>
-                        {blogBanners.length > 0 ? (
-                            blogBanners.map((item) => (
-                                <CarouselItem key={item.id}>
-                                    <div className="relative w-full h-72 sm:h-96 md:h-[500px] overflow-hidden">
-                                        <img
-                                            src={item.image_url || "https://via.placeholder.com/1200x400?text=Blog+Banner"}
-                                            alt={item.image_content || "Blog Banner"}
-                                            className="w-full h-full object-cover opacity-90 transition-transform duration-500 hover:scale-105"
-                                            loading="lazy"
-                                        />
-                                        <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
-                                        <div className="absolute bottom-8 left-4 sm:left-6 md:left-8 text-white ">
-                                            <h1 className="text-xl sm:text-2xl md:text-3xl font-sm mb-2 tracking-tight text-center ">
-                                                {item.image_content || "Explore Our Blog"}
-                                            </h1>
-                                           
-                                        </div>
-                                    </div>
-                                </CarouselItem>
-                            ))
-                        ) : (
-                            <CarouselItem>
-                                <div className="relative w-full h-72 sm:h-96 md:h-[500px] overflow-hidden">
-                                    <img
-                                        src="https://via.placeholder.com/1200x400?text=No+Banner"
-                                        alt="No Banner"
-                                        className="w-full h-full object-cover opacity-90 transition-transform duration-500 hover:scale-105"
-                                        loading="lazy"
-                                    />
-                                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
-                                    <div className="absolute bottom-8 left-4 sm:left-6 md:left-8 text-white">
-                                        <h1 className="text-2xl sm:text-3xl md:text-4xl font-semibold mb-2 tracking-tight">
-                                            Welcome to Our Blog
-                                        </h1>
-                                        
-                                    </div>
-                                </div>
-                            </CarouselItem>
-                        )}
-                    </CarouselContent>
-                    
-                </Carousel>
-            </section>
-
-            {/* Blog Posts Section */}
-            <section className="py-8 sm:py-12 md:py-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex-grow">
-                {/* Filters and Search */}
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 sm:mb-8">
-                    <div className="flex flex-wrap gap-2">
-                        {categories.map((category) => (
-                            <Button
-                                key={category}
-                                onClick={() => setActiveCategory(category)}
-                                variant={activeCategory === category ? "default" : "outline"}
-                                className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors duration-200 ${activeCategory === category
-                                        ? "bg-primary text-white"
-                                        : "text-gray-700 hover:bg-gray-100"
-                                    }`}
-                            >
-                                {category}
-                            </Button>
-                        ))}
-                    </div>
-                    <div className="flex items-center gap-3 w-full sm:w-auto">
-                        <div className="relative w-full sm:w-64">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
-                            <Input
-                                type="text"
-                                placeholder="Search posts..."
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                className="pl-9 pr-3 py-2 text-sm"
-                            />
-                        </div>
-                        <select
-                            value={sortBy}
-                            onChange={(e) => setSortBy(e.target.value)}
-                            className="px-2 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-                        >
-                            <option value="date">Date</option>
-                            <option value="likes">Likes</option>
-                            <option value="views">Views</option>
-                        </select>
-                    </div>
-                </div>
-
-                {/* Blog Grid */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {filteredPosts.length > 0 ? (
-                        filteredPosts.map((post) => (
-                            <Card
-                                key={post.id}
-                                className="hover:shadow-xl transition-all duration-300 cursor-pointer overflow-hidden group"
-                                onClick={() => setSelectedPost(post)}
-                            >
-                                <div className="relative">
-                                    <img
-                                        src={post.image_url || "https://via.placeholder.com/600x400?text=Blog+Image"}
-                                        alt={post.title}
-                                        className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-500"
-                                        loading="lazy"
-                                    />
-                                    <span className="absolute top-3 left-3 bg-primary text-white text-xs px-2 py-1 rounded">
-                                        {post.category || "Uncategorized"}
-                                    </span>
-                                </div>
-                                <CardContent className="p-4 sm:p-5">
-                                    <CardTitle className="text-lg sm:text-xl font-semibold text-gray-800 mb-2 group-hover:text-primary transition-colors line-clamp-1">
-                                        {post.title}
-                                    </CardTitle>
-                                    <p className="text-gray-600 text-sm mb-3 line-clamp-2">
-                                        {post.content?.length > 100
-                                            ? post.content.slice(0, 100) + "..."
-                                            : post.content}
-                                    </p>
-                                    <div className="flex flex-wrap justify-between items-center text-xs sm:text-sm text-gray-500 mb-3 gap-2">
-                                        <div className="flex items-center gap-1 sm:gap-2">
-                                            <Clock className="w-4 h-4" />
-                                            <span>
-                                                {new Date(post.created_at).toLocaleDateString("en-US", {
-                                                    month: "long",
-                                                    day: "2-digit",
-                                                    year: "numeric",
-                                                })}{" "}
-                                                • {post.read_time || 5}m
-                                            </span>
-                                        </div>
-                                        <div className="flex items-center gap-1 sm:gap-2">
-                                            <Eye className="w-4 h-4" />
-                                            <span>{(post.views || 0).toLocaleString()}</span>
-                                        </div>
-                                    </div>
-                                    <div className="flex justify-between items-center text-sm">
-                                        <div className="flex items-center gap-3">
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    handleLike(post.id);
-                                                }}
-                                                className="flex items-center gap-1 hover:text-red-500 transition-colors"
-                                            >
-                                                <Heart className="w-4 h-4" />
-                                                <span>{post.likes || 0}</span>
-                                            </button>
-                                            <Share2 className="w-4 h-4 hover:text-indigo-500 transition-colors" />
-                                        </div>
-                                        <div className="flex gap-1 flex-wrap">
-                                            {(post.tags || []).map((tag) => (
-                                                <span
-                                                    key={tag}
-                                                    className="text-xs bg-gray-100 px-1.5 py-0.5 rounded text-gray-600"
-                                                >
-                                                    #{tag}
-                                                </span>
-                                            ))}
-                                        </div>
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        ))
-                    ) : (
-                        <p className="col-span-full text-center text-gray-600 py-8">
-                            No posts found.
-                        </p>
-                    )}
-                </div>
-            </section>
-
-            {/* Selected Post Dialog */}
-            {selectedPost && (
-                <Dialog open={!!selectedPost} onOpenChange={() => setSelectedPost(null)}>
-                    <DialogContent className="max-w-2xl p-5 sm:p-6">
-                        <DialogHeader>
-                            <DialogTitle className="text-xl sm:text-2xl font-semibold text-gray-800 line-clamp-1">
-                                {selectedPost.title}
-                            </DialogTitle>
-                        </DialogHeader>
-                        <img
-                            src={selectedPost.image_url || "https://via.placeholder.com/600x400?text=Blog+Image"}
-                            alt={selectedPost.title}
-                            className="w-full h-52 sm:h-64 object-cover rounded-lg mb-4"
-                            loading="lazy"
-                        />
-                        <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-gray-600 mb-4 text-sm">
-                            <div className="flex items-center gap-1 sm:gap-2">
-                                <User className="w-4 h-4" />
-                                <span>{selectedPost.author || "Unknown"}</span>
-                            </div>
-                            <div className="flex items-center gap-1 sm:gap-2">
-                                <Clock className="w-4 h-4" />
-                                <span>
-                                    {new Date(selectedPost.created_at).toLocaleDateString("en-US", {
-                                        month: "long",
-                                        day: "2-digit",
-                                        year: "numeric",
-                                    })}{" "}
-                                    • {selectedPost.read_time || 5}m
-                                </span>
-                            </div>
-                            <div className="flex items-center gap-1 sm:gap-2">
-                                <Eye className="w-4 h-4" />
-                                <span>{(selectedPost.views || 0).toLocaleString()}</span>
-                            </div>
-                        </div>
-                        <div
-                            className="text-gray-700 text-sm sm:text-base leading-relaxed mb-4 sm:mb-6"
-                            dangerouslySetInnerHTML={{
-                                __html:
-                                    selectedPost.content?.length > 200
-                                        ? selectedPost.content.slice(0, 200) + "..."
-                                        : selectedPost.content,
-                            }}
-                        />
-                        <Button
-                            className="w-full bg-primary hover:bg-blue-700 text-white py-2 transition-all duration-200 hover:scale-105"
-                            asChild
-                        >
-                            <Link to={`/blog/${selectedPost.id}`}>
-                                Read Full Article <ArrowRight className="ml-2 w-4 h-4" />
-                            </Link>
-                        </Button>
-                    </DialogContent>
-                </Dialog>
-            )}
-        </div>
+    
+    updatedPosts = updatedPosts.filter((post) =>
+      post.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      post.content.toLowerCase().includes(searchQuery.toLowerCase())
     );
+    
+    if (sortBy === "views") {
+      updatedPosts.sort((a, b) => (b.views || 0) - (a.views || 0));
+    } else {
+      updatedPosts.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    }
+    
+    setFilteredPosts(updatedPosts);
+  }, [data, searchQuery, activeCategory, sortBy]);
+
+  if (loading) {
+    return (
+      <div className="bg-white min-h-screen">
+        <Skeleton className="w-full h-80 rounded-none" />
+        <div className="max-w-6xl mx-auto px-4 py-12">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <Skeleton className="h-80 rounded-lg" />
+            <Skeleton className="h-80 rounded-lg" />
+            <Skeleton className="h-80 rounded-lg" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const blogPosts = data?.blogs || [];
+  const blogBanners = data?.blog_banners || [];
+  const categories = ["ALL", ...new Set(blogPosts.map((post) => post.category).filter(Boolean))];
+
+  const handleLike = (postId) => {
+    setLiked((prev) => ({
+      ...prev,
+      [postId]: !prev[postId],
+    }));
+  };
+
+  return (
+    <div className="bg-white min-h-screen">
+      {/* Banner Carousel */}
+      <div className="relative w-full h-64 sm:h-80 md:h-96 lg:h-[450px] overflow-hidden bg-black">
+        {blogBanners.length > 0 ? (
+          <img
+            src={blogBanners[0]?.image_url || "https://images.unsplash.com/photo-1499750310107-5fef28a66643?ixlib=rb-4.0.3&auto=format&fit=crop&w=1350&q=80"}
+            alt={blogBanners[0]?.image_content || "Blog Banner"}
+            className="w-full h-full object-cover opacity-70 hover:opacity-80 transition-opacity duration-500"
+          />
+        ) : (
+          <img
+            src="https://images.unsplash.com/photo-1499750310107-5fef28a66643?ixlib=rb-4.0.3&auto=format&fit=crop&w=1350&q=80"
+            alt="Blog"
+            className="w-full h-full object-cover opacity-70"
+          />
+        )}
+        <div className="absolute inset-0 bg-black/40"></div>
+        <div className="absolute inset-0 flex items-center justify-center px-4">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white text-center drop-shadow-lg">
+            {blogBanners[0]?.image_content || "Explore Our Blog"}
+          </h1>
+        </div>
+      </div>
+
+      {/* Content */}
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-12 md:py-16">
+        
+        {/* Filters */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8 md:mb-12">
+          <div className="flex flex-wrap gap-2">
+            {categories.map((category) => (
+              <Button
+                key={category}
+                onClick={() => setActiveCategory(category)}
+                variant={activeCategory === category ? "default" : "outline"}
+                className={`px-4 py-2 text-sm font-medium transition-all duration-300 ${
+                  activeCategory === category
+                    ? "bg-black text-white"
+                    : "border border-gray-300 text-gray-700 hover:bg-gray-100"
+                }`}
+              >
+                {category}
+              </Button>
+            ))}
+          </div>
+
+          <div className="flex gap-3 w-full sm:w-auto">
+            <div className="relative flex-1 sm:flex-none sm:w-64">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Input
+                type="text"
+                placeholder="Search posts..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10 pr-4 py-2 border border-gray-300"
+              />
+            </div>
+
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
+            >
+              <option value="date">Latest</option>
+              <option value="views">Most Viewed</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Blog Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+          {filteredPosts.length > 0 ? (
+            filteredPosts.map((post) => (
+              <div
+                key={post.id}
+                className="border border-gray-200 rounded-xl shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden group cursor-pointer"
+                onClick={() => navigate(`/blog/${post.id}`)}
+              >
+                <div className="relative h-48 bg-gray-200 overflow-hidden">
+                  <img
+                    src={post.image_url || "https://via.placeholder.com/600x400"}
+                    alt={post.title}
+                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                  />
+                  {post.category && (
+                    <span className="absolute top-3 left-3 bg-black text-white text-xs px-3 py-1 rounded-full">
+                      {post.category}
+                    </span>
+                  )}
+                </div>
+
+                <div className="p-6">
+                  <h3 className="text-lg sm:text-xl font-bold text-black mb-2 line-clamp-2 group-hover:text-gray-700 transition-colors">
+                    {post.title}
+                  </h3>
+
+                  <p className="text-gray-600 text-sm mb-4 line-clamp-3">
+                    {post.content?.replace(/<[^>]*>/g, "") || "No description"}
+                  </p>
+
+                  <div className="flex items-center gap-4 text-xs sm:text-sm text-gray-500 mb-4">
+                    <div className="flex items-center gap-1">
+                      <Clock className="w-4 h-4" />
+                      <span>{new Date(post.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Eye className="w-4 h-4" />
+                      <span>{(post.views || 0).toLocaleString()}</span>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-between items-center pt-4 border-t border-gray-200">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleLike(post.id);
+                      }}
+                      className={`flex items-center gap-1 transition-colors ${
+                        liked[post.id] ? "text-red-500" : "text-gray-600 hover:text-red-500"
+                      }`}
+                    >
+                      <Heart className={`w-4 h-4 ${liked[post.id] ? "fill-current" : ""}`} />
+                      <span className="text-sm">{(post.likes || 0) + (liked[post.id] ? 1 : 0)}</span>
+                    </button>
+                    <Share2 className="w-4 h-4 text-gray-600 hover:text-black transition-colors cursor-pointer" />
+                  </div>
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="col-span-full text-center py-12">
+              <p className="text-gray-600 text-lg">No posts found</p>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
 };
 
 export default Blog;

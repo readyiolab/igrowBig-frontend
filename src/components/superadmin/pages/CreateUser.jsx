@@ -1,7 +1,19 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect } from "react";
 import { motion } from "framer-motion";
 import ToastNotification, { showSuccessToast, showErrorToast } from "../../ToastNotification";
-import useTenantApi from "@/hooks/useTenantApi";
+import { useDispatch, useSelector } from "react-redux";
+import {
+  fetchTemplates,
+  createUser,
+  selectTemplates,
+  selectCreateUserLoading,
+  selectCreateUserError,
+  clearError as clearCreateUserError,
+} from "@/store/slices/createUserSlice";
+import {
+  setSubmitting,
+  selectIsSubmitting,
+} from "@/store/slices/uiSlice";
 
 // Countries available in the backend
 const AVAILABLE_COUNTRIES = [
@@ -14,50 +26,42 @@ const AVAILABLE_COUNTRIES = [
 ];
 
 const CreateUser = () => {
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [subdomain, setSubdomain] = useState("");
-  const [country, setCountry] = useState("");
-  const [subscriptionPlan, setSubscriptionPlan] = useState("monthly");
-  const [templateId, setTemplateId] = useState(null);
-  const [templates, setTemplates] = useState([]);
-  const [plans, setPlans] = useState({
+  // Form fields are still local states since they are component-specific form inputs
+  // If you want to move them to Redux too, create another slice, but for now, keeping minimal local state for form values
+  const [name, setName] = React.useState("");
+  const [email, setEmail] = React.useState("");
+  const [subdomain, setSubdomain] = React.useState("");
+  const [country, setCountry] = React.useState("");
+  const [subscriptionPlan, setSubscriptionPlan] = React.useState("monthly");
+  const [templateId, setTemplateId] = React.useState(null);
+  const [plans] = React.useState({
     monthly: { price: 16.25, discount: 0 },
     quarterly: { price: 45, discount: 8 },
   });
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [formErrors, setFormErrors] = useState({});
-  const { data, loading, error: apiError, getAll, post } = useTenantApi();
+  const [formErrors, setFormErrors] = React.useState({});
+  
+  const dispatch = useDispatch();
+  const templates = useSelector(selectTemplates);
+  const fetchLoading = useSelector(selectCreateUserLoading); // Specifically for fetch/create, but we'll use ui for submit
+  const apiError = useSelector(selectCreateUserError);
+  const isSubmitting = useSelector(selectIsSubmitting);
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setIsLoading(true);
-        const templateData = await getAll('/templates');
-        console.log("Raw template data:", templateData);
-        const validatedTemplates = Array.isArray(templateData)
-          ? templateData.filter(
-              (t) => t.id && t.name && t.description && t.image
-            )
-          : [];
-        console.log("Validated templates:", validatedTemplates);
-        setTemplates(validatedTemplates);
-        if (validatedTemplates.length > 0) {
-          setTemplateId(validatedTemplates[0].id);
-        }
-      } catch (err) {
-        console.error("Fetch error:", err);
-        setError(err.message || "Failed to load templates");
-        showErrorToast("Failed to load templates", err.message);
-      } finally {
-        setIsLoading(false);
-      }
-    };
+    dispatch(fetchTemplates());
+  }, [dispatch]);
 
-    fetchData();
-  }, [getAll]);
+  useEffect(() => {
+    if (templates.length > 0 && !templateId) {
+      setTemplateId(templates[0].id);
+    }
+  }, [templates, templateId]);
+
+  useEffect(() => {
+    if (apiError) {
+      showErrorToast("API Error", apiError.message || "An error occurred");
+      dispatch(clearCreateUserError());
+    }
+  }, [apiError, dispatch]);
 
   const validateForm = () => {
     const errors = {};
@@ -100,7 +104,7 @@ const CreateUser = () => {
       return;
     }
 
-    setIsSubmitting(true);
+    dispatch(setSubmitting(true));
 
     try {
       const payload = {
@@ -112,7 +116,7 @@ const CreateUser = () => {
         template_id: templateId,
       };
       console.log("Submitting payload:", payload);
-      const response = await post("/admin/create-user", payload);
+      const response = await dispatch(createUser(payload)).unwrap();
       
       setName("");
       setEmail("");
@@ -124,21 +128,21 @@ const CreateUser = () => {
       
       showSuccessToast(response.message || "User created successfully!");
     } catch (error) {
-      console.error("Error creating user:", error.response?.data || error.message);
-      const errorMsg = error.response?.data?.message || error.message;
-      const errorType = error.response?.data?.error;
+      console.error("Error creating user:", error);
+      const errorMsg = error.message || "Failed to create user";
+      const errorType = error.error;
       
       if (errorType === "INVALID_COUNTRY") {
-        setFormErrors({ country: errorMsg });
+        setFormErrors((prev) => ({ ...prev, country: errorMsg }));
       } else if (errorType === "EMAIL_EXISTS") {
-        setFormErrors({ email: errorMsg });
+        setFormErrors((prev) => ({ ...prev, email: errorMsg }));
       } else if (errorType === "SUBDOMAIN_EXISTS") {
-        setFormErrors({ subdomain: errorMsg });
+        setFormErrors((prev) => ({ ...prev, subdomain: errorMsg }));
       }
       
       showErrorToast("Failed to create user", errorMsg);
     } finally {
-      setIsSubmitting(false);
+      dispatch(setSubmitting(false));
     }
   };
 
@@ -162,7 +166,7 @@ const CreateUser = () => {
   const templateOptions = Array.isArray(templates) ? templates : [];
   const isFormDisabled = isSubmitting || templateOptions.length === 0;
 
-  if (isLoading || loading) {
+  if (fetchLoading && templateOptions.length === 0) {
     return (
       <div className="min-h-[400px] flex flex-col justify-center items-center p-8 bg-white rounded-xl shadow-sm">
         <svg

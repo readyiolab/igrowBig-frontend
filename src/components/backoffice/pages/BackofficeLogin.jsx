@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import { useDispatch } from "react-redux";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -7,6 +8,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 
 import useTenantApi from "@/hooks/useTenantApi";
+import { setCredentials } from "@/store/slices/authSlice";
 
 const BackofficeLogin = () => {
   const [email, setEmail] = useState("");
@@ -14,6 +16,7 @@ const BackofficeLogin = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState({});
   const navigate = useNavigate();
+  const dispatch = useDispatch();
   const { post, loading, error: apiError } = useTenantApi();
 
   const validateForm = () => {
@@ -39,13 +42,18 @@ const BackofficeLogin = () => {
         throw new Error("Invalid response from server: Missing token or tenant_id");
       }
 
-      localStorage.setItem("token", response.token);
-      localStorage.setItem("tenant_id", response.user.tenant_id);
+      // Store credentials in Redux AND localStorage
+      dispatch(setCredentials({
+        token: response.token,
+        tenantId: response.user.tenant_id,
+        user: response.user
+      }));
+
       navigate("/backoffice/dashboard");
     } catch (err) {
-      console.log("Login Error:", err); // Debug log
+      console.log("Login Error:", err);
       const errorMsg = err.message || "Unknown error";
-      const errorCode = err.error || "UNKNOWN_ERROR"; // Use err.error directly
+      const errorCode = err.error || "UNKNOWN_ERROR";
 
       switch (errorCode) {
         case "MISSING_FIELDS":
@@ -167,7 +175,7 @@ const BackofficeLogin = () => {
 
           <p className="text-center text-sm text-gray-600 mt-6">
             Forgot password?{" "}
-            <Link to="#" className="text-black hover:underline font-medium">
+            <Link to="/forgot-password" className="text-black hover:underline font-medium">
               Reset here
             </Link>
           </p>

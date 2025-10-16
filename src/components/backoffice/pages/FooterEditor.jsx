@@ -1,27 +1,46 @@
-
 import React, { useState, useEffect, useCallback } from "react";
 import { Edit, Trash2, Search, X } from "react-feather";
 import { useNavigate } from "react-router-dom";
-import useTenantApi from "@/hooks/useTenantApi";
+import { useSelector, useDispatch } from "react-redux";
 import toast, { Toaster } from "react-hot-toast";
+
+import {
+  fetchDisclaimer,
+  createDisclaimer,
+  updateDisclaimer,
+  deleteDisclaimer,
+  setFormData,
+  resetForm,
+  selectDisclaimer,
+  selectDisclaimerForm,
+  selectDisclaimerLoading,
+  selectDisclaimerError,
+} from "@/store/slices/disclaimerSlice";
+import {
+  openForm,
+  closeForm,
+  setSearchTerm,
+  setSubmitting,
+  selectShowForm,
+  selectIsEditing,
+  selectSearchTerm,
+  selectIsSubmitting,
+} from "@/store/slices/uiSlice";
 
 const FooterEditor = () => {
   const navigate = useNavigate();
-  const { data, loading: isLoading, error, getAll, post, put, del } = useTenantApi();
+  const dispatch = useDispatch();
 
   const [tenantId, setTenantId] = useState(null);
-  const [showForm, setShowForm] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
-  const [editId, setEditId] = useState(null);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [disclaimers, setDisclaimers] = useState({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const [newDisclaimer, setNewDisclaimer] = useState({
-    site_disclaimer: "",
-    product_disclaimer: "",
-    income_disclaimer: "",
-  });
+  const disclaimer = useSelector(selectDisclaimer);
+  const form = useSelector(selectDisclaimerForm);
+  const loading = useSelector(selectDisclaimerLoading);
+  const error = useSelector(selectDisclaimerError);
+  const showForm = useSelector(selectShowForm);
+  const isEditing = useSelector(selectIsEditing);
+  const searchTerm = useSelector(selectSearchTerm);
+  const isSubmitting = useSelector(selectIsSubmitting);
 
   // Authentication and tenant setup
   useEffect(() => {
@@ -38,46 +57,20 @@ const FooterEditor = () => {
   // Fetch disclaimers when tenantId changes
   useEffect(() => {
     if (tenantId) {
-      fetchDisclaimers(tenantId);
-    }
-  }, [tenantId]);
-
-  const fetchDisclaimers = async (tenant) => {
-    try {
-      const response = await toast.promise(
-        getAll(`/tenants/${tenant}/footer/disclaimers`),
-        {
-          loading: "Fetching disclaimers...",
-          success: "Disclaimers loaded successfully!",
-          error: (err) => {
-            if (err.response?.data?.error === "DISCLAIMERS_NOT_FOUND") {
-              return null; // Suppress toast for 404
-            }
-            return `Failed to load: ${err.response?.data?.message || err.message}`;
-          },
-        }
-      );
-      if (response && Object.keys(response).length > 0) {
-        setDisclaimers({
-          id: response.id || null,
-          site_disclaimer: response.site_disclaimer || "",
-          product_disclaimer: response.product_disclaimer || "",
-          income_disclaimer: response.income_disclaimer || "",
+      dispatch(fetchDisclaimer(tenantId))
+        .unwrap()
+        .then(() => {
+          console.log("Disclaimers loaded");
+        })
+        .catch((err) => {
+          console.error("Error loading disclaimers:", err);
+          if (err?.status === 401) {
+            toast.error("Session expired. Please log in again.");
+            navigate("/backoffice-login");
+          }
         });
-        setEditId(response.id || null);
-        setShowForm(false);
-      } else {
-        setDisclaimers({});
-        setEditId(null);
-        setShowForm(false);
-      }
-    } catch (err) {
-      console.error("Error fetching disclaimers:", err.response?.data || err.message);
-      setDisclaimers({});
-      setEditId(null);
-      setShowForm(false);
     }
-  };
+  }, [tenantId, dispatch, navigate]);
 
   const debounce = (func, delay) => {
     let timeoutId;
@@ -87,33 +80,32 @@ const FooterEditor = () => {
     };
   };
 
-  const handleSearchChange = useCallback(
+  const debouncedSearch = useCallback(
     debounce((value) => {
-      setSearchTerm(value);
+      dispatch(setSearchTerm(value));
     }, 300),
-    []
+    [dispatch]
   );
 
   const handleAddNew = () => {
-    setShowForm(true);
-    setIsEditing(false);
-    setNewDisclaimer({ site_disclaimer: "", product_disclaimer: "", income_disclaimer: "" });
+    dispatch(resetForm());
+    dispatch(openForm({ isEditing: false }));
   };
 
   const handleEdit = () => {
-    setShowForm(true);
-    setIsEditing(true);
-    setNewDisclaimer({
-      site_disclaimer: disclaimers.site_disclaimer || "",
-      product_disclaimer: disclaimers.product_disclaimer || "",
-      income_disclaimer: disclaimers.income_disclaimer || "",
-    });
+    dispatch(
+      setFormData({
+        site_disclaimer: disclaimer.site_disclaimer || "",
+        product_disclaimer: disclaimer.product_disclaimer || "",
+        income_disclaimer: disclaimer.income_disclaimer || "",
+      })
+    );
+    dispatch(openForm({ isEditing: true }));
   };
 
   const handleCancel = () => {
-    setShowForm(false);
-    setIsEditing(false);
-    setNewDisclaimer({ site_disclaimer: "", product_disclaimer: "", income_disclaimer: "" });
+    dispatch(closeForm());
+    dispatch(resetForm());
   };
 
   const handleSave = async () => {
@@ -123,39 +115,46 @@ const FooterEditor = () => {
       return;
     }
 
-    const { site_disclaimer, product_disclaimer, income_disclaimer } = newDisclaimer;
+    const { site_disclaimer, product_disclaimer, income_disclaimer } = form;
     if (!site_disclaimer.trim() && !product_disclaimer.trim() && !income_disclaimer.trim()) {
       toast.error("Please provide at least one disclaimer.");
       return;
     }
 
-    setIsSubmitting(true);
+    const payload = {
+      site_disclaimer: site_disclaimer.trim() || null,
+      product_disclaimer: product_disclaimer.trim() || null,
+      income_disclaimer: income_disclaimer.trim() || null,
+    };
+
+    dispatch(setSubmitting(true));
     try {
-      const payload = {
-        site_disclaimer: site_disclaimer.trim() || null,
-        product_disclaimer: product_disclaimer.trim() || null,
-        income_disclaimer: income_disclaimer.trim() || null,
-      };
+      const action = isEditing
+        ? updateDisclaimer({ tenantId, formData: payload })
+        : createDisclaimer({ tenantId, formData: payload });
+
       await toast.promise(
-        isEditing && editId
-          ? put(`/tenants/${tenantId}/footer/disclaimers`, payload)
-          : post(`/tenants/${tenantId}/footer/disclaimers`, payload),
+        dispatch(action).unwrap(),
         {
           loading: "Saving disclaimers...",
           success: "Disclaimers saved successfully!",
-          error: (err) => `Failed to save: ${err.response?.data?.message || err.message}`,
+          error: (err) => `Failed to save: ${err.message || "Unknown error"}`,
         }
       );
-      await fetchDisclaimers(tenantId);
-      handleCancel();
+
+      // Close form and reset
+      dispatch(closeForm());
+      dispatch(resetForm());
+      
+      // No need to refetch - Redux already updated the state from the response
     } catch (err) {
-      console.error("Error saving disclaimers:", err.response?.data || err.message);
-      if (err.response?.status === 401) {
+      console.error("Error saving disclaimers:", err);
+      if (err?.status === 401) {
         toast.error("Session expired. Please log in again.");
         navigate("/backoffice-login");
       }
     } finally {
-      setIsSubmitting(false);
+      dispatch(setSubmitting(false));
     }
   };
 
@@ -167,34 +166,38 @@ const FooterEditor = () => {
       return;
     }
 
-    setIsSubmitting(true);
+    dispatch(setSubmitting(true));
     try {
       await toast.promise(
-        del(`/tenants/${tenantId}/footer/disclaimers`),
+        dispatch(deleteDisclaimer(tenantId)).unwrap(),
         {
           loading: "Deleting disclaimers...",
           success: "Disclaimers deleted successfully!",
-          error: (err) => `Failed to delete: ${err.response?.data?.message || err.message}`,
+          error: (err) => `Failed to delete: ${err.message || "Unknown error"}`,
         }
       );
-      setDisclaimers({});
-      setEditId(null);
-      handleCancel();
+      
+      dispatch(closeForm());
+      dispatch(resetForm());
     } catch (err) {
-      console.error("Error deleting disclaimers:", err.response?.data || err.message);
-      if (err.response?.status === 401) {
+      console.error("Error deleting disclaimers:", err);
+      if (err?.status === 401) {
         toast.error("Session expired. Please log in again.");
         navigate("/backoffice-login");
       }
     } finally {
-      setIsSubmitting(false);
+      dispatch(setSubmitting(false));
     }
   };
 
+  const hasContent = Object.values(disclaimer)
+    .filter((v) => typeof v === "string")
+    .some((v) => v.trim());
+
   const filteredDisclaimers = [
-    ["Site Disclaimer", disclaimers.site_disclaimer],
-    ["Product Disclaimer", disclaimers.product_disclaimer],
-    ["Income Disclaimer", disclaimers.income_disclaimer],
+    ["Site Disclaimer", disclaimer.site_disclaimer],
+    ["Product Disclaimer", disclaimer.product_disclaimer],
+    ["Income Disclaimer", disclaimer.income_disclaimer],
   ].filter(([_, content]) => content && content.toLowerCase().includes(searchTerm.toLowerCase()));
 
   return (
@@ -202,7 +205,7 @@ const FooterEditor = () => {
       <Toaster position="top-right" toastOptions={{ duration: 3000 }} />
 
       {/* Loading State */}
-      {isLoading && (
+      {loading && (
         <div className="text-center py-6">
           <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-gray-900 mx-auto"></div>
           <span className="text-gray-500 text-lg mt-2 block">Loading disclaimers...</span>
@@ -210,7 +213,7 @@ const FooterEditor = () => {
       )}
 
       {/* No Tenant ID */}
-      {!tenantId && !isLoading && (
+      {!tenantId && !loading && (
         <div className="p-12 text-center bg-white shadow-lg rounded-xl border border-gray-200">
           <h3 className="text-xl font-semibold text-gray-700 mb-2">Authentication Required</h3>
           <p className="text-gray-500 mb-6">No tenant ID found. Please log in to continue.</p>
@@ -225,7 +228,7 @@ const FooterEditor = () => {
       )}
 
       {/* Error State */}
-      {error && !isLoading && tenantId && !showForm && (
+      {error && !loading && tenantId && !showForm && (
         <div className="p-12 text-center bg-white shadow-lg rounded-xl border border-gray-200">
           <h3 className="text-xl font-semibold text-gray-700 mb-2">Unable to Load Disclaimers</h3>
           <p className="text-gray-500 mb-6">
@@ -242,7 +245,7 @@ const FooterEditor = () => {
       )}
 
       {/* No Content State */}
-      {!isLoading && !error && !showForm && tenantId && Object.keys(disclaimers).length === 0 && (
+      {!loading && !error && !showForm && tenantId && !hasContent && (
         <div className="p-12 text-center bg-white shadow-lg rounded-xl border border-gray-200">
           <h3 className="text-xl font-semibold text-gray-700 mb-2">No Disclaimers Found</h3>
           <p className="text-gray-500 mb-6">Add some disclaimers to get started!</p>
@@ -257,13 +260,14 @@ const FooterEditor = () => {
       )}
 
       {/* Header and Table */}
-      {!isLoading && !error && !showForm && tenantId && Object.keys(disclaimers).length > 0 && (
+      {!loading && !error && !showForm && tenantId && hasContent && (
         <>
           <div className="flex justify-between items-center mb-6">
             <button
               onClick={handleEdit}
               className="bg-gradient-to-r from-gray-800 to-black text-white px-5 py-2 rounded-full flex items-center gap-2 hover:from-gray-900 hover:to-black hover:scale-105 transition-all duration-300 shadow-md"
               aria-label="Edit disclaimers"
+              disabled={isSubmitting}
             >
               <Edit size={18} /> Edit Disclaimers
             </button>
@@ -271,7 +275,7 @@ const FooterEditor = () => {
               <input
                 type="text"
                 placeholder="Search disclaimers..."
-                onChange={(e) => handleSearchChange(e.target.value)}
+                onChange={(e) => debouncedSearch(e.target.value)}
                 className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-full focus:outline-none focus:ring-2 focus:ring-gray-300 hover:border-gray-300 transition-all duration-200 shadow-sm text-sm"
                 aria-label="Search disclaimers"
                 disabled={isSubmitting}
@@ -360,8 +364,8 @@ const FooterEditor = () => {
               </label>
               <textarea
                 id="site_disclaimer"
-                value={newDisclaimer.site_disclaimer}
-                onChange={(e) => setNewDisclaimer({ ...newDisclaimer, site_disclaimer: e.target.value })}
+                value={form.site_disclaimer}
+                onChange={(e) => dispatch(setFormData({ site_disclaimer: e.target.value }))}
                 className="w-full px-4 py-2 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-300 hover:border-gray-300 transition-all duration-200 bg-gray-50 text-sm resize-y disabled:bg-gray-100 disabled:cursor-not-allowed"
                 placeholder="Enter site disclaimer"
                 rows="4"
@@ -375,8 +379,8 @@ const FooterEditor = () => {
               </label>
               <textarea
                 id="product_disclaimer"
-                value={newDisclaimer.product_disclaimer}
-                onChange={(e) => setNewDisclaimer({ ...newDisclaimer, product_disclaimer: e.target.value })}
+                value={form.product_disclaimer}
+                onChange={(e) => dispatch(setFormData({ product_disclaimer: e.target.value }))}
                 className="w-full px-4 py-2 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-300 hover:border-gray-300 transition-all duration-200 bg-gray-50 text-sm resize-y disabled:bg-gray-100 disabled:cursor-not-allowed"
                 placeholder="Enter product disclaimer"
                 rows="4"
@@ -390,8 +394,8 @@ const FooterEditor = () => {
               </label>
               <textarea
                 id="income_disclaimer"
-                value={newDisclaimer.income_disclaimer}
-                onChange={(e) => setNewDisclaimer({ ...newDisclaimer, income_disclaimer: e.target.value })}
+                value={form.income_disclaimer}
+                onChange={(e) => dispatch(setFormData({ income_disclaimer: e.target.value }))}
                 className="w-full px-4 py-2 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-300 hover:border-gray-300 transition-all duration-200 bg-gray-50 text-sm resize-y disabled:bg-gray-100 disabled:cursor-not-allowed"
                 placeholder="Enter income disclaimer"
                 rows="4"

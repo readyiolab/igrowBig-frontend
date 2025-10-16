@@ -1,333 +1,371 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useDispatch, useSelector } from "react-redux";
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
-import useTenantApi from "@/hooks/useTenantApi";
 import toast, { Toaster } from "react-hot-toast";
-import { X } from "react-feather";
 
-const HomePageIntroduction = () => {
-  const [content, setContent] = useState("");
+// Redux imports
+import {
+  fetchHomePage,
+  updateHomePage,
+  selectHomePageData,
+  selectHomePageLoading,
+  selectHomePageError,
+} from "@/store/slices/homePageSlice";
+
+import {
+  setSubmitting,
+  selectIsSubmitting,
+} from "@/store/slices/uiSlice";
+
+import { selectTenantId } from "@/store/slices/authSlice";
+
+const MAX_FILE_SIZE = 4 * 1024 * 1024; // 4MB
+const MAX_RETRIES = 3;
+
+const HomepageAboutCompany = () => {
+  const navigate = useNavigate();
+  const dispatch = useDispatch();
+
+  // Redux state
+  const homePageData = useSelector(selectHomePageData);
+  const loading = useSelector(selectHomePageLoading);
+  const error = useSelector(selectHomePageError);
+  const tenantId = useSelector(selectTenantId);
+  const isSubmitting = useSelector(selectIsSubmitting);
+
+  // Local form state
+  const [formData, setFormData] = useState({
+    title: "",
+    aboutContent1: "",
+    aboutContent2: "",
+  });
+
   const [image, setImage] = useState(null);
-  const [selectedImageFile, setSelectedImageFile] = useState(null);
-  const [tenantId, setTenantId] = useState(null);
-  const [existingPage, setExistingPage] = useState(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const { data, loading, error, getAll, put } = useTenantApi();
+  const [imagePreview, setImagePreview] = useState(null);
+  const [existingImageUrl, setExistingImageUrl] = useState(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
 
-  // Authentication and tenant setup
+  // Sync initial data from Redux to local state
   useEffect(() => {
-    const storedTenantId = localStorage.getItem("tenant_id");
-    const token = localStorage.getItem("token");
-    if (!token || !storedTenantId) {
-      toast.error("Please log in to continue.");
-      window.location.href = "/backoffice-login";
-    } else if (tenantId !== storedTenantId) {
-      setTenantId(storedTenantId);
+    if (homePageData && Object.keys(homePageData).length > 0) {
+      setFormData({
+        title: homePageData.about_company_title || "",
+        aboutContent1: homePageData.about_company_content_1 || "",
+        aboutContent2: homePageData.about_company_content_2 || "",
+      });
+      setExistingImageUrl(homePageData.about_company_image_url || null);
+      setIsEditing(true);
     }
-  }, [tenantId]);
+  }, [homePageData]);
 
-  // Fetch introduction data
+  // Fetch on mount
   useEffect(() => {
-    if (tenantId) {
-      fetchIntroductionData();
-    }
-  }, [tenantId]);
-
-  const fetchIntroductionData = async () => {
-    try {
-      const response = await getAll(`/tenants/${tenantId}/home-page`);
-      if (response && Object.keys(response).length > 0) {
-        setContent(response.introduction_content || "");
-        setImage(response.introduction_image_url || null);
-        setExistingPage(response);
-      } else {
-        setContent("");
-        setImage(null);
-        setExistingPage(null);
+    if (!tenantId) {
+      const storedTenantId = localStorage.getItem("tenant_id");
+      if (!storedTenantId) {
+        toast.error("Please log in to continue.");
+        navigate("/backoffice-login");
       }
-    } catch (err) {
-      console.error("Error fetching introduction data:", err);
-      setContent("");
-      setImage(null);
-      setExistingPage(null);
+      return;
     }
+
+    dispatch(fetchHomePage(tenantId))
+      .unwrap()
+      .then(() => {
+        toast.success("Data loaded successfully!");
+        setRetryCount(0);
+      })
+      .catch((err) => {
+        console.error("Error fetching data:", err);
+        if (retryCount < MAX_RETRIES) {
+          setTimeout(() => setRetryCount(retryCount + 1), 2000);
+        } else {
+          toast.error("Unable to load data. Start adding content.");
+          setIsEditing(false);
+        }
+      });
+  }, [tenantId, retryCount, dispatch, navigate]);
+
+  const validateImage = (file) => {
+    if (!file) return true;
+    if (file.size > MAX_FILE_SIZE) {
+      toast.error("Image size exceeds 4MB limit.");
+      return false;
+    }
+    if (!["image/jpeg", "image/jpg", "image/png"].includes(file.type)) {
+      toast.error("Please upload a JPEG, JPG, or PNG image.");
+      return false;
+    }
+    return true;
   };
 
-  const handleContentChange = (newContent) => {
-    if (newContent.length <= 2000) {
-      setContent(newContent);
-    } else {
-      toast.error("Content cannot exceed 2000 characters.");
-    }
-  };
-
-  const handleImageUpload = (event) => {
-    const file = event.target.files[0];
-    if (file) {
-      if (!["image/jpeg", "image/png"].includes(file.type)) {
-        toast.error("Please upload a JPEG or PNG image.");
-        return;
-      }
-      if (file.size > 5 * 1024 * 1024) {
-        toast.error("Image size cannot exceed 5MB.");
-        return;
-      }
+  const handleImageUpload = (e) => {
+    const file = e.target.files[0];
+    if (file && validateImage(file)) {
+      setImage(file);
       const reader = new FileReader();
-      reader.onload = (e) => {
-        setImage(e.target.result);
-        setSelectedImageFile(file);
+      reader.onloadend = () => {
+        setImagePreview(reader.result);
       };
       reader.readAsDataURL(file);
+      toast.info("Image selected!");
     }
   };
 
-  const handleRemoveImage = () => {
-    setImage(null);
-    setSelectedImageFile(null);
+  // Local change handlers
+  const handleFieldChange = (field, value) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
   const handleSave = async () => {
     if (!tenantId) {
       toast.error("Tenant ID not found. Please log in again.");
+      navigate("/backoffice-login");
       return;
     }
 
-    const token = localStorage.getItem("token");
-    if (!token) {
-      toast.error("No authentication token found. Please log in.");
+    if (!formData.title.trim()) {
+      toast.error("Title is required.");
       return;
     }
 
-    if (!content.trim() && !selectedImageFile && !image) {
-      toast.error("Please provide content or an image.");
+    if (!formData.aboutContent1.trim()) {
+      toast.error("About Content 1 is required.");
       return;
     }
 
-    setIsSubmitting(true);
+    if (image && !validateImage(image)) {
+      return;
+    }
+
+    const data = new FormData();
+    data.append("about_company_title", formData.title);
+    data.append("about_company_content_1", formData.aboutContent1);
+    data.append("about_company_content_2", formData.aboutContent2 || "");
+
+    // Only append image if new one uploaded; otherwise, send existing URL to preserve
+    if (image) {
+      data.append("about_company_image", image);
+    } else if (existingImageUrl) {
+      data.append("about_company_image_url", existingImageUrl);
+    }
+
+    dispatch(setSubmitting(true));
+
     try {
-      const formData = new FormData();
-      formData.append("introduction_content", content || "Default introduction");
-
-      if (existingPage) {
-        const requiredFields = [
-          "welcome_description",
-          "about_company_title",
-          "about_company_content_1",
-          "why_network_marketing_title",
-          "why_network_marketing_content",
-          "opportunity_video_header_title",
-          "support_content",
-        ];
-        requiredFields.forEach((field) => {
-          formData.append(field, existingPage[field] || `Default ${field}`);
-        });
-        if (existingPage.about_company_content_2) {
-          formData.append("about_company_content_2", existingPage.about_company_content_2);
-        }
-        if (existingPage.opportunity_video_url) {
-          formData.append("youtube_link", existingPage.opportunity_video_url);
-        }
-      } else {
-        const defaultFields = {
-          welcome_description: "Welcome to our platform",
-          about_company_title: "About Our Company",
-          about_company_content_1: "We are a leading company in our industry.",
-          why_network_marketing_title: "Why Network Marketing",
-          why_network_marketing_content: "Network marketing offers great opportunities.",
-          opportunity_video_header_title: "Our Opportunity",
-          support_content: "We provide excellent support to our users.",
-        };
-        Object.entries(defaultFields).forEach(([key, value]) => {
-          formData.append(key, value);
-        });
-      }
-
-      if (selectedImageFile) {
-        formData.append("introduction_image", selectedImageFile);
-      }
-
-      const response = await toast.promise(
-        put(`/tenants/${tenantId}/home-page`, formData, {
-          headers: {
-            "Content-Type": "multipart/form-data",
-            "Authorization": `Bearer ${token}`,
-          },
-        }),
+      await toast.promise(
+        dispatch(updateHomePage({ tenantId, formData: data })).unwrap(),
         {
-          loading: "Saving introduction...",
-          success: "Introduction saved successfully!",
-          error: (err) => `Failed to save: ${err.response?.data?.message || err.message}`,
+          loading: "Saving...",
+          success: "Saved successfully!",
+          error: (err) => `Failed: ${err.message || 'Unknown error'}`,
         }
       );
-
-      if (response.data?.data?.introduction_image_url) {
-        setImage(response.data.data.introduction_image_url);
-        setSelectedImageFile(null);
-      }
-      await fetchIntroductionData();
+      await dispatch(fetchHomePage(tenantId)); // Refresh data
     } catch (err) {
-      console.error("Error saving introduction:", err);
+      console.error("Save error:", err);
+      if (err.status === 401) {
+        toast.error("Session expired. Logging out...");
+        navigate("/backoffice-login");
+      }
     } finally {
-      setIsSubmitting(false);
+      dispatch(setSubmitting(false));
     }
   };
 
-  const handleCancel = () => {
-    if (existingPage) {
-      setContent(existingPage.introduction_content || "");
-      setImage(existingPage.introduction_image_url || null);
-      setSelectedImageFile(null);
-    } else {
-      setContent("");
-      setImage(null);
-      setSelectedImageFile(null);
-    }
+  const handleReset = () => {
+    setFormData({
+      title: homePageData.about_company_title || "",
+      aboutContent1: homePageData.about_company_content_1 || "",
+      aboutContent2: homePageData.about_company_content_2 || "",
+    });
+    setImage(null);
+    setImagePreview(null);
+    toast.success("Form reset!");
+  };
+
+  const handleStartEditing = () => {
+    setFormData({
+      title: "About Your Company",
+      aboutContent1: "Start writing here...",
+      aboutContent2: "",
+    });
+    setIsEditing(true);
+  };
+
+  const handleRetry = () => {
+    setRetryCount(0);
+    dispatch(fetchHomePage(tenantId));
   };
 
   const quillModules = {
     toolbar: [
-      [{ header: [1, 2, 3, false] }],
+      [{ header: [1, 2, 3, 4, 5, 6, false] }],
       [{ font: [] }],
-      [{ size: ["small", false, "large"] }],
-      ["bold", "italic", "underline"],
+      [{ size: ["small", false, "large", "huge"] }],
+      [{ color: [] }, { background: [] }],
+      ["bold", "italic", "underline", "strike"],
+      [{ script: "sub" }, { script: "super" }],
       [{ list: "ordered" }, { list: "bullet" }],
+      [{ indent: "-1" }, { indent: "+1" }],
       [{ align: [] }],
-      ["link", "image"],
+      ["link", "image", "video", "blockquote", "code-block"],
       ["clean"],
     ],
   };
 
+  const handleImageError = (e) => {
+    e.target.src = "/placeholder-image.jpg";
+  };
+
   return (
     <div className="container mx-auto p-4">
-      <Toaster position="top-right" toastOptions={{ duration: 3000 }} />
+      <Toaster position="top-right" />
 
-      {/* Loading State */}
-      {loading && (
-        <div className="text-center py-12">
+      {loading ? (
+        <div className="text-center py-6">
           <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-gray-900 mx-auto"></div>
-          <span className="text-gray-500 text-lg mt-2 block">Loading introduction data...</span>
+          <span className="text-gray-500 text-lg mt-2 block">Loading...</span>
         </div>
-      )}
-
-      {/* No Content or Error State */}
-      {(!existingPage && !loading && !content && !image) && (
+      ) : error && retryCount >= MAX_RETRIES ? (
         <div className="p-12 text-center bg-white shadow-lg rounded-xl border border-gray-200">
-          <h3 className="text-xl font-semibold text-gray-700 mb-2">No Introduction Yet</h3>
-          <p className="text-gray-500 mb-6">Get started by adding an introduction for your homepage!</p>
-          <button
-            onClick={() => setContent("Start writing your introduction here...")}
-            className="bg-gradient-to-r from-gray-800 to-black text-white px-6 py-2 rounded-full transition-all duration-200 hover:scale-105"
-            aria-label="Add introduction"
-          >
-            Add Introduction
-          </button>
+          <h3 className="text-xl font-semibold text-gray-700 mb-2">Unable to Load</h3>
+          <p className="text-gray-500 mb-6">{error.message || "Error loading data."}</p>
+          <div className="flex justify-center gap-4">
+            <button
+              onClick={handleStartEditing}
+              className="bg-black text-white px-6 py-2 rounded-full hover:scale-105"
+            >
+              Add Content
+            </button>
+            <button
+              onClick={handleRetry}
+              className="border border-gray-200 text-gray-700 px-6 py-2 rounded-full hover:bg-gray-100"
+            >
+              Retry
+            </button>
+          </div>
         </div>
-      )}
+      ) : (
+        <div className="bg-white p-6 rounded-xl shadow-md border border-gray-100">
+          <h3 className="text-lg font-semibold text-gray-800 mb-6 border-b pb-2">
+            {isEditing ? "Edit" : "Create"} About Company
+          </h3>
 
-      {/* Main Editor */}
-      {(!loading && (existingPage || content || image)) && (
-        <div className="bg-white shadow-lg rounded-xl p-6 border border-gray-100">
-          <h2 className="text-2xl font-bold text-gray-800 mb-6">
-            {existingPage ? "Edit Homepage Introduction" : "Add Homepage Introduction"}
-          </h2>
-
-          {/* Editor Section */}
-          <div className="mb-8">
-            <label className="block text-sm font-medium text-gray-700 mb-2">Introduction Content</label>
-            <div className="border border-gray-200 rounded-lg overflow-hidden">
-              <ReactQuill
-                value={content}
-                onChange={handleContentChange}
-                modules={quillModules}
-                theme="snow"
-                className="bg-gray-50"
-                aria-label="Introduction content editor"
+          <div className="space-y-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Title <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={formData.title}
+                onChange={(e) => handleFieldChange("title", e.target.value)}
+                className="w-full px-4 py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-gray-300"
+                placeholder="Enter title"
+                disabled={isSubmitting}
               />
             </div>
-            <p className="text-sm text-gray-500 mt-2">
-              {content.replace(/<[^>]+>/g, "").length}/2000 characters
-            </p>
-          </div>
 
-          {/* Image Upload Section */}
-          <div className="mb-8">
-            <label className="block text-sm font-medium text-gray-700 mb-2">Introduction Image</label>
-            <div className="border-2 border-dashed border-gray-200 rounded-lg p-6 text-center">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                About Content 1 <span className="text-red-500">*</span>
+              </label>
+              <ReactQuill
+                value={formData.aboutContent1}
+                onChange={(value) => handleFieldChange("aboutContent1", value)}
+                modules={quillModules}
+                className="bg-white rounded-lg shadow-sm border border-gray-200"
+                placeholder="Enter content..."
+                readOnly={isSubmitting}
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                About Content 2
+              </label>
+              <ReactQuill
+                value={formData.aboutContent2}
+                onChange={(value) => handleFieldChange("aboutContent2", value)}
+                modules={quillModules}
+                className="bg-white rounded-lg shadow-sm border border-gray-200"
+                placeholder="Enter optional content..."
+                readOnly={isSubmitting}
+              />
+            </div>
+
+            {/* Image upload and preview */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Image (Max 4MB, 348x348 recommended)
+              </label>
               <input
                 type="file"
-                accept="image/jpeg,image/png"
+                accept="image/jpeg,image/jpg,image/png"
                 onChange={handleImageUpload}
-                className="hidden"
-                id="image-upload"
-                aria-label="Upload introduction image"
+                disabled={isSubmitting}
+                className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-black file:text-white hover:file:bg-gray-800"
               />
-              <label
-                htmlFor="image-upload"
-                className="cursor-pointer bg-gray-100 px-4 py-2 rounded-full text-gray-700 hover:bg-gray-200 transition-all duration-200"
-              >
-                {image ? "Replace Image" : "Upload Image"}
-              </label>
-              <p className="text-sm text-gray-500 mt-2">JPEG or PNG, max 5MB</p>
-              {image && (
-                <div className="mt-4 relative inline-block">
+              {(imagePreview || existingImageUrl) && (
+                <div className="mt-2">
+                  <p className="text-xs text-gray-500">Preview:</p>
                   <img
-                    src={image}
-                    alt="Introduction preview"
-                    className="w-40 h-40 object-cover rounded-lg"
+                    src={imagePreview || existingImageUrl}
+                    alt="Preview"
+                    className="w-[348px] h-[348px] object-cover rounded-lg shadow-sm"
+                    onError={handleImageError}
                   />
-                  <button
-                    onClick={handleRemoveImage}
-                    className="absolute top-0 right-0 bg-red-600 text-white rounded-full p-1 hover:bg-red-700 transition-all duration-200"
-                    aria-label="Remove image"
-                  >
-                    <X size={16} />
-                  </button>
                 </div>
               )}
             </div>
-          </div>
 
-          {/* Preview Section */}
-          <div className="mb-8">
-            <label className="block text-sm font-medium text-gray-700 mb-2">Preview</label>
-            <div className="border border-gray-200 rounded-lg p-6 bg-gray-50">
-              {content ? (
+            {/* Preview Section */}
+            <div>
+              <h4 className="text-md font-semibold text-gray-700 mb-2">Preview</h4>
+              <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                <h1 className="text-2xl font-bold">{formData.title || "No title"}</h1>
                 <div
-                  className="prose max-w-none"
-                  dangerouslySetInnerHTML={{ __html: content }}
+                  dangerouslySetInnerHTML={{ __html: formData.aboutContent1 || "No content" }}
+                  className="prose max-w-none text-gray-700"
                 />
-              ) : (
-                <p className="text-gray-500">No content yet</p>
-              )}
-              {image && (
-                <img
-                  src={image}
-                  alt="Introduction preview"
-                  className="w-40 h-40 mt-4 object-cover rounded-lg"
+                <div
+                  dangerouslySetInnerHTML={{ __html: formData.aboutContent2 || "" }}
+                  className="prose max-w-none text-gray-700 mt-4"
                 />
-              )}
+                {(imagePreview || existingImageUrl) ? (
+                  <img
+                    src={imagePreview || existingImageUrl}
+                    alt="Preview"
+                    className="w-[348px] h-[348px] mt-4 rounded object-cover"
+                    onError={handleImageError}
+                  />
+                ) : (
+                  <div className="w-[348px] h-[348px] bg-gray-200 border-2 border-dashed rounded mt-4 flex items-center justify-center">
+                    <span className="text-gray-500">Image Placeholder</span>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
-          {/* Action Buttons */}
-          <div className="flex justify-end gap-4">
+          <div className="flex justify-end gap-4 mt-8">
             <button
-              onClick={handleCancel}
+              onClick={handleReset}
               disabled={isSubmitting}
-              className="px-6 py-2 border border-gray-200 rounded-full text-gray-700 hover:bg-gray-100 hover:scale-105 transition-all duration-200 font-medium shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
-              aria-label="Cancel changes"
+              className="px-6 py-2.5 border border-gray-200 rounded-full text-gray-700 hover:bg-gray-100"
             >
-              Cancel
+              Reset
             </button>
             <button
               onClick={handleSave}
               disabled={isSubmitting}
-              className="px-6 py-2 bg-gradient-to-r from-gray-800 to-black text-white rounded-full hover:from-gray-900 hover:to-black hover:scale-105 transition-all duration-200 font-medium shadow-md flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-              aria-label="Save introduction"
+              className="px-6 py-2.5 bg-black text-white rounded-full hover:scale-105 flex items-center gap-2"
             >
-              {isSubmitting && (
-                <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-white"></div>
-              )}
+              {isSubmitting && <div className="animate-spin h-4 w-4 border-t-2 border-white rounded-full"></div>}
               {isSubmitting ? "Saving..." : "Save"}
             </button>
           </div>
@@ -337,4 +375,4 @@ const HomePageIntroduction = () => {
   );
 };
 
-export default HomePageIntroduction;
+export default HomepageAboutCompany;

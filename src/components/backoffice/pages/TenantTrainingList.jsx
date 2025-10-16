@@ -1,15 +1,23 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Filter } from "react-feather";
+import { useDispatch, useSelector } from "react-redux";
 import toast, { Toaster } from "react-hot-toast";
-import useTenantApi from "@/hooks/useTenantApi";
 import { getToken } from "@/utils/auth";
+import {
+  fetchTrainings,
+  selectTrainings,
+  selectTrainingLoading,
+  selectTrainingError,
+} from "@/store/slices/trainingSlice";
 
 const TenantTrainingList = () => {
-  const { getAll, loading, error } = useTenantApi();
+  const dispatch = useDispatch();
   const navigate = useNavigate();
+  const trainings = useSelector(selectTrainings);
+  const loading = useSelector(selectTrainingLoading);
+  const error = useSelector(selectTrainingError);
   const [tenantId, setTenantId] = useState(null);
-  const [trainings, setTrainings] = useState([]);
   const [filter, setFilter] = useState("all"); // all, active, inactive
 
   // Check authentication and tenantId
@@ -28,31 +36,10 @@ const TenantTrainingList = () => {
   // Fetch trainings when tenantId is set
   useEffect(() => {
     if (tenantId) {
-      fetchTrainings();
+      dispatch(fetchTrainings(tenantId));
     }
-  }, [tenantId]);
+  }, [tenantId, dispatch]);
 
-  const fetchTrainings = async () => {
-    try {
-      console.log("Fetching trainings for tenantId:", tenantId); // Debug
-      const response = await getAll(`/tenants/${tenantId}/trainings`);
-      console.log("Trainings response:", response); // Debug
-      if (response && response.trainings) {
-        setTrainings(response.trainings);
-      } else {
-        setTrainings([]);
-      }
-    } catch (err) {
-      console.error("Error fetching trainings:", err);
-      if (err.response?.status === 401 || err.response?.status === 403) {
-        toast.error("Authentication failed. Please log in again.");
-        localStorage.removeItem("token");
-        setTimeout(() => navigate("/backoffice-login"), 1000);
-      } else {
-        toast.error(err.message || "Failed to fetch trainings");
-      }
-    }
-  };
   // Filter trainings based on status
   const filteredTrainings = trainings.filter((training) => {
     if (filter === "active") return training.status === "ACTIVE";

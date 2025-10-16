@@ -1,77 +1,74 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import useTenantApi from "@/hooks/useTenantApi";
+import { useDispatch, useSelector } from "react-redux";
 import toast, { Toaster } from "react-hot-toast";
+
+// Redux imports
+import {
+  fetchHomePage,
+  updateHomePage,
+  setData,
+  selectHomePageData,
+  selectHomePageLoading,
+  selectHomePageError,
+} from "@/store/slices/homePageSlice";
+
+import {
+  setSubmitting,
+  selectIsSubmitting,
+} from "@/store/slices/uiSlice";
+
+import { selectTenantId } from "@/store/slices/authSlice";
+
+const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
 
 const HomepageOpportunityVideo = () => {
   const navigate = useNavigate();
-  const { data, loading: isLoading, error, getAll, put } = useTenantApi();
+  const dispatch = useDispatch();
 
-  const [tenantId, setTenantId] = useState(null);
-  const [headerTitle, setHeaderTitle] = useState("");
-  const [videoFile, setVideoFile] = useState(null);
-  const [youtubeLink, setYoutubeLink] = useState("");
-  const [existingVideoUrl, setExistingVideoUrl] = useState(null);
-  const [isEditing, setIsEditing] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  // Redux state
+  const homePageData = useSelector(selectHomePageData);
+  const loading = useSelector(selectHomePageLoading);
+  const error = useSelector(selectHomePageError);
+  const tenantId = useSelector(selectTenantId);
+  const isSubmitting = useSelector(selectIsSubmitting);
+
+  // Local state
   const [retryCount, setRetryCount] = useState(0);
-  const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB in bytes
+  const [videoFile, setVideoFile] = useState(null);
 
+  const headerTitle = homePageData.opportunity_video_header_title || "";
+  const youtubeLink = homePageData.opportunity_video_url && homePageData.opportunity_video_url.includes("youtube") ? homePageData.opportunity_video_url : "";
+  const existingVideoUrl = homePageData.opportunity_video_url && !homePageData.opportunity_video_url.includes("youtube") ? homePageData.opportunity_video_url : null;
+  const isEditing = !!headerTitle;
+
+  // Fetch on mount
   useEffect(() => {
-    const storedTenantId = localStorage.getItem("tenant_id");
-    if (storedTenantId && tenantId !== storedTenantId) {
-      setTenantId(storedTenantId);
+    if (!tenantId) {
+      const storedTenantId = localStorage.getItem("tenant_id");
+      if (!storedTenantId) {
+        toast.error("Please log in to continue.");
+        navigate("/backoffice-login");
+      }
+      return;
     }
-  }, []);
 
-  useEffect(() => {
-    if (tenantId) {
-      fetchOpportunityVideoData();
-    }
-  }, [tenantId, retryCount]);
-
-  const fetchOpportunityVideoData = async () => {
-    try {
-      const response = await toast.promise(
-        getAll(`/tenants/${tenantId}/home-page`),
-        {
-          loading: "Fetching video data...",
-          success: "Video data loaded successfully!",
-          error: "Failed to load video data.",
+    dispatch(fetchHomePage(tenantId))
+      .unwrap()
+      .then(() => {
+        toast.success("Video data loaded successfully!");
+        setRetryCount(0);
+      })
+      .catch((err) => {
+        console.error("Error fetching opportunity video data:", err);
+        if (retryCount < 3) {
+          setTimeout(() => setRetryCount(retryCount + 1), 2000);
+        } else {
+          toast.error("Unable to load data. Please try again later or start adding content.");
+          setIsEditing(false);
         }
-      );
-      if (response && Object.keys(response).length > 0) {
-        setHeaderTitle(response.opportunity_video_header_title || "");
-        setYoutubeLink(
-          response.opportunity_video_url && response.opportunity_video_url.includes("youtube")
-            ? response.opportunity_video_url
-            : ""
-        );
-        setExistingVideoUrl(
-          response.opportunity_video_url && !response.opportunity_video_url.includes("youtube")
-            ? response.opportunity_video_url
-            : null
-        );
-        setVideoFile(null);
-        setIsEditing(!!response.opportunity_video_header_title);
-      } else {
-        setHeaderTitle("");
-        setYoutubeLink("");
-        setExistingVideoUrl(null);
-        setVideoFile(null);
-        setIsEditing(false);
-      }
-    } catch (err) {
-      console.error("Error fetching opportunity video data:", err.response?.data || err.message);
-      if (retryCount < 3) {
-        toast.error(`Failed to load data. Retrying... (${retryCount + 1}/3)`);
-        setTimeout(() => setRetryCount(retryCount + 1), 2000);
-      } else {
-        toast.error("Unable to load data. Please try again later or start adding content.");
-        setIsEditing(false);
-      }
-    }
-  };
+      });
+  }, [tenantId, retryCount, dispatch, navigate]);
 
   const validateVideo = (file) => {
     if (!file) return true;
@@ -101,8 +98,8 @@ const HomepageOpportunityVideo = () => {
     const file = e.target.files[0];
     if (file && validateVideo(file)) {
       setVideoFile(file);
-      setYoutubeLink("");
-      setExistingVideoUrl(null);
+      dispatch(setData({ opportunity_video: file }));
+      dispatch(setData({ opportunity_video_url: "" }));
       toast.info("Video selected successfully!");
     }
   };
@@ -117,15 +114,16 @@ const HomepageOpportunityVideo = () => {
 
   const handleInputChange = useCallback(
     debounce((field, value) => {
-      if (field === "headerTitle") setHeaderTitle(value);
+      if (field === "headerTitle") {
+        dispatch(setData({ opportunity_video_header_title: value }));
+      }
       if (field === "youtubeLink") {
-        setYoutubeLink(value);
+        dispatch(setData({ opportunity_video_url: value }));
         setVideoFile(null);
-        setExistingVideoUrl(null);
         if (value && !validateYoutubeLink(value)) return;
       }
     }, 300),
-    []
+    [dispatch]
   );
 
   const getYoutubeEmbedUrl = (url) => {
@@ -165,83 +163,76 @@ const HomepageOpportunityVideo = () => {
     } else if (youtubeLink) {
       formData.append("youtube_link", youtubeLink);
     } else if (existingVideoUrl) {
-      formData.append("youtube_link", existingVideoUrl);
+      formData.append("opportunity_video_url", existingVideoUrl);
     }
 
-    const existingPage = await getAll(`/tenants/${tenantId}/home-page`);
-    if (existingPage && Object.keys(existingPage).length > 0) {
-      formData.append("welcome_description", existingPage.welcome_description || "Default welcome");
-      formData.append("introduction_content", existingPage.introduction_content || "Default introduction");
-      formData.append("about_company_title", existingPage.about_company_title || "About Us");
-      formData.append("about_company_content_1", existingPage.about_company_content_1 || "Default content");
-      formData.append("about_company_content_2", existingPage.about_company_content_2 || "");
-      formData.append("why_network_marketing_title", existingPage.why_network_marketing_title || "Why Network Marketing");
-      formData.append("why_network_marketing_content", existingPage.why_network_marketing_content || "Default why content");
-      formData.append("support_content", existingPage.support_content || "Default support");
-    } else {
-      const defaultFields = {
-        welcome_description: "Welcome to our platform",
-        introduction_content: "Default introduction content",
-        about_company_title: "About Our Company",
-        about_company_content_1: "We are a leading company in our industry.",
-        why_network_marketing_title: "Why Network Marketing",
-        why_network_marketing_content: "Network marketing offers great opportunities.",
-        support_content: "We provide excellent support to our users.",
-      };
-      Object.entries(defaultFields).forEach(([key, value]) => {
-        formData.append(key, value);
-      });
-    }
+    // Add other fields from existing data or defaults
+    const defaults = {
+      welcome_description: "Welcome to our platform",
+      introduction_content: "Default introduction content",
+      about_company_title: "About Our Company",
+      about_company_content_1: "Default about content",
+      about_company_content_2: "",
+      why_network_marketing_title: "Why Network Marketing",
+      why_network_marketing_content: "Default why content",
+      support_content: "Default support content",
+    };
 
-    setIsSubmitting(true);
+    Object.entries(defaults).forEach(([key, value]) => {
+      formData.append(key, homePageData[key] || value);
+    });
+
+    dispatch(setSubmitting(true));
+
     try {
       await toast.promise(
-        put(`/tenants/${tenantId}/home-page`, formData, true),
+        dispatch(updateHomePage({ tenantId, formData })).unwrap(),
         {
           loading: "Saving video data...",
           success: "Opportunity video saved successfully!",
-          error: (err) => `Failed to save: ${err.response?.data?.message || err.message}`,
+          error: (err) => `Failed to save: ${err.message || 'Unknown error'}`,
         }
       );
-      await fetchOpportunityVideoData();
+      await dispatch(fetchHomePage(tenantId));
+      setVideoFile(null);
     } catch (err) {
-      console.error("Error saving opportunity video:", err.response?.data || err.message);
-      if (err.response?.status === 401) {
+      console.error("Error saving opportunity video:", err);
+      if (err.status === 401) {
         toast.error("Session expired. Please log in again.");
         navigate("/backoffice-login");
       }
     } finally {
-      setIsSubmitting(false);
+      dispatch(setSubmitting(false));
     }
   };
 
   const handleReset = () => {
-    setHeaderTitle("");
+    dispatch(setData({
+      opportunity_video_header_title: "",
+      opportunity_video_url: "",
+    }));
     setVideoFile(null);
-    setYoutubeLink("");
-    setExistingVideoUrl(null);
     setIsEditing(false);
     toast.success("Form reset successfully!");
   };
 
   const handleStartEditing = () => {
-    setHeaderTitle("Opportunity Video Overview");
-    setVideoFile(null);
-    setYoutubeLink("");
-    setExistingVideoUrl(null);
+    dispatch(setData({
+      opportunity_video_header_title: "Opportunity Video Overview",
+    }));
     setIsEditing(true);
   };
 
   const handleRetry = () => {
     setRetryCount(0);
-    fetchOpportunityVideoData();
+    dispatch(fetchHomePage(tenantId));
   };
 
   return (
     <div className="container mx-auto p-4">
       <Toaster position="top-right" toastOptions={{ duration: 3000 }} />
 
-      {isLoading ? (
+      {loading ? (
         <div className="text-center py-6">
           <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-gray-900 mx-auto"></div>
           <span className="text-gray-500 text-lg mt-2 block animate-pulse">Loading video data...</span>
@@ -253,7 +244,6 @@ const HomepageOpportunityVideo = () => {
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
-            xmlns="http://www.w3.org/2000/svg"
           >
             <path
               strokeLinecap="round"

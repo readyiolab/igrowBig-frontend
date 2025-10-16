@@ -1,64 +1,47 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import useTenantApi from "@/hooks/useTenantApi";
+import { useSelector, useDispatch } from "react-redux";
+import { fetchHomePage, updateHomePage } from "@/store/slices/homePageSlice";
+import { setSubmitting, openForm, closeForm, incrementRetry, resetRetry } from "@/store/slices/uiSlice";
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
 import toast, { Toaster } from "react-hot-toast";
 
 const HomepageWhyNetworkMarketing = () => {
   const navigate = useNavigate();
-  const { data, loading: isLoading, error, getAll, put } = useTenantApi();
+  const dispatch = useDispatch();
+
+  const { data: homePageData, loading: isLoading, error } = useSelector((state) => state.homePage);
+  const { isSubmitting, isEditing, retryCount } = useSelector((state) => state.ui);
 
   const [tenantId, setTenantId] = useState(null);
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
-  const [isEditing, setIsEditing] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
     const storedTenantId = localStorage.getItem("tenant_id");
     if (storedTenantId && tenantId !== storedTenantId) {
       setTenantId(storedTenantId);
     }
-  }, []);
+  }, [tenantId]);
 
   useEffect(() => {
     if (tenantId) {
-      fetchWhyNetworkMarketingData();
+      dispatch(fetchHomePage(tenantId));
     }
-  }, [tenantId, retryCount]);
+  }, [tenantId, dispatch, retryCount]);
 
-  const fetchWhyNetworkMarketingData = async () => {
-    try {
-      const response = await toast.promise(
-        getAll(`/tenants/${tenantId}/home-page`),
-        {
-          loading: "Fetching data...",
-          success: "Data loaded successfully!",
-          error: "Failed to load data.",
-        }
-      );
-      if (response && Object.keys(response).length > 0) {
-        setTitle(response.why_network_marketing_title || "");
-        setContent(response.why_network_marketing_content || "");
-        setIsEditing(!!response.why_network_marketing_title);
-      } else {
-        setTitle("");
-        setContent("");
-        setIsEditing(false);
-      }
-    } catch (err) {
-      console.error("Error fetching why network marketing data:", err.response?.data || err.message);
-      if (retryCount < 3) {
-        toast.error(`Failed to load data. Retrying... (${retryCount + 1}/3)`);
-        setTimeout(() => setRetryCount(retryCount + 1), 2000);
-      } else {
-        toast.error("Unable to load data. Please try again later or start adding content.");
-        setIsEditing(false);
-      }
+  useEffect(() => {
+    if (homePageData && Object.keys(homePageData).length > 0) {
+      setTitle(homePageData.why_network_marketing_title || "");
+      setContent(homePageData.why_network_marketing_content || "");
+      dispatch(openForm({ isEditing: !!homePageData.why_network_marketing_title }));
+    } else {
+      setTitle("");
+      setContent("");
+      dispatch(closeForm());
     }
-  };
+  }, [homePageData, dispatch]);
 
   const debounce = (func, delay) => {
     let timeoutId;
@@ -103,16 +86,15 @@ const HomepageWhyNetworkMarketing = () => {
     formData.append("why_network_marketing_title", title);
     formData.append("why_network_marketing_content", content);
 
-    const existingPage = await getAll(`/tenants/${tenantId}/home-page`);
-    if (existingPage && Object.keys(existingPage).length > 0) {
-      formData.append("welcome_description", existingPage.welcome_description || "Default welcome");
-      formData.append("introduction_content", existingPage.introduction_content || "Default introduction");
-      formData.append("about_company_title", existingPage.about_company_title || "About Us");
-      formData.append("about_company_content_1", existingPage.about_company_content_1 || "Default content");
-      formData.append("about_company_content_2", existingPage.about_company_content_2 || "");
-      formData.append("opportunity_video_header_title", existingPage.opportunity_video_header_title || "Opportunity Video");
-      formData.append("opportunity_video_url", existingPage.opportunity_video_url || "");
-      formData.append("support_content", existingPage.support_content || "Default support content");
+    if (homePageData && Object.keys(homePageData).length > 0) {
+      formData.append("welcome_description", homePageData.welcome_description || "Default welcome");
+      formData.append("introduction_content", homePageData.introduction_content || "Default introduction");
+      formData.append("about_company_title", homePageData.about_company_title || "About Us");
+      formData.append("about_company_content_1", homePageData.about_company_content_1 || "Default content");
+      formData.append("about_company_content_2", homePageData.about_company_content_2 || "");
+      formData.append("opportunity_video_header_title", homePageData.opportunity_video_header_title || "Opportunity Video");
+      formData.append("opportunity_video_url", homePageData.opportunity_video_url || "");
+      formData.append("support_content", homePageData.support_content || "Default support content");
     } else {
       const defaultFields = {
         welcome_description: "Welcome to our platform",
@@ -127,44 +109,43 @@ const HomepageWhyNetworkMarketing = () => {
       });
     }
 
-    setIsSubmitting(true);
+    dispatch(setSubmitting(true));
     try {
       await toast.promise(
-        put(`/tenants/${tenantId}/home-page`, formData, true),
+        dispatch(updateHomePage({ tenantId, formData })).unwrap(),
         {
           loading: "Saving data...",
           success: "Why Network Marketing saved successfully!",
-          error: (err) => `Failed to save: ${err.response?.data?.message || err.message}`,
+          error: (err) => `Failed to save: ${err.message}`,
         }
       );
-      await fetchWhyNetworkMarketingData();
     } catch (err) {
-      console.error("Error saving why network marketing:", err.response?.data || err.message);
-      if (err.response?.status === 401) {
+      console.error("Error saving why network marketing:", err);
+      if (err.status === 401) {
         toast.error("Session expired. Please log in again.");
         navigate("/backoffice-login");
       }
     } finally {
-      setIsSubmitting(false);
+      dispatch(setSubmitting(false));
     }
   };
 
   const handleReset = () => {
     setTitle("");
     setContent("");
-    setIsEditing(false);
+    dispatch(closeForm());
     toast.success("Form reset successfully!");
   };
 
   const handleStartEditing = () => {
     setTitle("Why Network Marketing");
     setContent("Start writing about why network marketing here...");
-    setIsEditing(true);
+    dispatch(openForm({ isEditing: true }));
   };
 
   const handleRetry = () => {
-    setRetryCount(0);
-    fetchWhyNetworkMarketingData();
+    dispatch(resetRetry());
+    dispatch(fetchHomePage(tenantId));
   };
 
   const quillModules = {

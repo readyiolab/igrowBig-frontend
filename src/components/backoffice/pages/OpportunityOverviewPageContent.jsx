@@ -1,13 +1,29 @@
+// OpportunityOverviewPageContent.jsx
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import useTenantApi from "@/hooks/useTenantApi";
+import { useDispatch, useSelector } from "react-redux";
+import useTenantApi from "@/hooks/useTenantApi"; // Note: Keeping for now, but ideally replace if needed
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
 import toast, { Toaster } from "react-hot-toast";
+import {
+  fetchOpportunityPage,
+  updateOpportunityPage,
+  createOpportunityPage,
+  selectOpportunityPageData,
+  selectOpportunityPageLoading,
+  selectOpportunityPageError,
+} from "@/store/slices/opportunityPageSlice";
+import { setSubmitting, selectIsSubmitting } from "@/store/slices/uiSlice";
 
 const OpportunityOverviewPageContent = () => {
   const navigate = useNavigate();
-  const { data, loading: isLoading, error, getAll, post, put } = useTenantApi();
+  const dispatch = useDispatch();
+
+  const data = useSelector(selectOpportunityPageData);
+  const loading = useSelector(selectOpportunityPageLoading);
+  const error = useSelector(selectOpportunityPageError);
+  const isSubmitting = useSelector(selectIsSubmitting);
 
   const [tenantId, setTenantId] = useState(null);
   const [content, setContent] = useState({
@@ -18,8 +34,6 @@ const OpportunityOverviewPageContent = () => {
   const [existingImageUrl, setExistingImageUrl] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [retryCount, setRetryCount] = useState(0);
   const MAX_IMAGE_SIZE = 4 * 1024 * 1024; // 4MB in bytes
 
   useEffect(() => {
@@ -27,53 +41,31 @@ const OpportunityOverviewPageContent = () => {
     if (storedTenantId && tenantId !== storedTenantId) {
       setTenantId(storedTenantId);
     }
-  }, []);
+  }, [tenantId]);
 
   useEffect(() => {
     if (tenantId) {
-      fetchContent();
+      dispatch(fetchOpportunityPage(tenantId));
     }
-  }, [tenantId, retryCount]);
+  }, [tenantId, dispatch]);
 
-  const fetchContent = async () => {
-    try {
-      const response = await toast.promise(
-        getAll(`/tenants/${tenantId}/opportunity-page`),
-        {
-          loading: "Fetching content...",
-          success: "Content loaded!",
-          error: "Failed to load content.",
-        }
-      );
-      if (response && (response.welcome_message || response.page_content || response.page_image_url)) {
-        setContent({
-          welcome_message: response.welcome_message || "",
-          page_content: response.page_content || "",
-          page_image: null,
-        });
-        setExistingImageUrl(response.page_image_url || null);
-        setImagePreview(null);
-        setIsEditing(true);
-      } else {
-        setContent({ welcome_message: "", page_content: "", page_image: null });
-        setExistingImageUrl(null);
-        setImagePreview(null);
-        setIsEditing(false);
-      }
-    } catch (err) {
-      console.error("Error fetching opportunity page content:", err.response?.data || err.message);
-      if (retryCount < 3) {
-        toast.error(`Failed to load content. Retrying... (${retryCount + 1}/3)`);
-        setTimeout(() => setRetryCount(retryCount + 1), 2000);
-      } else {
-        toast.error("Unable to load content. Please try again later.");
-        setContent({ welcome_message: "", page_content: "", page_image: null });
-        setExistingImageUrl(null);
-        setImagePreview(null);
-        setIsEditing(false);
-      }
+  useEffect(() => {
+    if (data && (data.welcome_message || data.page_content || data.page_image_url)) {
+      setContent({
+        welcome_message: data.welcome_message || "",
+        page_content: data.page_content || "",
+        page_image: null,
+      });
+      setExistingImageUrl(data.page_image_url || null);
+      setImagePreview(null);
+      setIsEditing(true);
+    } else {
+      setContent({ welcome_message: "", page_content: "", page_image: null });
+      setExistingImageUrl(null);
+      setImagePreview(null);
+      setIsEditing(false);
     }
-  };
+  }, [data]);
 
   const validateFile = (file) => {
     if (!file) return true; // Image is optional
@@ -135,28 +127,27 @@ const OpportunityOverviewPageContent = () => {
       formData.append("page_image", content.page_image);
     }
 
-    setIsSubmitting(true);
+    dispatch(setSubmitting(true));
     try {
-      const existingPage = await getAll(`/tenants/${tenantId}/opportunity-page`);
-      await toast.promise(
-        existingPage && existingPage.id
-          ? put(`/tenants/${tenantId}/opportunity-page`, formData, true)
-          : post(`/tenants/${tenantId}/opportunity-page`, formData, true),
-        {
-          loading: "Saving content...",
-          success: "Content saved successfully!",
-          error: (err) => `Failed to save: ${err.response?.data?.message || err.message}`,
-        }
-      );
-      await fetchContent();
+      const existingPage = data;
+      const promise = existingPage && existingPage.id
+        ? dispatch(updateOpportunityPage({ tenantId, formData })).unwrap()
+        : dispatch(createOpportunityPage({ tenantId, formData })).unwrap();
+
+      await toast.promise(promise, {
+        loading: "Saving content...",
+        success: "Content saved successfully!",
+        error: (err) => `Failed to save: ${err.message || "Unknown error"}`,
+      });
+      dispatch(fetchOpportunityPage(tenantId));
     } catch (err) {
-      console.error("Error saving opportunity page content:", err.response?.data || err.message);
-      if (err.response?.status === 401) {
+      console.error("Error saving opportunity page content:", err);
+      if (err.status === 401) {
         toast.error("Session expired. Please log in again.");
         navigate("/backoffice-login");
       }
     } finally {
-      setIsSubmitting(false);
+      dispatch(setSubmitting(false));
     }
   };
 
@@ -169,8 +160,7 @@ const OpportunityOverviewPageContent = () => {
   };
 
   const handleRetry = () => {
-    setRetryCount(0);
-    fetchContent();
+    dispatch(fetchOpportunityPage(tenantId));
   };
 
   const quillModules = {
@@ -194,14 +184,14 @@ const OpportunityOverviewPageContent = () => {
     <div className="container mx-auto p-4">
       <Toaster position="top-right" toastOptions={{ duration: 3000 }} />
 
-      {isLoading && (
+      {loading && (
         <div className="text-center py-6">
           <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-gray-900 mx-auto"></div>
           <span className="text-gray-500 text-lg mt-2 block animate-pulse">Loading content...</span>
         </div>
       )}
 
-      {error && retryCount >= 3 && !isLoading && (
+      {error && !loading && (
         <div className="p-12 text-center bg-white shadow-lg rounded-xl border border-gray-200">
           <svg
             className="mx-auto h-24 w-24 text-gray-400 mb-4"
@@ -240,7 +230,7 @@ const OpportunityOverviewPageContent = () => {
         </div>
       )}
 
-      {!tenantId && !isLoading && (
+      {!tenantId && !loading && (
         <div className="p-12 text-center bg-white shadow-lg rounded-xl border border-gray-200">
           <h3 className="text-xl font-semibold text-gray-700 mb-2">Authentication Required</h3>
           <p className="text-gray-500 mb-6">No tenant ID found. Please log in to continue.</p>
@@ -254,7 +244,7 @@ const OpportunityOverviewPageContent = () => {
         </div>
       )}
 
-      {!isLoading && !error && tenantId && (
+      {!loading && !error && tenantId && (
         <div className="bg-white p-6 rounded-xl shadow-md border border-gray-100 transition-all duration-300 hover:shadow-lg">
           <h3 className="text-lg font-semibold text-gray-800 mb-6 border-b pb-2">
             {isEditing ? "Edit Opportunity Page Content" : "Create Opportunity Page Content"}

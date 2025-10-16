@@ -1,30 +1,12 @@
 import React, { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import useTenantApi from "@/hooks/useTenantApi";
 import { Button } from "@/components/ui/button";
-import {
-  Card, CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
-
-import { ScrollArea } from "@/components/ui/scroll-area";
-
-import {
-  Carousel, CarouselContent,
-  CarouselItem,
-  CarouselPrevious,
-  CarouselNext,
-} from "@/components/ui/carousel";
-import { Download } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { ArrowRight, Download } from "lucide-react";
 
 const Opportunity = () => {
+  const navigate = useNavigate();
   const { getAll } = useTenantApi();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -33,13 +15,11 @@ const Opportunity = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        console.log("Opportunity: Fetching data");
         const response = await getAll("/site/data");
-        console.log("Opportunity: Response:", response);
         setData(response.site_data);
       } catch (err) {
-        console.error("Opportunity: Error:", err);
         setError(err.message);
+        setData({});
       } finally {
         setLoading(false);
       }
@@ -49,215 +29,210 @@ const Opportunity = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-accent">
-        <div className="text-gray-800 text-xl font-semibold animate-pulse">Loading...</div>
-      </div>
-    );
-  }
-  if (error) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-accent">
-        <div className="text-red-600 text-xl font-semibold">Error: {error}</div>
+      <div className="bg-white min-h-screen">
+        {/* Banner Skeleton */}
+        <Skeleton className="w-full h-64 sm:h-80 md:h-96 lg:h-[450px]" />
+        
+        {/* Content Skeleton */}
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-12 md:py-16">
+          <Skeleton className="w-full h-48 rounded-2xl mb-12" />
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
+            <Skeleton className="h-80 rounded-2xl" />
+            <div className="space-y-4">
+              <Skeleton className="h-10 w-3/4" />
+              <Skeleton className="h-32 w-full" />
+              <Skeleton className="h-10 w-1/2" />
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
 
   const opportunityPage = data?.opportunity || {};
-  const banners = [
-    {
-      id: 1,
-      text: opportunityPage.banner_content || "Discover Your Opportunity",
-      image: opportunityPage.banner_image_url || "https://via.placeholder.com/1200x400?text=Opportunity+Banner",
-    },
-  ];
+
+  // Fallback content
+  const bannerImage = opportunityPage.banner_image_url || "https://images.unsplash.com/photo-1552664730-d307ca884978?ixlib=rb-4.0.3&auto=format&fit=crop&w=1350&q=80";
+  const bannerContent = opportunityPage.banner_content || "Discover Your Opportunity";
+  const welcomeMessage = opportunityPage.welcome_message || "<p>Welcome to NHT Global. Discover the world's premier network marketing company designed to help you achieve your goals and transform your life.</p>";
+  const pageContent = opportunityPage.page_content || "<p>Join NHT Global to build your future and promote wellness. Our compensation plan is designed to reward your efforts and support your success.</p>";
+  const headerTitle = opportunityPage.header_title || "Open the Door of Opportunity";
+  const pageImage = opportunityPage.page_image_url || "https://images.unsplash.com/photo-1552664730-d307ca884978?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80";
 
   return (
-    <div className="bg-accent min-h-screen">
-      
-
-      {/* Carousel */}
-      <section aria-label="NHT Global Opportunity Highlights" className="relative">
-        <Carousel className="w-full">
-          <CarouselContent>
-            {banners.map((banner) => (
-              <CarouselItem key={banner.id}>
-                <div className="relative h-56 sm:h-64 md:h-80 lg:h-[450px] overflow-hidden">
-                  <img
-                    src={banner.image}
-                    alt={`${banner.text} - NHT Global Opportunity`}
-                    className="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
-                    loading="lazy"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-gray-900/70 to-transparent" />
-                  <div className="absolute bottom-4 sm:bottom-6 left-0 right-0 text-white text-center px-4">
-                    <h1 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-semibold drop-shadow-md">
-                      {banner.text}
-                    </h1>
-                  </div>
-                </div>
-              </CarouselItem>
-            ))}
-          </CarouselContent>
-          <CarouselPrevious className="left-2 sm:left-4" />
-          <CarouselNext className="right-2 sm:right-4" />
-        </Carousel>
-      </section>
+    <div className="bg-white min-h-screen">
+      {/* Hero Banner */}
+      <div className="relative w-full h-64 sm:h-80 md:h-96 lg:h-[450px] overflow-hidden bg-black">
+        <img
+          src={bannerImage}
+          alt="Opportunity Banner"
+          className="w-full h-full object-cover opacity-70 hover:opacity-80 transition-opacity duration-500"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+        <div className="absolute inset-0 flex items-end justify-center pb-8 px-4">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-white text-center drop-shadow-lg">
+            {bannerContent}
+          </h1>
+        </div>
+      </div>
 
       {/* Main Content */}
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-10">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-12 md:py-16">
+        
         {/* Welcome Section */}
-        <section className="mb-8 sm:mb-10 text-center">
-          <Card >
-            <CardHeader>
-              <CardTitle className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-semibold text-gray-800">
+        <section className="mb-12 md:mb-16">
+          <div className="border border-gray-200 rounded-2xl shadow-lg hover:shadow-xl transition-shadow duration-300 overflow-hidden">
+            <div className="bg-gradient-to-r from-black to-gray-800 text-white px-6 sm:px-8 md:px-12 py-10 md:py-12">
+              <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-center">
                 Welcome to the NHT Global Opportunity
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="w-16 sm:w-24 h-1 bg-primary mx-auto mb-4 sm:mb-6" />
-              
-                <div
-                  className="text-sm sm:text-md md:text-lg text-gray-600 max-w-3xl mx-auto leading-relaxed"
-                  dangerouslySetInnerHTML={{
-                    __html:
-                      opportunityPage.welcome_message ||
-                      "Discover the world’s premier network marketing company designed to help you achieve your goals.",
-                  }}
-                />
-             
-            </CardContent>
-          </Card>
+              </h2>
+            </div>
+            <div className="px-6 sm:px-8 md:px-12 py-10 md:py-12">
+              <div className="w-16 h-1 bg-black mx-auto mb-8"></div>
+              <div
+                className="text-base sm:text-lg text-gray-700 leading-relaxed text-center max-w-3xl mx-auto"
+                dangerouslySetInnerHTML={{ __html: welcomeMessage }}
+              />
+            </div>
+          </div>
         </section>
 
-        {/* Opportunity Section */}
-        <section className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8 lg:gap-10 items-center">
-          <div className="relative h-64 sm:h-72 md:h-[400px] overflow-hidden rounded-lg">
-            <img
-              src={
-                opportunityPage.page_image_url ||
-                "https://via.placeholder.com/600x400?text=Opportunity+Image"
-              }
-              alt="NHT Global Opportunity"
-              className="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
-              loading="lazy"
-            />
-          </div>
-          <div className="flex flex-col justify-center">
-            <h2 className="text-xl sm:text-2xl md:text-3xl font-semibold text-gray-800 mb-4 sm:mb-6 text-center md:text-left">
-              {opportunityPage.header_title || "Open the Door of Opportunity"}
-            </h2>
-            
+        {/* Opportunity Section - Two Column */}
+        <section className="mb-12 md:mb-16">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-12 items-center">
+            {/* Image */}
+            <div className="order-2 md:order-1">
+              <div className="relative h-64 sm:h-72 md:h-96 lg:h-[450px] overflow-hidden rounded-2xl shadow-lg hover:shadow-xl transition-shadow duration-300">
+                <img
+                  src={pageImage}
+                  alt="Opportunity"
+                  className="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
+                  loading="lazy"
+                />
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="order-1 md:order-2 flex flex-col justify-center">
+              <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-black mb-6">
+                {headerTitle}
+              </h2>
+              
               <div
-                className="text-sm sm:text-md md:text-lg text-gray-700 leading-relaxed"
-                dangerouslySetInnerHTML={{
-                  __html:
-                    opportunityPage.page_content ||
-                    "<p>Join NHT Global to build your future and promote wellness.</p>",
-                }}
+                className="text-base sm:text-lg text-gray-700 leading-relaxed mb-8 space-y-4"
+                dangerouslySetInnerHTML={{ __html: pageContent }}
               />
-            
-            <div className="flex flex-col sm:flex-row gap-4 mt-4 sm:mt-6 items-center md:items-start">
-              <Button
-                asChild
-                className="bg-primary hover:bg-blue-700 text-white rounded-lg px-4 sm:px-6 py-2 sm:py-3 font-semibold"
-              >
-                <Link to="/join-us">Learn More</Link>
-              </Button>
-              {opportunityPage.plan_document_url && (
+              
+              <div className="flex flex-col sm:flex-row gap-4">
                 <Button
-                  asChild
-                  variant="outline"
-                  className="border-primary text-primary hover:bg-primary hover:text-white"
+                  onClick={() => navigate("/join-us")}
+                  className="bg-black hover:bg-gray-800 text-white px-8 py-3 font-semibold transition-all duration-300 hover:scale-105 flex items-center justify-center sm:justify-start"
                 >
-                  <a
-                    href={opportunityPage.plan_document_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    <Download className="w-4 h-4 mr-2" />
-                    Compensation Plan
-                  </a>
+                  Learn More
+                  <ArrowRight className="ml-2 h-5 w-5" />
                 </Button>
-              )}
+                
+                {opportunityPage.plan_document_url && (
+                  <a href={opportunityPage.plan_document_url} target="_blank" rel="noopener noreferrer">
+                    <Button
+                      variant="outline"
+                      className="border-black text-black hover:bg-black hover:text-white px-8 py-3 font-semibold transition-all duration-300 hover:scale-105 w-full sm:w-auto flex items-center justify-center"
+                    >
+                      <Download className="mr-2 h-5 w-5" />
+                      Compensation Plan
+                    </Button>
+                  </a>
+                )}
+              </div>
             </div>
           </div>
         </section>
 
         {/* Video Section */}
         {opportunityPage.video_section_link && (
-          <section className="mt-8 sm:mt-10">
-            <Card className="border-none shadow-sm">
-              <CardHeader>
-                <CardTitle className="text-lg sm:text-xl md:text-2xl font-semibold text-gray-800">
+          <section className="mb-12 md:mb-16">
+            <div className="border border-gray-200 rounded-2xl shadow-lg overflow-hidden">
+              <div className="bg-gray-50 border-b border-gray-200 px-6 sm:px-8 md:px-12 py-8">
+                <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-black">
                   Explore Our Opportunity
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="relative aspect-video rounded-lg overflow-hidden shadow-md">
+                </h2>
+              </div>
+              <div className="px-6 sm:px-8 md:px-12 py-8">
+                <div className="relative aspect-video rounded-lg overflow-hidden shadow-lg">
                   <video
                     src={opportunityPage.video_section_link}
                     controls
-                    className="w-full h-full"
+                    className="w-full h-full bg-black"
                     title="NHT Global Opportunity Video"
                   />
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           </section>
         )}
 
-        {/* Tabs Section */}
-        <section className="mt-8 sm:mt-10">
-          <Card className="border-none shadow-sm">
-            <CardContent className="pt-6">
-              <Tabs defaultValue="overview" className="w-full">
-                <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="overview">Overview</TabsTrigger>
-                  <TabsTrigger value="plan">Plan Details</TabsTrigger>
-                </TabsList>
-                <TabsContent value="overview">
-                  <ScrollArea className="h-48 sm:h-56">
-                    <div
-                      className="text-sm sm:text-md md:text-lg text-gray-700 leading-relaxed"
-                      dangerouslySetInnerHTML={{
-                        __html:
-                          opportunityPage.welcome_message ||
-                          "Learn how NHT Global empowers you to achieve financial and personal growth.",
-                      }}
-                    />
-                  </ScrollArea>
-                </TabsContent>
-                <TabsContent value="plan">
-                  <ScrollArea className="h-48 sm:h-56">
-                    <div
-                      className="text-sm sm:text-md md:text-lg text-gray-700 leading-relaxed"
-                      dangerouslySetInnerHTML={{
-                        __html:
-                          opportunityPage.page_content ||
-                          "Explore the NHT Global Compensation Plan to understand your earning potential.",
-                      }}
-                    />
-                    {opportunityPage.plan_document_url && (
-                      <Button
-                        asChild
-                        variant="link"
-                        className="mt-4 text-primary"
-                      >
-                        <a
-                          href={opportunityPage.plan_document_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                        >
-                          Download Compensation Plan
-                        </a>
-                      </Button>
-                    )}
-                  </ScrollArea>
-                </TabsContent>
-              </Tabs>
-            </CardContent>
-          </Card>
+        {/* Overview Section */}
+        <section className="mb-12 md:mb-16">
+          <div className="border border-gray-200 rounded-2xl shadow-lg overflow-hidden">
+            <div className="bg-gray-50 border-b border-gray-200 px-6 sm:px-8 md:px-12 py-8">
+              <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-black">
+                Opportunity Overview
+              </h2>
+            </div>
+            <div className="px-6 sm:px-8 md:px-12 py-10">
+              <div
+                className="text-base sm:text-lg text-gray-700 leading-relaxed max-h-96 overflow-y-auto"
+                dangerouslySetInnerHTML={{ __html: welcomeMessage }}
+              />
+            </div>
+          </div>
         </section>
+
+        {/* Plan Details Section */}
+        <section className="mb-12 md:mb-16">
+          <div className="border border-gray-200 rounded-2xl shadow-lg overflow-hidden">
+            <div className="bg-gray-50 border-b border-gray-200 px-6 sm:px-8 md:px-12 py-8">
+              <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-black">
+                Plan Details & Earning Potential
+              </h2>
+            </div>
+            <div className="px-6 sm:px-8 md:px-12 py-10">
+              <div
+                className="text-base sm:text-lg text-gray-700 leading-relaxed mb-8"
+                dangerouslySetInnerHTML={{ __html: pageContent }}
+              />
+              {opportunityPage.plan_document_url && (
+                <a href={opportunityPage.plan_document_url} target="_blank" rel="noopener noreferrer">
+                  <Button className="bg-black hover:bg-gray-800 text-white px-8 py-3 font-semibold flex items-center">
+                    <Download className="mr-2 h-5 w-5" />
+                    Download Full Compensation Plan
+                  </Button>
+                </a>
+              )}
+            </div>
+          </div>
+        </section>
+
+        {/* Bottom CTA */}
+        <section className="border border-gray-200 rounded-2xl shadow-lg overflow-hidden">
+          <div className="bg-gradient-to-r from-black to-gray-800 px-6 sm:px-8 md:px-12 py-12 md:py-16 text-center">
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-4">
+              Ready to Start Your Journey?
+            </h2>
+            <p className="text-gray-200 text-lg mb-8 max-w-2xl mx-auto">
+              Join thousands of successful entrepreneurs building their businesses with NHT Global
+            </p>
+            <Button
+              onClick={() => navigate("/join-us")}
+              className="bg-white hover:bg-gray-100 text-black px-8 py-3 font-bold text-lg transition-all duration-300 hover:scale-105 inline-flex items-center"
+            >
+              Get Started Now
+              <ArrowRight className="ml-2 h-5 w-5" />
+            </Button>
+          </div>
+        </section>
+
       </div>
     </div>
   );

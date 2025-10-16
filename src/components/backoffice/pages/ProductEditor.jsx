@@ -1,97 +1,118 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useEffect, useCallback, useState } from "react";
 import { Plus, Edit, Trash2, Search, X } from "react-feather";
 import { useNavigate } from "react-router-dom";
-import useTenantApi from "@/hooks/useTenantApi";
+import { useDispatch, useSelector } from "react-redux";
+import toast, { Toaster } from "react-hot-toast";
 import RichTextEditor from "./RichTextEditor";
-import ToastNotification, { showSuccessToast, showErrorToast } from "../../ToastNotification";
+
+// Redux imports for products
+import {
+  fetchProducts,
+  createProduct,
+  updateProduct,
+  deleteProduct,
+  setFormData,
+  resetForm,
+  clearError,
+  selectProducts,
+  selectProductForm,
+  selectProductLoading,
+  selectProductError,
+} from "@/store/slices/productSlice";
+
+// Redux imports for categories
+import {
+  fetchCategories,
+  selectCategories,
+} from "@/store/slices/categorySlice";
+
+// Redux imports for UI
+import {
+  openForm,
+  closeForm,
+  setSearchTerm,
+  setSubmitting,
+  incrementRetry,
+  resetRetry,
+  selectShowForm,
+  selectIsEditing,
+  selectEditId,
+  selectSearchTerm,
+  selectIsSubmitting,
+  selectRetryCount,
+} from "@/store/slices/uiSlice";
+
+// Redux imports for auth
+import { selectTenantId } from "@/store/slices/authSlice";
+
+const MAX_IMAGE_SIZE = 4 * 1024 * 1024; // 4MB
+const MAX_PDF_SIZE = 4 * 1024 * 1024; // 4MB
+const MAX_VIDEO_SIZE = 50 * 1024 * 1024; // 50MB
+const MAX_RETRIES = 3;
+
+// Reliable placeholder URL (via.placeholder.com is defunct)
+const PLACEHOLDER_IMAGE = "https://placehold.co/50x50?text=No+Image&font=roboto";
 
 const ProductEditor = () => {
   const navigate = useNavigate();
-  const { data, loading: isLoading, error, getAll, post, put, request, del } = useTenantApi();
+  const dispatch = useDispatch();
 
-  const [showForm, setShowForm] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
-  const [editId, setEditId] = useState(null);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [products, setProducts] = useState([]);
-  const [categories, setCategories] = useState([]);
-  const [tenantId, setTenantId] = useState(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [retryCount, setRetryCount] = useState(0);
+  // Redux state for products
+  const products = useSelector(selectProducts);
+  const form = useSelector(selectProductForm);
+  const loading = useSelector(selectProductLoading);
+  const error = useSelector(selectProductError);
 
- const [newProduct, setNewProduct] = useState({
-  category_id: "",
-  name: "",
-  title: "",
-  your_price: "", // Replace price
-  base_price: "",
-  preferred_customer_price: "",
-  availability: "in_stock",
-  status: "active",
-  image: null,
-  banner_image: null,
-  guide_pdf: null,
-  video: null,
-  video_url: "", // Replace youtube_link
-  instructions: "",
-  description: "", // Replace price_description
-  buy_link: "",
-});
+  // Redux state for categories
+  const categories = useSelector(selectCategories);
 
-  const MAX_IMAGE_SIZE = 4 * 1024 * 1024; // 4MB
-  const MAX_PDF_SIZE = 4 * 1024 * 1024; // 4MB
-  const MAX_VIDEO_SIZE = 50 * 1024 * 1024; // 50MB
-  const MAX_RETRIES = 3;
+  // Redux state for UI
+  const showForm = useSelector(selectShowForm);
+  const isEditing = useSelector(selectIsEditing);
+  const editId = useSelector(selectEditId);
+  const searchTerm = useSelector(selectSearchTerm);
+  const isSubmitting = useSelector(selectIsSubmitting);
+  const retryCount = useSelector(selectRetryCount);
 
+  // Redux state for auth
+  const tenantId = useSelector(selectTenantId);
+
+  const editingProduct = products.find((product) => product.id === editId);
+
+  // Fetch on mount
   useEffect(() => {
-    const storedTenantId = localStorage.getItem("tenant_id");
-    if (storedTenantId && tenantId !== storedTenantId) {
-      setTenantId(storedTenantId);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (tenantId) {
-      fetchProducts();
-      fetchCategories();
-    }
-  }, [tenantId, retryCount]);
-
-  const fetchProducts = async () => {
-  try {
-    const response = await getAll(`/tenants/${tenantId}/products`);
-    setProducts(Array.isArray(response.data) ? response.data : []); // Access response.data
-    showSuccessToast("Products loaded!");
-    setRetryCount(0);
-  } catch (err) {
-    console.error("Error fetching products:", err.response?.data || err.message);
-    if (retryCount < MAX_RETRIES) {
-      setTimeout(() => setRetryCount(retryCount + 1), 2000);
-    } else {
-      showErrorToast("Unable to load products. Please try again later.");
-      setProducts([]);
-    }
-  }
-};
-
-  const fetchCategories = async () => {
-    try {
-      const response = await getAll(`/tenants/${tenantId}/categories`);
-      setCategories(Array.isArray(response) ? response : []);
-      showSuccessToast("Categories loaded!");
-      setRetryCount(0); // Reset retry count on success
-    } catch (err) {
-      console.error("Error fetching categories:", err.response?.data || err.message);
-      if (retryCount < MAX_RETRIES) {
-        // Silently retry without toast
-        setTimeout(() => setRetryCount(retryCount + 1), 2000);
-      } else {
-        showErrorToast("Unable to load categories. Please try again later.");
-        setCategories([]);
+    if (!tenantId) {
+      const storedTenantId = localStorage.getItem("tenant_id");
+      if (!storedTenantId) {
+        toast.error("Please log in to continue.");
+        navigate("/backoffice-login");
       }
+      return;
     }
-  };
 
+    // Fetch products with retry logic
+    dispatch(fetchProducts(tenantId))
+      .unwrap()
+      .then(() => {
+        toast.success("Products loaded!");
+        dispatch(resetRetry());
+      })
+      .catch((err) => {
+        console.error("Error fetching products:", err);
+        if (retryCount < MAX_RETRIES) {
+          setTimeout(() => dispatch(incrementRetry()), 2000);
+        } else {
+          toast.error("Unable to load products. Please try again later.");
+        }
+      });
+
+    // Fetch categories (no retry toast)
+    dispatch(fetchCategories(tenantId)).catch((err) => {
+      console.error("Error fetching categories:", err);
+    });
+  }, [tenantId, retryCount, dispatch, navigate]);
+
+  // Debounced search
   const debounce = (func, delay) => {
     let timeoutId;
     return (...args) => {
@@ -102,249 +123,234 @@ const ProductEditor = () => {
 
   const handleSearchChange = useCallback(
     debounce((value) => {
-      setSearchTerm(value);
+      dispatch(setSearchTerm(value));
     }, 300),
-    []
+    [dispatch]
   );
 
+  // Handlers
   const handleAddNew = () => {
-    setShowForm(true);
-    setIsEditing(false);
-    setEditId(null);
-    setNewProduct({
-      category_id: "",
-      name: "",
-      title: "",
-      price: "",
-      price_description: "",
-      availability: "in_stock",
-      status: "active",
-      image: null,
-      banner_image: null,
-      guide_pdf: null,
-      video: null,
-      youtube_link: "",
-      instructions: "",
-      description: "",
-    });
+    dispatch(openForm({ isEditing: false }));
+    dispatch(resetForm());
   };
 
- const handleEdit = (product) => {
-  setShowForm(true);
-  setIsEditing(true);
-  setEditId(product.id);
-  setNewProduct({
-    category_id: product.category_id || "",
-    name: product.name || "",
-    title: product.title || "",
-    your_price: product.your_price || "",
-    base_price: product.base_price || "",
-    preferred_customer_price: product.preferred_customer_price || "",
-    availability: product.availability || "in_stock",
-    status: product.status || "active",
-    image: null,
-    banner_image: null,
-    guide_pdf: null,
-    video: null,
-    video_url: product.video_url || "",
-    instructions: product.instructions || "",
-    description: product.description || "",
-    buy_link: product.buy_link || "",
-  });
-};
-
-  const handleCancel = () => {
-    setShowForm(false);
-    setIsEditing(false);
-    setEditId(null);
-    setNewProduct({
-      category_id: "",
-      name: "",
-      title: "",
-      price: "",
-      price_description: "",
-      availability: "in_stock",
-      status: "active",
+  const handleEdit = (product) => {
+    dispatch(openForm({ isEditing: true, editId: product.id }));
+    dispatch(setFormData({
+      category_id: product.category_id || '',
+      name: product.name || '',
+      title: product.title || '',
+      your_price: product.your_price || '',
+      base_price: product.base_price || '',
+      preferred_customer_price: product.preferred_customer_price || '',
+      availability: product.availability || 'in_stock',
+      status: product.status || 'active',
       image: null,
       banner_image: null,
       guide_pdf: null,
       video: null,
-      youtube_link: "",
-      instructions: "",
-      description: "",
-    });
+      video_url: product.video_url || '',
+      instructions: product.instructions || '',
+      description: product.description || '',
+      buy_link: product.buy_link || '',
+    }));
+  };
+
+  const handleCancel = () => {
+    dispatch(closeForm());
+    dispatch(resetForm());
   };
 
   const validateFile = (file, type, maxSize) => {
-    if (!file) return true; // Files are optional
+    if (!file) return true;
     if (file.size > maxSize) {
-      showErrorToast(`${type.charAt(0).toUpperCase() + type.slice(1)} size exceeds ${maxSize / 1024 / 1024}MB limit.`);
+      toast.error(`${type.charAt(0).toUpperCase() + type.slice(1)} size exceeds ${maxSize / 1024 / 1024}MB limit.`);
       return false;
     }
     if (type === "image" && !["image/jpeg", "image/jpg", "image/png"].includes(file.type)) {
-      showErrorToast("Only JPEG, JPG, or PNG images are allowed.");
+      toast.error("Only JPEG, JPG, or PNG images are allowed.");
       return false;
     }
     if (type === "pdf" && file.type !== "application/pdf") {
-      showErrorToast("Only PDF files are allowed.");
+      toast.error("Only PDF files are allowed.");
       return false;
     }
-    if (type === "video" && file.type !== "video/mp4") {
-      showErrorToast("Only MP4 videos are allowed.");
+    if (type === "video" && !["video/mp4"].includes(file.type)) {
+      toast.error("Only MP4 videos are allowed.");
       return false;
     }
     return true;
   };
 
   const validateYouTubeLink = (link) => {
-    if (!link) return true; // YouTube link is optional
+    if (!link) return true;
     const youtubeRegex = /^(https?:\/\/)?(www\.)?youtube\.com\/embed\/[\w-]+(\?[\w=&-]*)?$/;
     if (!youtubeRegex.test(link)) {
-      showErrorToast("Please provide a valid YouTube embed URL (e.g., https://www.youtube.com/embed/VIDEO_ID).");
+      toast.error("Please provide a valid YouTube embed URL (e.g., https://www.youtube.com/embed/VIDEO_ID).");
       return false;
     }
     return true;
   };
 
   const handleFileChange = (field, file) => {
-    setNewProduct({ ...newProduct, [field]: file });
-    if (file && field !== "youtube_link") {
-      showSuccessToast(`${field.replace("_", " ").replace(/\b\w/g, (c) => c.toUpperCase())} selected successfully!`);
+    if (validateFile(file, field.includes("image") ? "image" : field.includes("pdf") ? "pdf" : "video", 
+      field.includes("image") ? MAX_IMAGE_SIZE : field.includes("pdf") ? MAX_PDF_SIZE : MAX_VIDEO_SIZE)) {
+      dispatch(setFormData({ [field]: file }));
+      toast.success(`${field.replace("_", " ").replace(/\b\w/g, (c) => c.toUpperCase())} selected successfully!`);
     }
   };
 
   const handleRemoveFile = (field) => {
-    setNewProduct({ ...newProduct, [field]: null });
-    showSuccessToast(`${field.replace("_", " ").replace(/\b\w/g, (c) => c.toUpperCase())} removed.`);
+    dispatch(setFormData({ [field]: null }));
+    toast.success(`${field.replace("_", " ").replace(/\b\w/g, (c) => c.toUpperCase())} removed.`);
   };
 
   const handleSave = async () => {
-  if (!tenantId) {
-    showErrorToast("Tenant ID not found. Please log in again.");
-    navigate("/backoffice-login");
-    return;
-  }
-
-  if (!newProduct.category_id) {
-    showErrorToast("Please select a product category.");
-    return;
-  }
-  if (!newProduct.name.trim()) {
-    showErrorToast("Product name is required.");
-    return;
-  }
-  if (!newProduct.title.trim()) {
-    showErrorToast("Product title is required.");
-    return;
-  }
-  if (!newProduct.your_price || isNaN(newProduct.your_price) || Number(newProduct.your_price) < 0) {
-    showErrorToast("Please enter a valid 'Your Price' (0 or greater).");
-    return;
-  }
-  if (!newProduct.base_price || isNaN(newProduct.base_price) || Number(newProduct.base_price) < 0) {
-    showErrorToast("Please enter a valid 'Base Price' (0 or greater).");
-    return;
-  }
-  if (
-    !newProduct.preferred_customer_price ||
-    isNaN(newProduct.preferred_customer_price) ||
-    Number(newProduct.preferred_customer_price) < 0
-  ) {
-    showErrorToast("Please enter a valid 'Preferred Customer Price' (0 or greater).");
-    return;
-  }
-
-  if (!validateYouTubeLink(newProduct.video_url)) {
-    return;
-  }
-
-  if (
-    !validateFile(newProduct.image, "image", MAX_IMAGE_SIZE) ||
-    !validateFile(newProduct.banner_image, "image", MAX_IMAGE_SIZE) ||
-    !validateFile(newProduct.guide_pdf, "pdf", MAX_PDF_SIZE) ||
-    !validateFile(newProduct.video, "video", MAX_VIDEO_SIZE)
-  ) {
-    return;
-  }
-
-  const formData = new FormData();
-  formData.append("category_id", newProduct.category_id);
-  formData.append("name", newProduct.name);
-  formData.append("title", newProduct.title);
-  formData.append("your_price", newProduct.your_price);
-  formData.append("base_price", newProduct.base_price);
-  formData.append("preferred_customer_price", newProduct.preferred_customer_price);
-  formData.append("availability", newProduct.availability);
-  formData.append("status", newProduct.status);
-  if (newProduct.image) formData.append("image", newProduct.image);
-  if (newProduct.banner_image) formData.append("banner_image", newProduct.banner_image);
-  if (newProduct.guide_pdf) formData.append("guide_pdf", newProduct.guide_pdf);
-  if (newProduct.video) formData.append("video", newProduct.video);
-  formData.append("video_url", newProduct.video_url);
-  formData.append("instructions", newProduct.instructions);
-  formData.append("description", newProduct.description);
-  formData.append("buy_link", newProduct.buy_link);
-
-  const config = {
-    onUploadProgress: (progressEvent) => {
-      const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-      toast.loading(`Uploading... ${percentCompleted}%`, { id: "upload-progress" });
-    },
-  };
-
-  setIsSubmitting(true);
-  try {
-    const response = await (isEditing
-      ? put(`/tenants/${tenantId}/products/${editId}`, formData, true, config)
-      : post(`/tenants/${tenantId}/products`, formData, true, config));
-    showSuccessToast(isEditing ? "Product updated" : "Product added");
-    await fetchProducts();
-    handleCancel();
-  } catch (err) {
-    console.error("Error saving product:", err.response?.data || err.message);
-    const errorData = err.response?.data;
-    if (errorData?.error === "FILE_ERROR") {
-      showErrorToast(errorData.message || "Invalid file type or size.");
-    } else if (errorData?.error === "MISSING_FIELDS") {
-      showErrorToast(errorData.message || "Please fill in all required fields.");
-    } else if (errorData?.error === "UNAUTHORIZED" || err.response?.status === 401) {
-      showErrorToast("Session expired. Please log in again.");
+    if (!tenantId) {
+      toast.error("Tenant ID not found. Please log in again.");
       navigate("/backoffice-login");
-    } else {
-      showErrorToast(errorData?.message || "Failed to save product. Please try again.");
+      return;
     }
-  } finally {
-    setIsSubmitting(false);
-    toast.dismiss("upload-progress");
-  }
-};
+
+    if (!form.category_id) {
+      toast.error("Please select a product category.");
+      return;
+    }
+    if (!form.name.trim()) {
+      toast.error("Product name is required.");
+      return;
+    }
+    if (!form.title.trim()) {
+      toast.error("Product title is required.");
+      return;
+    }
+    if (!form.your_price || isNaN(form.your_price) || Number(form.your_price) < 0) {
+      toast.error("Please enter a valid 'Your Price' (0 or greater).");
+      return;
+    }
+    if (!form.base_price || isNaN(form.base_price) || Number(form.base_price) < 0) {
+      toast.error("Please enter a valid 'Base Price' (0 or greater).");
+      return;
+    }
+    if (!form.preferred_customer_price || isNaN(form.preferred_customer_price) || Number(form.preferred_customer_price) < 0) {
+      toast.error("Please enter a valid 'Preferred Customer Price' (0 or greater).");
+      return;
+    }
+
+    if (!validateYouTubeLink(form.video_url)) {
+      return;
+    }
+
+    if (
+      !validateFile(form.image, "image", MAX_IMAGE_SIZE) ||
+      !validateFile(form.banner_image, "image", MAX_IMAGE_SIZE) ||
+      !validateFile(form.guide_pdf, "pdf", MAX_PDF_SIZE) ||
+      !validateFile(form.video, "video", MAX_VIDEO_SIZE)
+    ) {
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("category_id", form.category_id);
+    formData.append("name", form.name);
+    formData.append("title", form.title);
+    formData.append("your_price", form.your_price);
+    formData.append("base_price", form.base_price);
+    formData.append("preferred_customer_price", form.preferred_customer_price);
+    formData.append("availability", form.availability);
+    formData.append("status", form.status);
+    if (form.image) formData.append("image", form.image);
+    if (form.banner_image) formData.append("banner_image", form.banner_image);
+    if (form.guide_pdf) formData.append("guide_pdf", form.guide_pdf);
+    if (form.video) formData.append("video", form.video);
+    formData.append("video_url", form.video_url);
+    formData.append("instructions", form.instructions);
+    formData.append("description", form.description);
+    formData.append("buy_link", form.buy_link);
+
+    dispatch(setSubmitting(true));
+
+    const config = {
+      onUploadProgress: (progressEvent) => {
+        const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+        toast.loading(`Uploading... ${percentCompleted}%`, { id: "upload-progress" });
+      },
+    };
+
+    try {
+      if (isEditing) {
+        await toast.promise(
+          dispatch(updateProduct({ tenantId, productId: editId, formData, config })).unwrap(),
+          {
+            loading: "Updating product...",
+            success: "Product updated successfully!",
+            error: (err) => `Failed to update: ${err.message || 'Unknown error'}`,
+          }
+        );
+      } else {
+        await toast.promise(
+          dispatch(createProduct({ tenantId, formData, config })).unwrap(),
+          {
+            loading: "Creating product...",
+            success: "Product created successfully!",
+            error: (err) => `Failed to create: ${err.message || 'Unknown error'}`,
+          }
+        );
+      }
+      
+      await dispatch(fetchProducts(tenantId));
+      handleCancel();
+    } catch (err) {
+      console.error("Error saving product:", err);
+      const errorData = err;
+      if (errorData?.error === "FILE_ERROR") {
+        toast.error(errorData.message || "Invalid file type or size.");
+      } else if (errorData?.error === "MISSING_FIELDS") {
+        toast.error(errorData.message || "Please fill in all required fields.");
+      } else if (errorData?.status === 401) {
+        toast.error("Session expired. Please log in again.");
+        navigate("/backoffice-login");
+      } else {
+        toast.error(errorData?.message || "Failed to save product. Please try again.");
+      }
+    } finally {
+      dispatch(setSubmitting(false));
+      toast.dismiss("upload-progress");
+    }
+  };
 
   const handleDelete = async (productId) => {
     if (window.confirm("Are you sure you want to delete this product?")) {
-      setIsSubmitting(true);
+      dispatch(setSubmitting(true));
       try {
-        await del(`/tenants/${tenantId}/products/${productId}`);
-        showSuccessToast("Product deleted");
-        await fetchProducts();
+        await toast.promise(
+          dispatch(deleteProduct({ tenantId, productId })).unwrap(),
+          {
+            loading: "Deleting product...",
+            success: "Product deleted successfully!",
+            error: (err) => `Failed to delete: ${err.message || 'Unknown error'}`,
+          }
+        );
+        await dispatch(fetchProducts(tenantId));
       } catch (err) {
-        console.error("Error deleting product:", err.response?.data || err.message);
-        const errorData = err.response?.data;
-        if (errorData?.error === "UNAUTHORIZED" || err.response?.status === 401) {
-          showErrorToast("Session expired. Please log in again.");
+        console.error("Error deleting product:", err);
+        const errorData = err;
+        if (errorData?.status === 401) {
+          toast.error("Session expired. Please log in again.");
           navigate("/backoffice-login");
         } else {
-          showErrorToast(errorData?.message || "Failed to delete product. Please try again.");
+          toast.error(errorData?.message || "Failed to delete product. Please try again.");
         }
       } finally {
-        setIsSubmitting(false);
+        dispatch(setSubmitting(false));
       }
     }
   };
 
   const handleRetry = () => {
-    setRetryCount(0);
-    fetchProducts();
-    fetchCategories();
+    dispatch(resetRetry());
+    dispatch(fetchProducts(tenantId));
+    dispatch(fetchCategories(tenantId));
   };
 
   const filteredProducts = products.filter(
@@ -353,9 +359,40 @@ const ProductEditor = () => {
       (product.category_name || "").toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  // Image Fallback Component
+  const ImageWithFallback = ({ src, alt, className }) => {
+    const [imgSrc, setImgSrc] = useState(src);
+    const [hasError, setHasError] = useState(false);
+
+    const handleError = () => {
+      if (!hasError) {
+        setHasError(true);
+        setImgSrc(PLACEHOLDER_IMAGE);
+      }
+    };
+
+    if (!src) {
+      return (
+        <div className={`w-12 h-12 bg-gray-200 rounded-md flex items-center justify-center text-xs text-gray-500 ${className}`}>
+          No Image
+        </div>
+      );
+    }
+
+    return (
+      <img
+        src={imgSrc}
+        alt={alt}
+        className={className}
+        onError={handleError}
+        loading="lazy"
+      />
+    );
+  };
+
   return (
     <div className="container mx-auto p-4">
-      <ToastNotification />
+      <Toaster position="top-right" toastOptions={{ duration: 3000 }} />
 
       <div className="flex justify-between items-center mb-6">
         {!showForm && (
@@ -385,21 +422,22 @@ const ProductEditor = () => {
         )}
       </div>
 
-      {isLoading && (
+      {/* Loading State */}
+      {loading && (
         <div className="text-center py-6">
           <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-gray-900 mx-auto"></div>
           <span className="text-gray-500 text-lg mt-2 block animate-pulse">Loading products...</span>
         </div>
       )}
 
-      {error && retryCount >= MAX_RETRIES && !isLoading && (
+      {/* Error State */}
+      {error && retryCount >= MAX_RETRIES && !loading && (
         <div className="p-12 text-center bg-white shadow-lg rounded-xl border border-gray-200">
           <svg
             className="mx-auto h-24 w-24 text-gray-400 mb-4"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
-            xmlns="http://www.w3.org/2000/svg"
           >
             <path
               strokeLinecap="round"
@@ -410,20 +448,18 @@ const ProductEditor = () => {
           </svg>
           <h3 className="text-xl font-semibold text-gray-700 mb-2">Unable to Load Products</h3>
           <p className="text-gray-500 mb-6">
-            {error.message || "An error occurred while loading products. You can start adding a product or try again."}
+            {error.message || "An error occurred while loading products."}
           </p>
           <div className="flex justify-center gap-4">
             <button
               onClick={handleAddNew}
               className="bg-black text-white px-6 py-2 rounded-full transition-all duration-200 hover:scale-105"
-              aria-label="Add new product"
             >
               Add Product
             </button>
             <button
               onClick={handleRetry}
               className="border border-gray-200 text-gray-700 px-6 py-2 rounded-full hover:bg-gray-100 transition-all duration-200"
-              aria-label="Retry loading products"
             >
               Retry
             </button>
@@ -431,22 +467,23 @@ const ProductEditor = () => {
         </div>
       )}
 
-      {!tenantId && !isLoading && (
+      {/* No Tenant ID */}
+      {!tenantId && !loading && (
         <div className="p-12 text-center bg-white shadow-lg rounded-xl border border-gray-200">
           <h3 className="text-xl font-semibold text-gray-700 mb-2">Authentication Required</h3>
           <p className="text-gray-500 mb-6">No tenant ID found. Please log in to continue.</p>
           <button
             onClick={() => navigate("/backoffice-login")}
             className="bg-black text-white px-6 py-2 rounded-full transition-all duration-200 hover:scale-105"
-            aria-label="Go to login page"
           >
             Log In
           </button>
         </div>
       )}
 
-      {!showForm && !isLoading && !error && tenantId && (
-        <div className="bg-white shadow-md rounded-xl overflow-hidden border border-gray-200 transition-all duration-300 hover:shadow-lg">
+      {/* Products Table */}
+      {!showForm && !loading && tenantId && !error && (
+        <div className="bg-white shadow-lg rounded-xl overflow-hidden border border-gray-200 transition-all duration-300">
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gradient-to-r from-gray-800 to-black text-white">
@@ -480,16 +517,11 @@ const ProductEditor = () => {
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">{product.category_name || "Uncategorized"}</td>
                       <td className="px-6 py-4 text-sm text-gray-800">{product.name}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
-                        {product.image_url ? (
-                          <img
-                            src={product.image_url}
-                            alt={product.name}
-                            className="w-12 h-12 object-cover rounded-md shadow-sm hover:scale-105 transition-transform duration-200"
-                            onError={(e) => (e.target.src = "https://via.placeholder.com/50x50?text=No+Image")}
-                          />
-                        ) : (
-                          <span className="text-gray-500 italic">No image</span>
-                        )}
+                        <ImageWithFallback
+                          src={product.image_url}
+                          alt={product.name}
+                          className="w-12 h-12 object-cover rounded-md shadow-sm hover:scale-105 transition-transform duration-200"
+                        />
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
                         <span
@@ -527,6 +559,7 @@ const ProductEditor = () => {
         </div>
       )}
 
+      {/* Product Form */}
       {showForm && (
         <div className="bg-white p-6 rounded-xl shadow-md border border-gray-200 transition-all duration-300 hover:shadow-lg">
           <div className="flex justify-between items-center mb-4">
@@ -551,8 +584,8 @@ const ProductEditor = () => {
                 </label>
                 <select
                   id="category_id"
-                  value={newProduct.category_id}
-                  onChange={(e) => setNewProduct({ ...newProduct, category_id: e.target.value })}
+                  value={form.category_id}
+                  onChange={(e) => dispatch(setFormData({ category_id: e.target.value }))}
                   disabled={isSubmitting}
                   className="w-full px-4 py-2 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-300 bg-white text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
                   aria-label="Product category"
@@ -573,8 +606,8 @@ const ProductEditor = () => {
                 <input
                   id="name"
                   type="text"
-                  value={newProduct.name}
-                  onChange={(e) => setNewProduct({ ...newProduct, name: e.target.value })}
+                  value={form.name}
+                  onChange={(e) => dispatch(setFormData({ name: e.target.value }))}
                   disabled={isSubmitting}
                   className="w-full px-4 py-2 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-300 bg-white text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
                   placeholder="Enter product name"
@@ -589,8 +622,8 @@ const ProductEditor = () => {
                 <input
                   id="title"
                   type="text"
-                  value={newProduct.title}
-                  onChange={(e) => setNewProduct({ ...newProduct, title: e.target.value })}
+                  value={form.title}
+                  onChange={(e) => dispatch(setFormData({ title: e.target.value }))}
                   disabled={isSubmitting}
                   className="w-full px-4 py-2 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-300 bg-white text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
                   placeholder="Enter product title"
@@ -599,29 +632,11 @@ const ProductEditor = () => {
               </div>
 
               <div>
-                <label htmlFor="price" className="block text-sm font-medium text-gray-700 mb-1">
-                  Product Price <span className="text-red-500">*</span>
-                </label>
-                <input
-                  id="price"
-                  type="number"
-                  value={newProduct.price}
-                  onChange={(e) => setNewProduct({ ...newProduct, price: e.target.value })}
-                  disabled={isSubmitting}
-                  className="w-full px-4 py-2 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-300 bg-white text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
-                  placeholder="Enter price"
-                  min="0"
-                  step="0.01"
-                  aria-label="Product price"
-                />
-              </div>
-
-              <div>
                 <label htmlFor="availability" className="block text-sm font-medium text-gray-700 mb-1">Availability</label>
                 <select
                   id="availability"
-                  value={newProduct.availability}
-                  onChange={(e) => setNewProduct({ ...newProduct, availability: e.target.value })}
+                  value={form.availability}
+                  onChange={(e) => dispatch(setFormData({ availability: e.target.value }))}
                   disabled={isSubmitting}
                   className="w-full px-4 py-2 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-300 bg-white text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
                   aria-label="Product availability"
@@ -636,8 +651,8 @@ const ProductEditor = () => {
                 <label htmlFor="status" className="block text-sm font-medium text-gray-700 mb-1">Status</label>
                 <select
                   id="status"
-                  value={newProduct.status}
-                  onChange={(e) => setNewProduct({ ...newProduct, status: e.target.value })}
+                  value={form.status}
+                  onChange={(e) => dispatch(setFormData({ status: e.target.value }))}
                   disabled={isSubmitting}
                   className="w-full px-4 py-2 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-300 bg-white text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
                   aria-label="Product status"
@@ -648,138 +663,115 @@ const ProductEditor = () => {
               </div>
             </div>
 
-            <div>
-    <label htmlFor="your_price" className="block text-sm font-medium text-gray-700 mb-1">
-      Your Price <span className="text-red-500">*</span>
-    </label>
-    <input
-      id="your_price"
-      type="number"
-      value={newProduct.your_price}
-      onChange={(e) => setNewProduct({ ...newProduct, your_price: e.target.value })}
-      disabled={isSubmitting}
-      className="w-full px-4 py-2 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-300 bg-white text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
-      placeholder="Enter your price"
-      min="0"
-      step="0.01"
-      aria-label="Your price"
-    />
-  </div>
-
-  <div>
-    <label htmlFor="base_price" className="block text-sm font-medium text-gray-700 mb-1">
-      Base Price <span className="text-red-500">*</span>
-    </label>
-    <input
-      id="base_price"
-      type="number"
-      value={newProduct.base_price}
-      onChange={(e) => setNewProduct({ ...newProduct, base_price: e.target.value })}
-      disabled={isSubmitting}
-      className="w-full px-4 py-2 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-300 bg-white text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
-      placeholder="Enter base price"
-      min="0"
-      step="0.01"
-      aria-label="Base price"
-    />
-  </div>
-
-  <div>
-    <label htmlFor="preferred_customer_price" className="block text-sm font-medium text-gray-700 mb-1">
-      Preferred Customer Price <span className="text-red-500">*</span>
-    </label>
-    <input
-      id="preferred_customer_price"
-      type="number"
-      value={newProduct.preferred_customer_price}
-      onChange={(e) => setNewProduct({ ...newProduct, preferred_customer_price: e.target.value })}
-      disabled={isSubmitting}
-      className="w-full px-4 py-2 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-300 bg-white text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
-      placeholder="Enter preferred customer price"
-      min="0"
-      step="0.01"
-      aria-label="Preferred customer price"
-    />
-  </div>
-
-  <div>
-    <label htmlFor="buy_link" className="block text-sm font-medium text-gray-700 mb-1">
-      Buy Link
-    </label>
-    <input
-      id="buy_link"
-      type="url"
-      value={newProduct.buy_link}
-      onChange={(e) => setNewProduct({ ...newProduct, buy_link: e.target.value })}
-      disabled={isSubmitting}
-      className="w-full px-4 py-2 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-300 bg-white text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
-      placeholder="Enter buy link (optional)"
-      aria-label="Buy link"
-    />
-  </div>
-
-  <div>
-    <label htmlFor="video_url" className="block text-sm font-medium text-gray-700 mb-1">
-      YouTube Embed Link (Optional)
-    </label>
-    <input
-      id="video_url"
-      type="text"
-      value={newProduct.video_url}
-      onChange={(e) => setNewProduct({ ...newProduct, video_url: e.target.value })}
-      disabled={isSubmitting}
-      className="w-full px-4 py-2 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-300 bg-white text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
-      placeholder="e.g., https://www.youtube.com/embed/VIDEO_ID"
-      aria-label="YouTube embedded link"
-    />
-    <p className="text-xs text-gray-500 mt-1">
-      How to get link: Click Share → Embed → Copy iframe src
-    </p>
-    {newProduct.video_url && (
-      <div className="mt-2">
-        <p className="text-xs text-gray-500">Preview:</p>
-        <iframe
-          src={newProduct.video_url}
-          title="YouTube Preview"
-          className="w-full h-32 rounded-md shadow-sm"
-          frameBorder="0"
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-          allowFullScreen
-        />
-      </div>
-    )}
-  </div>
-
-  <div>
-    <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
-      Product Description
-    </label>
-    <RichTextEditor
-      id="description"
-      value={newProduct.description}
-      onChange={(value) => setNewProduct({ ...newProduct, description: value })}
-      placeholder="Enter product description here..."
-      height="200px"
-      readOnly={isSubmitting}
-      aria-label="Product description"
-    />
-  </div>
-
             <div className="space-y-5">
               <div>
-                <label htmlFor="price_description" className="block text-sm font-medium text-gray-700 mb-1">Product Description</label>
-                <textarea
-                  id="price_description"
-                  value={newProduct.price_description}
-                  onChange={(e) => setNewProduct({ ...newProduct, price_description: e.target.value })}
+                <label htmlFor="your_price" className="block text-sm font-medium text-gray-700 mb-1">
+                  Your Price <span className="text-red-500">*</span>
+                </label>
+                <input
+                  id="your_price"
+                  type="number"
+                  value={form.your_price}
+                  onChange={(e) => dispatch(setFormData({ your_price: e.target.value }))}
                   disabled={isSubmitting}
                   className="w-full px-4 py-2 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-300 bg-white text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
-                  placeholder="Enter price description"
-                  rows="2"
-                  aria-label="Price description"
+                  placeholder="Enter your price"
+                  min="0"
+                  step="0.01"
+                  aria-label="Your price"
                 />
               </div>
 
+              <div>
+                <label htmlFor="base_price" className="block text-sm font-medium text-gray-700 mb-1">
+                  Base Price <span className="text-red-500">*</span>
+                </label>
+                <input
+                  id="base_price"
+                  type="number"
+                  value={form.base_price}
+                  onChange={(e) => dispatch(setFormData({ base_price: e.target.value }))}
+                  disabled={isSubmitting}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-300 bg-white text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
+                  placeholder="Enter base price"
+                  min="0"
+                  step="0.01"
+                  aria-label="Base price"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="preferred_customer_price" className="block text-sm font-medium text-gray-700 mb-1">
+                  Preferred Customer Price <span className="text-red-500">*</span>
+                </label>
+                <input
+                  id="preferred_customer_price"
+                  type="number"
+                  value={form.preferred_customer_price}
+                  onChange={(e) => dispatch(setFormData({ preferred_customer_price: e.target.value }))}
+                  disabled={isSubmitting}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-300 bg-white text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
+                  placeholder="Enter preferred customer price"
+                  min="0"
+                  step="0.01"
+                  aria-label="Preferred customer price"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="buy_link" className="block text-sm font-medium text-gray-700 mb-1">
+                  Buy Link
+                </label>
+                <input
+                  id="buy_link"
+                  type="url"
+                  value={form.buy_link}
+                  onChange={(e) => dispatch(setFormData({ buy_link: e.target.value }))}
+                  disabled={isSubmitting}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-300 bg-white text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
+                  placeholder="Enter buy link (optional)"
+                  aria-label="Buy link"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Video URL */}
+          <div className="mt-6">
+            <label htmlFor="video_url" className="block text-sm font-medium text-gray-700 mb-1">
+              YouTube Embed Link (Optional)
+            </label>
+            <input
+              id="video_url"
+              type="text"
+              value={form.video_url}
+              onChange={(e) => dispatch(setFormData({ video_url: e.target.value }))}
+              disabled={isSubmitting}
+              className="w-full px-4 py-2 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-300 bg-white text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
+              placeholder="e.g., https://www.youtube.com/embed/VIDEO_ID"
+              aria-label="YouTube embedded link"
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              How to get link: Click Share → Embed → Copy iframe src
+            </p>
+            {form.video_url && (
+              <div className="mt-2">
+                <p className="text-xs text-gray-500">Preview:</p>
+                <iframe
+                  src={form.video_url}
+                  title="YouTube Preview"
+                  className="w-full h-32 rounded-md shadow-sm"
+                  frameBorder="0"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                />
+              </div>
+            )}
+          </div>
+
+          {/* File Uploads */}
+          <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-4">
               <div>
                 <label htmlFor="image" className="block text-sm font-medium text-gray-700 mb-1">
                   Product Image (JPEG, JPG, PNG, Max 4MB)
@@ -793,24 +785,15 @@ const ProductEditor = () => {
                   onChange={(e) => handleFileChange("image", e.target.files[0])}
                   aria-label="Product image"
                 />
-                {(newProduct.image || (isEditing && newProduct.image === null)) && (
+                {(form.image || (isEditing && editingProduct?.image_url)) && (
                   <div className="mt-2 relative">
-                    <p className="text-xs text-gray-500">{newProduct.image ? "Selected:" : "Current:"}</p>
-                    {newProduct.image ? (
-                      <img
-                        src={URL.createObjectURL(newProduct.image)}
-                        alt="Selected Preview"
-                        className="h-20 w-auto object-cover rounded shadow-sm"
-                        onError={(e) => (e.target.src = "https://via.placeholder.com/50x50?text=No+Image")}
-                      />
-                    ) : (
-                      <img
-                        src={products.find((p) => p.id === editId)?.image_url || "https://via.placeholder.com/50x50?text=No+Image"}
-                        alt="Current"
-                        className="h-20 w-auto object-cover rounded shadow-sm"
-                      />
-                    )}
-                    {newProduct.image && (
+                    <p className="text-xs text-gray-500">{form.image ? "Selected:" : "Current:"}</p>
+                    <ImageWithFallback
+                      src={form.image ? URL.createObjectURL(form.image) : editingProduct?.image_url}
+                      alt="Preview"
+                      className="h-20 w-auto object-cover rounded shadow-sm"
+                    />
+                    {form.image && (
                       <button
                         onClick={() => handleRemoveFile("image")}
                         disabled={isSubmitting}
@@ -839,25 +822,26 @@ const ProductEditor = () => {
                   onChange={(e) => handleFileChange("banner_image", e.target.files[0])}
                   aria-label="Product banner image"
                 />
-                {newProduct.banner_image && (
+                {(form.banner_image || (isEditing && editingProduct?.banner_image_url)) && (
                   <div className="mt-2 relative">
-                    <p className="text-xs text-gray-500">Selected:</p>
-                    <img
-                      src={URL.createObjectURL(newProduct.banner_image)}
-                      alt="Selected Preview"
+                    <p className="text-xs text-gray-500">{form.banner_image ? "Selected:" : "Current:"}</p>
+                    <ImageWithFallback
+                      src={form.banner_image ? URL.createObjectURL(form.banner_image) : editingProduct?.banner_image_url}
+                      alt="Preview"
                       className="h-20 w-auto object-cover rounded shadow-sm"
-                      onError={(e) => (e.target.src = "https://via.placeholder.com/50x50?text=No+Image")}
                     />
-                    <button
-                      onClick={() => handleRemoveFile("banner_image")}
-                      disabled={isSubmitting}
-                      className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full hover:bg-red-600 transition-colors duration-200 disabled:opacity-50"
-                      aria-label="Remove selected banner image"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
+                    {form.banner_image && (
+                      <button
+                        onClick={() => handleRemoveFile("banner_image")}
+                        disabled={isSubmitting}
+                        className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full hover:bg-red-600 transition-colors duration-200 disabled:opacity-50"
+                        aria-label="Remove selected banner image"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
@@ -875,9 +859,9 @@ const ProductEditor = () => {
                   onChange={(e) => handleFileChange("guide_pdf", e.target.files[0])}
                   aria-label="Product guide PDF"
                 />
-                {newProduct.guide_pdf && (
+                {form.guide_pdf && (
                   <div className="mt-2">
-                    <p className="text-xs text-gray-500">Selected: {newProduct.guide_pdf.name}</p>
+                    <p className="text-xs text-gray-500">Selected: {form.guide_pdf.name}</p>
                     <button
                       onClick={() => handleRemoveFile("guide_pdf")}
                       disabled={isSubmitting}
@@ -889,7 +873,9 @@ const ProductEditor = () => {
                   </div>
                 )}
               </div>
+            </div>
 
+            <div className="space-y-4">
               <div>
                 <label htmlFor="video" className="block text-sm font-medium text-gray-700 mb-1">
                   Product Video Clip (MP4, Max 50MB)
@@ -903,14 +889,17 @@ const ProductEditor = () => {
                   onChange={(e) => handleFileChange("video", e.target.files[0])}
                   aria-label="Product video"
                 />
-                {newProduct.video && (
+                {form.video && (
                   <div className="mt-2 relative">
                     <p className="text-xs text-gray-500">Selected:</p>
                     <video
-                      src={URL.createObjectURL(newProduct.video)}
+                      src={URL.createObjectURL(form.video)}
                       controls
                       className="w-48 h-28 object-cover rounded shadow-sm"
-                      onError={(e) => (e.target.src = "https://via.placeholder.com/50x50?text=No+Video")}
+                      onError={(e) => {
+                        e.target.style.display = "none";
+                        toast.error("Failed to load video preview.");
+                      }}
                     />
                     <button
                       onClick={() => handleRemoveFile("video")}
@@ -925,41 +914,10 @@ const ProductEditor = () => {
                   </div>
                 )}
               </div>
-
-              <div>
-                <label htmlFor="youtube_link" className="block text-sm font-medium text-gray-700 mb-1">
-                  OR Enter YouTube Embedded Link
-                </label>
-                <input
-                  id="youtube_link"
-                  type="text"
-                  value={newProduct.youtube_link}
-                  onChange={(e) => setNewProduct({ ...newProduct, youtube_link: e.target.value })}
-                  disabled={isSubmitting}
-                  className="w-full px-4 py-2 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-300 bg-white text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
-                  placeholder="e.g., https://www.youtube.com/embed/VIDEO_ID"
-                  aria-label="YouTube embedded link"
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  How to get link: Click Share → Embed → Copy iframe src
-                </p>
-                {newProduct.youtube_link && (
-                  <div className="mt-2">
-                    <p className="text-xs text-gray-500">Preview:</p>
-                    <iframe
-                      src={newProduct.youtube_link}
-                      title="YouTube Preview"
-                      className="w-full h-32 rounded-md shadow-sm"
-                      frameBorder="0"
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                      allowFullScreen
-                    />
-                  </div>
-                )}
-              </div>
             </div>
           </div>
 
+          {/* Rich Text Editors */}
           <div className="mt-6 space-y-6">
             <div>
               <label htmlFor="instructions" className="block text-sm font-medium text-gray-700 mb-2">
@@ -967,8 +925,8 @@ const ProductEditor = () => {
               </label>
               <RichTextEditor
                 id="instructions"
-                value={newProduct.instructions}
-                onChange={(value) => setNewProduct({ ...newProduct, instructions: value })}
+                value={form.instructions}
+                onChange={(value) => dispatch(setFormData({ instructions: value }))}
                 placeholder="Enter product instructions here..."
                 height="200px"
                 readOnly={isSubmitting}
@@ -982,8 +940,8 @@ const ProductEditor = () => {
               </label>
               <RichTextEditor
                 id="description"
-                value={newProduct.description}
-                onChange={(value) => setNewProduct({ ...newProduct, description: value })}
+                value={form.description}
+                onChange={(value) => dispatch(setFormData({ description: value }))}
                 placeholder="Enter product description here..."
                 height="200px"
                 readOnly={isSubmitting}
@@ -1003,7 +961,7 @@ const ProductEditor = () => {
             </button>
             <button
               onClick={handleSave}
-              disabled={isSubmitting || !tenantId}
+              disabled={isSubmitting || !tenantId || !form.name.trim() || !form.category_id}
               className="px-6 py-2 bg-gradient-to-r from-gray-800 to-black text-white rounded-full hover:from-gray-900 hover:to-black hover:scale-105 transition-all duration-300 font-medium shadow-md flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
               aria-label={isEditing ? "Update product" : "Save product"}
             >

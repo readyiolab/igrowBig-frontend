@@ -3,7 +3,7 @@ import React from 'react';
 import { theme } from '@/constants/backofficeConfig';
 import NotificationDropdown from '../components/NotificationDropdown';
 import ProfileDropdown from '../components/ProfileDropdown';
-
+import useLogout from "@/hooks/useLogout";
 const Header = ({
   pageTitle,
   isSidebarOpen,

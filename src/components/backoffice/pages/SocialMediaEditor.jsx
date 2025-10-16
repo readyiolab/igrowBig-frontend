@@ -1,22 +1,45 @@
 import React, { useState, useEffect } from "react";
 import { Plus, Edit, Trash2, Search, X } from "react-feather";
 import { useNavigate } from "react-router-dom";
+import { useDispatch, useSelector } from "react-redux";
 import toast, { Toaster } from "react-hot-toast";
-import useTenantApi from "@/hooks/useTenantApi";
+import {
+  fetchSocialMediaLinks,
+  createSocialMediaLinks,
+  updateSocialMediaLinks,
+  deleteSocialMediaLinks,
+  selectSocialMediaData,
+  selectSocialMediaLoading,
+  selectSocialMediaError,
+} from "@/store/slices/socialMediaSlice";
+import {
+  openForm,
+  closeForm,
+  setSubmitting,
+  setSearchTerm,
+  selectShowForm,
+  selectIsEditing,
+  selectEditId,
+  selectIsSubmitting,
+  selectSearchTerm,
+} from "@/store/slices/uiSlice";
+import { getToken } from "@/utils/auth";
 
 // SocialMediaEditor Component
 const SocialMediaEditor = () => {
+  const dispatch = useDispatch();
   const navigate = useNavigate();
-  const { data, loading: isLoading, error, getAll, post, put, del } = useTenantApi();
+
+  const socialLinks = useSelector(selectSocialMediaData);
+  const isLoading = useSelector(selectSocialMediaLoading);
+  const error = useSelector(selectSocialMediaError);
+  const showForm = useSelector(selectShowForm);
+  const isEditing = useSelector(selectIsEditing);
+  const editPlatform = useSelector(selectEditId);
+  const searchTerm = useSelector(selectSearchTerm);
+  const isSubmitting = useSelector(selectIsSubmitting);
 
   const [tenantId, setTenantId] = useState(null);
-  const [showForm, setShowForm] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
-  const [editPlatform, setEditPlatform] = useState(null);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [socialLinks, setSocialLinks] = useState({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
   const [newSocial, setNewSocial] = useState({
     facebook_url: "",
     twitter_url: "",
@@ -26,60 +49,49 @@ const SocialMediaEditor = () => {
   // Authentication and tenant setup
   useEffect(() => {
     const storedTenantId = localStorage.getItem("tenant_id");
-    const token = localStorage.getItem("token");
+    const token = getToken();
     if (!token || !storedTenantId) {
       toast.error("Please log in to continue.");
       navigate("/backoffice-login");
     } else {
       setTenantId(storedTenantId);
-      fetchSocialLinks(storedTenantId);
     }
   }, [navigate]);
 
-  const fetchSocialLinks = async (tenant) => {
-    try {
-      const response = await toast.promise(
-        getAll(`/tenants/${tenant}/footer/social-links`),
-        {
-          loading: "Fetching social links...",
-          success: "Social links loaded successfully!",
-          error: (err) => {
-            if (err.response?.data?.error === "SOCIAL_LINKS_NOT_FOUND") {
-              return null; // Suppress toast for 404
-            }
-            return `Failed to load: ${err.response?.data?.message || err.message}`;
-          },
-        }
-      );
-      if (response && Object.keys(response).length > 0) {
-        setSocialLinks(response);
-        setShowForm(false); // Hide form if links exist
-      } else {
-        setSocialLinks({});
-        setShowForm(true); // Show form automatically if no links
-        setIsEditing(false); // Ensure form is in "add" mode
-      }
-    } catch (err) {
-      if (err.response?.data?.error !== "SOCIAL_LINKS_NOT_FOUND") {
-        console.error("Error fetching social links:", err.response?.data || err.message);
-      }
-      setSocialLinks({});
-      setShowForm(true); // Show form on error (404)
-      setIsEditing(false);
+  // Fetch social links when tenantId is set
+  useEffect(() => {
+    if (tenantId) {
+      dispatch(fetchSocialMediaLinks(tenantId));
     }
-  };
+  }, [tenantId, dispatch]);
+
+  // Handle form visibility based on data
+  useEffect(() => {
+    if (Object.keys(socialLinks).length > 0) {
+      dispatch(closeForm());
+    } else {
+      dispatch(openForm({ isEditing: false }));
+    }
+  }, [socialLinks, dispatch]);
+
+  // Handle errors
+  useEffect(() => {
+    if (error) {
+      if (error.status === 401) {
+        toast.error("Session expired. Please log in again.");
+        localStorage.removeItem("token");
+        navigate("/backoffice-login");
+      }
+    }
+  }, [error, navigate]);
 
   const handleAddNew = () => {
-    setShowForm(true);
-    setIsEditing(false);
-    setEditPlatform(null);
+    dispatch(openForm({ isEditing: false }));
     setNewSocial({ facebook_url: "", twitter_url: "", youtube_url: "" });
   };
 
   const handleEdit = (platform) => {
-    setShowForm(true);
-    setIsEditing(true);
-    setEditPlatform(platform);
+    dispatch(openForm({ isEditing: true, editId: platform }));
     setNewSocial({
       facebook_url: platform === "Facebook" ? socialLinks.facebook_url || "" : "",
       twitter_url: platform === "Twitter" ? socialLinks.twitter_url || "" : "",
@@ -88,11 +100,8 @@ const SocialMediaEditor = () => {
   };
 
   const handleCancel = () => {
-    setShowForm(false);
-    setIsEditing(false);
-    setEditPlatform(null);
+    dispatch(closeForm());
     setNewSocial({ facebook_url: "", twitter_url: "", youtube_url: "" });
-    setIsSubmitting(false);
   };
 
   const validateUrl = (url, platform) => {
@@ -114,7 +123,8 @@ const SocialMediaEditor = () => {
     const { facebook_url, twitter_url, youtube_url } = newSocial;
 
     if (isEditing && editPlatform) {
-      const url = editPlatform === "Facebook" ? facebook_url : editPlatform === "Twitter" ? twitter_url : youtube_url;
+      const field = `${editPlatform.toLowerCase()}_url`;
+      const url = newSocial[field];
       if (!validateUrl(url, editPlatform)) return;
 
       if (!url) {
@@ -122,27 +132,27 @@ const SocialMediaEditor = () => {
         return;
       }
 
-      setIsSubmitting(true);
+      const payload = {
+        ...socialLinks,
+        [field]: url,
+      };
+
+      dispatch(setSubmitting(true));
       try {
-        const payload = {
-          facebook_url: editPlatform === "Facebook" ? facebook_url : socialLinks.facebook_url || null,
-          twitter_url: editPlatform === "Twitter" ? twitter_url : socialLinks.twitter_url || null,
-          youtube_url: editPlatform === "YouTube" ? youtube_url : socialLinks.youtube_url || null,
-        };
         await toast.promise(
-          put(`/tenants/${tenantId}/footer/social-links`, payload),
+          dispatch(updateSocialMediaLinks({ tenantId, payload })).unwrap(),
           {
             loading: `Updating ${editPlatform} link...`,
             success: `${editPlatform} link updated successfully!`,
-            error: (err) => `Failed to update: ${err.response?.data?.message || err.message}`,
+            error: (err) => `Failed to update: ${err.message || "Unknown error"}`,
           }
         );
-        await fetchSocialLinks(tenantId);
+        dispatch(fetchSocialMediaLinks(tenantId));
         handleCancel();
       } catch (err) {
-        console.error(`Error updating ${editPlatform} link:`, err.response?.data || err.message);
+        console.error(`Error updating ${editPlatform} link:`, err);
       } finally {
-        setIsSubmitting(false);
+        dispatch(setSubmitting(false));
       }
     } else {
       if (
@@ -158,27 +168,28 @@ const SocialMediaEditor = () => {
         return;
       }
 
-      setIsSubmitting(true);
+      const payload = {
+        facebook_url: facebook_url || null,
+        twitter_url: twitter_url || null,
+        youtube_url: youtube_url || null,
+      };
+
+      dispatch(setSubmitting(true));
       try {
-        const payload = {
-          facebook_url: facebook_url || null,
-          twitter_url: twitter_url || null,
-          youtube_url: youtube_url || null,
-        };
         await toast.promise(
-          post(`/tenants/${tenantId}/footer/social-links`, payload),
+          dispatch(createSocialMediaLinks({ tenantId, payload })).unwrap(),
           {
             loading: "Saving social links...",
             success: "Social links saved successfully!",
-            error: (err) => `Failed to save: ${err.response?.data?.message || err.message}`,
+            error: (err) => `Failed to save: ${err.message || "Unknown error"}`,
           }
         );
-        await fetchSocialLinks(tenantId);
+        dispatch(fetchSocialMediaLinks(tenantId));
         handleCancel();
       } catch (err) {
-        console.error("Error saving social links:", err.response?.data || err.message);
+        console.error("Error saving social links:", err);
       } finally {
-        setIsSubmitting(false);
+        dispatch(setSubmitting(false));
       }
     }
   };
@@ -190,22 +201,20 @@ const SocialMediaEditor = () => {
       return;
     }
 
-    setIsSubmitting(true);
+    dispatch(setSubmitting(true));
     try {
       await toast.promise(
-        del(`/tenants/${tenantId}/footer/social-links`),
+        dispatch(deleteSocialMediaLinks(tenantId)).unwrap(),
         {
           loading: "Deleting social links...",
           success: "Social links deleted successfully!",
-          error: (err) => `Failed to delete: ${err.response?.data?.message || err.message}`,
+          error: (err) => `Failed to delete: ${err.message || "Unknown error"}`,
         }
       );
-      setSocialLinks({});
-      setShowForm(true); // Show form after deletion
     } catch (err) {
-      console.error("Error deleting social links:", err.response?.data || err.message);
+      console.error("Error deleting social links:", err);
     } finally {
-      setIsSubmitting(false);
+      dispatch(setSubmitting(false));
     }
   };
 
@@ -242,7 +251,7 @@ const SocialMediaEditor = () => {
               type="text"
               placeholder="Search social links..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => dispatch(setSearchTerm(e.target.value))}
               className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm transition-all duration-200 shadow-sm hover:shadow-md"
             />
             <Search size={18} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500" />

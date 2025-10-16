@@ -1,62 +1,161 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { BarChart2, Users, Package, Calendar } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import useTenantApi from "@/hooks/useTenantApi";
+import { useDispatch, useSelector } from "react-redux";
 import toast, { Toaster } from "react-hot-toast";
+
+// Redux imports for categories
+import {
+  fetchCategories,
+  selectCategories,
+  selectCategoryLoading,
+  selectCategoryError,
+} from "@/store/slices/categorySlice";
+
+// Redux imports for products
+import {
+  fetchProducts,
+  selectProducts,
+  selectProductLoading,
+  selectProductError,
+} from "@/store/slices/productSlice";
+
+// Redux imports for blogs
+import {
+  fetchBlogs,
+  selectBlogs,
+  selectBlogLoading,
+  selectBlogError,
+} from "@/store/slices/blogSlice";
+
+// Redux imports for subscribers
+import {
+  fetchSubscribers,
+  selectSubscribers,
+  selectSubscriberLoading,
+  selectSubscriberError,
+} from "@/store/slices/subscriberSlice";
+
+// Redux imports for UI
+import {
+  setSearchTerm,
+  incrementRetry,
+  resetRetry,
+  selectSearchTerm,
+  selectRetryCount,
+} from "@/store/slices/uiSlice";
+
+// Redux imports for auth
+import { selectTenantId } from "@/store/slices/authSlice";
+
+const MAX_RETRIES = 3;
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const { data: categoryData, loading: categoryLoading, error: categoryError, getAll: getCategories } = useTenantApi();
-  const { data: blogData, loading: blogLoading, error: blogError, getAll: getBlogs } = useTenantApi();
-  const { data: productData, loading: productLoading, error: productError, getAll: getProducts } = useTenantApi();
-  const { data: subscriberData, loading: subscriberLoading, error: subscriberError, getAll: getSubscribers } = useTenantApi();
+  const dispatch = useDispatch();
 
-  const [tenantId, setTenantId] = useState(null);
-  const [searchTerm, setSearchTerm] = useState("");
+  // Redux state for data
+  const categories = useSelector(selectCategories);
+  const products = useSelector(selectProducts);
+  const blogs = useSelector(selectBlogs);
+  const subscribers = useSelector(selectSubscribers);
+
+  // Redux state for loading
+  const categoryLoading = useSelector(selectCategoryLoading);
+  const productLoading = useSelector(selectProductLoading);
+  const blogLoading = useSelector(selectBlogLoading);
+  const subscriberLoading = useSelector(selectSubscriberLoading);
+
+  // Redux state for errors
+  const categoryError = useSelector(selectCategoryError);
+  const productError = useSelector(selectProductError);
+  const blogError = useSelector(selectBlogError);
+  const subscriberError = useSelector(selectSubscriberError);
+
+  // Redux state for UI
+  const searchTerm = useSelector(selectSearchTerm);
+  const retryCount = useSelector(selectRetryCount);
+
+  // Redux state for auth
+  const tenantId = useSelector(selectTenantId);
+
+  // Local state
   const [entriesPerPage, setEntriesPerPage] = useState(5);
   const [currentPage, setCurrentPage] = useState(1);
-  const [retryCounts, setRetryCounts] = useState({
-    categories: 0,
-    blogs: 0,
-    products: 0,
-    subscribers: 0,
-  });
 
+  // Fetch data on mount
   useEffect(() => {
-    const storedTenantId = localStorage.getItem("tenant_id");
-    if (storedTenantId && tenantId !== storedTenantId) {
-      setTenantId(storedTenantId);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (tenantId) {
-      getCategories(`/tenants/${tenantId}/categories`);
-      getBlogs(`/tenants/${tenantId}/blogs`);
-      getProducts(`/tenants/${tenantId}/products`);
-      getSubscribers(`/tenants/${tenantId}/subscribers`); // Assuming an endpoint for subscribers
-    }
-  }, [tenantId, getCategories, getBlogs, getProducts, getSubscribers]);
-
-  useEffect(() => {
-    const handleRetry = async (type, fetchFn, endpoint) => {
-      if (retryCounts[type] < 3 && (type === "subscribers" ? subscriberError : categoryError || blogError || productError)) {
-        toast.error(`Failed to load ${type}. Retrying... (${retryCounts[type] + 1}/3)`);
-        setTimeout(() => {
-          setRetryCounts((prev) => ({ ...prev, [type]: prev[type] + 1 }));
-          fetchFn(endpoint);
-        }, 2000);
+    if (!tenantId) {
+      const storedTenantId = localStorage.getItem("tenant_id");
+      if (!storedTenantId) {
+        toast.error("Please log in to continue.");
+        navigate("/backoffice-login");
       }
-    };
-
-    if (tenantId) {
-      handleRetry("categories", getCategories, `/tenants/${tenantId}/categories`);
-      handleRetry("blogs", getBlogs, `/tenants/${tenantId}/blogs`);
-      handleRetry("products", getProducts, `/tenants/${tenantId}/products`);
-      handleRetry("subscribers", getSubscribers, `/tenants/${tenantId}/subscribers`);
+      return;
     }
-  }, [categoryError, blogError, productError, subscriberError, tenantId, retryCounts, getCategories, getBlogs, getProducts, getSubscribers]);
 
+    dispatch(fetchCategories(tenantId))
+      .unwrap()
+      .then(() => {
+        toast.success("Categories loaded!");
+        dispatch(resetRetry());
+      })
+      .catch((err) => {
+        console.error("Error fetching categories:", err);
+        if (retryCount < MAX_RETRIES) {
+          setTimeout(() => dispatch(incrementRetry()), 2000);
+        } else {
+          toast.error("Unable to load categories. Please try again later.");
+        }
+      });
+
+    dispatch(fetchProducts(tenantId))
+      .unwrap()
+      .then(() => {
+        toast.success("Products loaded!");
+        dispatch(resetRetry());
+      })
+      .catch((err) => {
+        console.error("Error fetching products:", err);
+        if (retryCount < MAX_RETRIES) {
+          setTimeout(() => dispatch(incrementRetry()), 2000);
+        } else {
+          toast.error("Unable to load products. Please try again later.");
+        }
+      });
+
+    dispatch(fetchBlogs(tenantId))
+      .unwrap()
+      .then(() => {
+        toast.success("Blogs loaded!");
+        dispatch(resetRetry());
+      })
+      .catch((err) => {
+        console.error("Error fetching blogs:", err);
+        if (retryCount < MAX_RETRIES) {
+          setTimeout(() => dispatch(incrementRetry()), 2000);
+        } else {
+          toast.error("Unable to load blogs. Please try again later.");
+        }
+      });
+
+    dispatch(fetchSubscribers(tenantId))
+      .unwrap()
+      .then(() => {
+        toast.success("Subscribers loaded!");
+        dispatch(resetRetry());
+      })
+      .catch((err) => {
+        console.error("Error fetching subscribers:", err);
+        if (retryCount < MAX_RETRIES) {
+          setTimeout(() => dispatch(incrementRetry()), 2000);
+        } else {
+          toast.error("Unable to load subscribers. Please try again later.");
+        }
+      });
+  }, [tenantId, retryCount, dispatch, navigate]);
+
+  // Debounced search
   const debounce = (func, delay) => {
     let timeoutId;
     return (...args) => {
@@ -67,29 +166,27 @@ const Dashboard = () => {
 
   const handleSearchChange = useCallback(
     debounce((value) => {
-      setSearchTerm(value);
+      dispatch(setSearchTerm(value));
       setCurrentPage(1);
     }, 300),
-    []
+    [dispatch]
   );
 
-  const productCategories = (categoryData || []).map((cat, index) => ({
-  srNo: index + 1,
-  category: cat.name || "Unnamed Category",
-  productCount: !productLoading && !productError && productData?.data
-    ? productData.data.filter((prod) => prod.category_id === cat.id).length
-    : 0,
-  status: cat.status === "active" ? "ACTIVE" : "INACTIVE",
-}));
+  const productCategories = categories.map((cat, index) => ({
+    srNo: index + 1,
+    category: cat.name || "Unnamed Category",
+    productCount: products.filter((prod) => prod.category_id === cat.id).length,
+    status: cat.status === "active" ? "ACTIVE" : "INACTIVE",
+  }));
 
   const filteredCategories = productCategories.filter((item) =>
     item.category.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const totalCategories = productCategories.length;
-  const totalProducts = productData?.length || 0;
-  const totalSubscribers = subscriberData?.length || 0; // Dynamic subscriber count
-  const nextBilling = "31-Mar-2025"; // Placeholder, update with dynamic data if available
+  const totalCategories = categories.length;
+  const totalProducts = products.length;
+  const totalSubscribers = subscribers.length;
+  const nextBilling = "31-Mar-2025"; // Placeholder
 
   const paginatedCategories = filteredCategories.slice(
     (currentPage - 1) * entriesPerPage,
@@ -109,7 +206,7 @@ const Dashboard = () => {
     setCurrentPage(1);
   };
 
-  const blogPosts = (blogData || []).map((blog) => ({
+  const blogPosts = blogs.map((blog) => ({
     id: blog.id,
     title: blog.title || "Untitled",
     createdOn: new Date(blog.created_at).toLocaleDateString("en-US", {
@@ -121,10 +218,18 @@ const Dashboard = () => {
     imageUrl: blog.image_url || "/placeholder-image.jpg",
   }));
 
-  const handleRetry = (type, fetchFn, endpoint) => {
-    setRetryCounts((prev) => ({ ...prev, [type]: 0 }));
-    fetchFn(endpoint);
+  const handleRetry = () => {
+    dispatch(resetRetry());
+    if (tenantId) {
+      dispatch(fetchCategories(tenantId));
+      dispatch(fetchProducts(tenantId));
+      dispatch(fetchBlogs(tenantId));
+      dispatch(fetchSubscribers(tenantId));
+    }
   };
+
+  const hasAnyError = categoryError || productError || blogError || subscriberError;
+  const hasAnyLoading = categoryLoading || productLoading || blogLoading || subscriberLoading;
 
   return (
     <div className="container mx-auto p-4">
@@ -179,20 +284,19 @@ const Dashboard = () => {
 
           <div className="bg-white p-6 rounded-xl shadow-md border border-gray-200 mb-8 transition-all duration-300 hover:shadow-lg">
             <h3 className="text-xl font-semibold text-gray-800 mb-4">Product Overview</h3>
-            {(categoryLoading || productLoading) && (
+            {hasAnyLoading && (
               <div className="text-center py-6">
                 <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-gray-900 mx-auto"></div>
                 <span className="text-gray-500 text-sm mt-2 block">Loading data...</span>
               </div>
             )}
-            {(categoryError || productError) && retryCounts.categories >= 3 && retryCounts.products >= 3 && !categoryLoading && !productLoading && (
+            {hasAnyError && retryCount >= MAX_RETRIES && !hasAnyLoading && (
               <div className="p-6 text-center bg-white shadow-lg rounded-xl border border-gray-200">
                 <svg
                   className="mx-auto h-16 w-16 text-gray-400 mb-4"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
-                  xmlns="http://www.w3.org/2000/svg"
                 >
                   <path
                     strokeLinecap="round"
@@ -206,10 +310,7 @@ const Dashboard = () => {
                   {categoryError?.message || productError?.message || "An error occurred while loading data."}
                 </p>
                 <button
-                  onClick={() => {
-                    handleRetry("categories", getCategories, `/tenants/${tenantId}/categories`);
-                    handleRetry("products", getProducts, `/tenants/${tenantId}/products`);
-                  }}
+                  onClick={handleRetry}
                   className="border border-gray-200 text-gray-700 px-6 py-2 rounded-full hover:bg-gray-100 transition-all duration-200"
                   aria-label="Retry loading product data"
                 >
@@ -217,7 +318,7 @@ const Dashboard = () => {
                 </button>
               </div>
             )}
-            {!categoryLoading && !productLoading && !categoryError && !productError && (
+            {!hasAnyLoading && !hasAnyError && (
               filteredCategories.length > 0 ? (
                 <>
                   <div className="flex flex-col sm:flex-row justify-between items-center mb-4 gap-4">
@@ -323,7 +424,6 @@ const Dashboard = () => {
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
-                    xmlns="http://www.w3.org/2000/svg"
                   >
                     <path
                       strokeLinecap="round"
@@ -347,14 +447,13 @@ const Dashboard = () => {
                 <span className="text-gray-500 text-sm mt-2 block">Loading blogs...</span>
               </div>
             )}
-            {blogError && retryCounts.blogs >= 3 && !blogLoading && (
+            {blogError && retryCount >= MAX_RETRIES && !blogLoading && (
               <div className="p-6 text-center bg-white shadow-lg rounded-xl border border-gray-200">
                 <svg
                   className="mx-auto h-16 w-16 text-gray-400 mb-4"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
-                  xmlns="http://www.w3.org/2000/svg"
                 >
                   <path
                     strokeLinecap="round"
@@ -366,7 +465,10 @@ const Dashboard = () => {
                 <h3 className="text-lg font-semibold text-gray-700 mb-2">Unable to Load Blogs</h3>
                 <p className="text-gray-500 mb-4">{blogError.message || "An error occurred while loading blogs."}</p>
                 <button
-                  onClick={() => handleRetry("blogs", getBlogs, `/tenants/${tenantId}/blogs`)}
+                  onClick={() => {
+                    dispatch(resetRetry());
+                    dispatch(fetchBlogs(tenantId));
+                  }}
                   className="border border-gray-200 text-gray-700 px-6 py-2 rounded-full hover:bg-gray-100 transition-all duration-200"
                   aria-label="Retry loading blogs"
                 >
@@ -407,7 +509,6 @@ const Dashboard = () => {
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
-                    xmlns="http://www.w3.org/2000/svg"
                   >
                     <path
                       strokeLinecap="round"

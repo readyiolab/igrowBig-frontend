@@ -1,74 +1,73 @@
+// OpportunityOverviewVideoSection.jsx
 import React, { useState, useEffect, useCallback } from "react";
 import { Plus, Edit, Trash2, Search, X } from "react-feather";
 import { useNavigate } from "react-router-dom";
-import useTenantApi from "@/hooks/useTenantApi";
+import { useDispatch, useSelector } from "react-redux";
 import toast, { Toaster } from "react-hot-toast";
+import {
+  fetchOpportunityPage,
+  updateOpportunityPage,
+  createOpportunityPage,
+  deleteOpportunityPage,
+  selectOpportunityPageData,
+  selectOpportunityPageLoading,
+  selectOpportunityPageError,
+} from "@/store/slices/opportunityPageSlice";
+import {
+  openForm,
+  closeForm,
+  setSubmitting,
+  setSearchTerm,
+  selectShowForm,
+  selectIsEditing,
+  selectIsSubmitting,
+  selectSearchTerm,
+} from "@/store/slices/uiSlice";
 
 const OpportunityOverviewVideoSection = () => {
   const navigate = useNavigate();
-  const { data, loading: isLoading, error, getAll, post, put, request } = useTenantApi();
+  const dispatch = useDispatch();
+
+  const data = useSelector(selectOpportunityPageData);
+  const loading = useSelector(selectOpportunityPageLoading);
+  const error = useSelector(selectOpportunityPageError);
+  const showForm = useSelector(selectShowForm);
+  const isEditing = useSelector(selectIsEditing);
+  const searchTerm = useSelector(selectSearchTerm);
+  const isSubmitting = useSelector(selectIsSubmitting);
 
   const [tenantId, setTenantId] = useState(null);
-  const [showForm, setShowForm] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [videos, setVideos] = useState([]);
   const [newVideo, setNewVideo] = useState({
     header_title: "",
     video_file: null,
     youtube_link: "",
   });
   const [videoPreview, setVideoPreview] = useState(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [retryCount, setRetryCount] = useState(0);
   const MAX_VIDEO_SIZE = 50 * 1024 * 1024; // 50MB in bytes
+
+  const videos = data && (data.header_title || data.video_section_link)
+    ? [
+        {
+          id: data.id,
+          header_title: data.header_title || "NHT Global Compensation Plan",
+          video_section_link: data.video_section_link || null,
+          is_youtube: data.video_section_link?.includes("youtube.com") || false,
+        },
+      ]
+    : [];
 
   useEffect(() => {
     const storedTenantId = localStorage.getItem("tenant_id");
     if (storedTenantId && tenantId !== storedTenantId) {
       setTenantId(storedTenantId);
     }
-  }, []);
+  }, [tenantId]);
 
   useEffect(() => {
     if (tenantId) {
-      fetchVideo();
+      dispatch(fetchOpportunityPage(tenantId));
     }
-  }, [tenantId, retryCount]);
-
-  const fetchVideo = async () => {
-    try {
-      const response = await toast.promise(
-        getAll(`/tenants/${tenantId}/opportunity-page`),
-        {
-          loading: "Fetching video section...",
-          success: "Video section loaded!",
-          error: "Failed to load video section.",
-        }
-      );
-      if (response && (response.header_title || response.video_section_link)) {
-        setVideos([
-          {
-            id: response.id,
-            header_title: response.header_title || "NHT Global Compensation Plan",
-            video_section_link: response.video_section_link || null,
-            is_youtube: response.video_section_link?.includes("youtube.com") || false,
-          },
-        ]);
-      } else {
-        setVideos([]);
-      }
-    } catch (err) {
-      console.error("Error fetching opportunity page video:", err.response?.data || err.message);
-      if (retryCount < 3) {
-        toast.error(`Failed to load video section. Retrying... (${retryCount + 1}/3)`);
-        setTimeout(() => setRetryCount(retryCount + 1), 2000);
-      } else {
-        toast.error("Unable to load video section. Please try again later.");
-        setVideos([]);
-      }
-    }
-  };
+  }, [tenantId, dispatch]);
 
   const debounce = (func, delay) => {
     let timeoutId;
@@ -80,21 +79,19 @@ const OpportunityOverviewVideoSection = () => {
 
   const handleSearchChange = useCallback(
     debounce((value) => {
-      setSearchTerm(value);
+      dispatch(setSearchTerm(value));
     }, 300),
-    []
+    [dispatch]
   );
 
   const handleAddNew = () => {
-    setShowForm(true);
-    setIsEditing(false);
+    dispatch(openForm({ isEditing: false }));
     setNewVideo({ header_title: "", video_file: null, youtube_link: "" });
     setVideoPreview(null);
   };
 
   const handleEdit = (video) => {
-    setShowForm(true);
-    setIsEditing(true);
+    dispatch(openForm({ isEditing: true, editId: video.id }));
     setNewVideo({
       header_title: video.header_title,
       video_file: null,
@@ -104,8 +101,7 @@ const OpportunityOverviewVideoSection = () => {
   };
 
   const handleCancel = () => {
-    setShowForm(false);
-    setIsEditing(false);
+    dispatch(closeForm());
     setNewVideo({ header_title: "", video_file: null, youtube_link: "" });
     setVideoPreview(null);
   };
@@ -191,29 +187,28 @@ const OpportunityOverviewVideoSection = () => {
       formData.append("video_section_link", newVideo.youtube_link);
     }
 
-    setIsSubmitting(true);
+    dispatch(setSubmitting(true));
     try {
-      const existingPage = await getAll(`/tenants/${tenantId}/opportunity-page`);
-      await toast.promise(
-        existingPage && existingPage.id
-          ? put(`/tenants/${tenantId}/opportunity-page`, formData, true)
-          : post(`/tenants/${tenantId}/opportunity-page`, formData, true),
-        {
-          loading: "Saving video section...",
-          success: "Video section saved successfully!",
-          error: (err) => `Failed to save: ${err.response?.data?.message || err.message}`,
-        }
-      );
-      await fetchVideo();
+      const existingPage = data;
+      const promise = existingPage && existingPage.id
+        ? dispatch(updateOpportunityPage({ tenantId, formData })).unwrap()
+        : dispatch(createOpportunityPage({ tenantId, formData })).unwrap();
+
+      await toast.promise(promise, {
+        loading: "Saving video section...",
+        success: "Video section saved successfully!",
+        error: (err) => `Failed to save: ${err.message || "Unknown error"}`,
+      });
+      dispatch(fetchOpportunityPage(tenantId));
       handleCancel();
     } catch (err) {
-      console.error("Error saving opportunity page video:", err.response?.data || err.message);
-      if (err.response?.status === 401) {
+      console.error("Error saving opportunity page video:", err);
+      if (err.status === 401) {
         toast.error("Session expired. Please log in again.");
         navigate("/backoffice-login");
       }
     } finally {
-      setIsSubmitting(false);
+      dispatch(setSubmitting(false));
     }
   };
 
@@ -223,33 +218,31 @@ const OpportunityOverviewVideoSection = () => {
       return;
     }
     if (window.confirm("Are you sure you want to delete this video section?")) {
-      setIsSubmitting(true);
+      dispatch(setSubmitting(true));
       try {
         await toast.promise(
-          request("delete", `/tenants/${tenantId}/opportunity-page`),
+          dispatch(deleteOpportunityPage(tenantId)).unwrap(),
           {
             loading: "Deleting video section...",
             success: "Video section deleted successfully!",
-            error: (err) => `Failed to delete: ${err.response?.data?.message || err.message}`,
+            error: (err) => `Failed to delete: ${err.message || "Unknown error"}`,
           }
         );
-        setVideos([]);
         handleCancel();
       } catch (err) {
-        console.error("Error deleting opportunity page video:", err.response?.data || err.message);
-        if (err.response?.status === 401) {
+        console.error("Error deleting opportunity page video:", err);
+        if (err.status === 401) {
           toast.error("Session expired. Please log in again.");
           navigate("/backoffice-login");
         }
       } finally {
-        setIsSubmitting(false);
+        dispatch(setSubmitting(false));
       }
     }
   };
 
   const handleRetry = () => {
-    setRetryCount(0);
-    fetchVideo();
+    dispatch(fetchOpportunityPage(tenantId));
   };
 
   const filteredVideos = videos.filter(
@@ -271,6 +264,7 @@ const OpportunityOverviewVideoSection = () => {
                 <input
                   type="text"
                   placeholder="Search videos..."
+                  value={searchTerm}
                   onChange={(e) => handleSearchChange(e.target.value)}
                   className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-full focus:outline-none focus:ring-2 focus:ring-gray-300 hover:border-gray-300 transition-all duration-200 shadow-sm text-sm"
                   aria-label="Search video section"
@@ -289,14 +283,14 @@ const OpportunityOverviewVideoSection = () => {
         )}
       </div>
 
-      {isLoading && (
+      {loading && (
         <div className="text-center py-6">
           <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-gray-900 mx-auto"></div>
           <span className="text-gray-500 text-lg mt-2 block animate-pulse">Loading video section...</span>
         </div>
       )}
 
-      {error && retryCount >= 3 && !isLoading && (
+      {error && !loading && (
         <div className="p-12 text-center bg-white shadow-lg rounded-xl border border-gray-200">
           <svg
             className="mx-auto h-24 w-24 text-gray-400 mb-4"
@@ -335,7 +329,7 @@ const OpportunityOverviewVideoSection = () => {
         </div>
       )}
 
-      {!tenantId && !isLoading && (
+      {!tenantId && !loading && (
         <div className="p-12 text-center bg-white shadow-lg rounded-xl border border-gray-200">
           <h3 className="text-xl font-semibold text-gray-700 mb-2">Authentication Required</h3>
           <p className="text-gray-500 mb-6">No tenant ID found. Please log in to continue.</p>
@@ -349,7 +343,7 @@ const OpportunityOverviewVideoSection = () => {
         </div>
       )}
 
-      {!isLoading && !error && !showForm && tenantId && (
+      {!loading && !error && !showForm && tenantId && (
         <div className="bg-white shadow-md rounded-xl overflow-hidden border border-gray-200 transition-all duration-300 hover:shadow-lg">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gradient-to-r from-gray-800 to-black text-white">

@@ -1,114 +1,187 @@
-
-import React, { useState, useEffect } from "react";
-import { Plus, Edit, Trash2, Search, X } from "react-feather";
+import React, { useState, useEffect, useCallback } from "react";
+import { Plus, Edit, Trash2, Search, X, MessageCircle } from "react-feather";
 import { useNavigate } from "react-router-dom";
-import useTenantApi from "@/hooks/useTenantApi";
-import ToastNotification, { showSuccessToast, showErrorToast } from "../../ToastNotification";
+import { useDispatch, useSelector } from "react-redux";
+import toast, { Toaster } from "react-hot-toast";
 
-// BlogEditor Component
+// Redux imports for blogs
+import {
+  fetchBlogs,
+  createBlog,
+  updateBlog,
+  deleteBlog,
+  createBanner,
+  updateBanner,
+  deleteBanner,
+  setBlogFormData,
+  resetBlogForm,
+  setBannerFormData,
+  resetBannerForm,
+  clearError,
+  selectBlogs,
+  selectBlogForm,
+  selectBannerForm,
+  selectBlogLoading,
+  selectBlogError,
+} from "@/store/slices/blogSlice";
+
+// Redux imports for UI
+import {
+  openForm,
+  closeForm,
+  setSearchTerm,
+  setSubmitting,
+  incrementRetry,
+  resetRetry,
+  selectShowForm,
+  selectIsEditing,
+  selectEditId,
+  selectSearchTerm,
+  selectIsSubmitting,
+  selectRetryCount,
+} from "@/store/slices/uiSlice";
+
+// Redux imports for auth
+import { selectTenantId } from "@/store/slices/authSlice";
+
+const MAX_FILE_SIZE = 4 * 1024 * 1024;
+const MAX_RETRIES = 3;
+
 const BlogEditor = () => {
   const navigate = useNavigate();
-  const { data, loading: isLoading, error, getAll, post, put, del } = useTenantApi();
+  const dispatch = useDispatch();
 
-  const [tenantId, setTenantId] = useState(null);
-  const [showBlogForm, setShowBlogForm] = useState(false);
+  // Redux state for blogs
+  const blogs = useSelector(selectBlogs);
+  const blogForm = useSelector(selectBlogForm);
+  const bannerForm = useSelector(selectBannerForm);
+  const loading = useSelector(selectBlogLoading);
+  const error = useSelector(selectBlogError);
+
+  // Redux state for UI (for blog form)
+  const showForm = useSelector(selectShowForm);
+  const isEditing = useSelector(selectIsEditing);
+  const editId = useSelector(selectEditId);
+  const searchTerm = useSelector(selectSearchTerm);
+  const isSubmitting = useSelector(selectIsSubmitting);
+  const retryCount = useSelector(selectRetryCount);
+
+  // Redux state for auth
+  const tenantId = useSelector(selectTenantId);
+
+  // Local state for banner form
   const [showBannerForm, setShowBannerForm] = useState(false);
-  const [isEditingBlog, setIsEditingBlog] = useState(false);
   const [isEditingBanner, setIsEditingBanner] = useState(false);
-  const [editBlogId, setEditBlogId] = useState(null);
   const [editBannerId, setEditBannerId] = useState(null);
-  const [searchTerm, setSearchTerm] = useState("");
+  const [editBlogId, setEditBlogId] = useState(null);
+
+  // Local state for comments
   const [showComments, setShowComments] = useState(false);
   const [selectedBlogId, setSelectedBlogId] = useState(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [newComment, setNewComment] = useState("");
-  const [retryCount, setRetryCount] = useState(0);
-
-  const [blogs, setBlogs] = useState([]);
   const [comments, setComments] = useState([]);
 
-  const [newBlog, setNewBlog] = useState({ title: "", content: "", image: null, is_visible: true });
-  const [newBanner, setNewBanner] = useState({ image: null, image_content: "", currentImage: null });
+  const editingBlog = blogs.find((blog) => blog.id === editId);
 
-  const MAX_RETRIES = 3;
-  const MAX_FILE_SIZE = 4 * 1024 * 1024; // 4MB
-
-  // Authentication and tenant setup
+  // Fetch blogs on mount
   useEffect(() => {
-    const storedTenantId = localStorage.getItem("tenant_id");
-    const token = localStorage.getItem("token");
-    if (!token || !storedTenantId) {
-      showErrorToast("Please log in to continue.");
-      navigate("/backoffice-login");
+    if (!tenantId) {
+      const storedTenantId = localStorage.getItem("tenant_id");
+      if (!storedTenantId) {
+        toast.error("Please log in to continue.");
+        navigate("/backoffice-login");
+      }
+      return;
+    }
+
+    dispatch(fetchBlogs(tenantId))
+      .unwrap()
+      .then(() => {
+        toast.success("Blogs loaded successfully!");
+        dispatch(resetRetry());
+      })
+      .catch((err) => {
+        console.error("Error fetching blogs:", err);
+        if (retryCount < MAX_RETRIES) {
+          setTimeout(() => dispatch(incrementRetry()), 2000);
+        } else {
+          toast.error("Unable to load blogs. Please try again later.");
+        }
+      });
+  }, [tenantId, retryCount, dispatch, navigate]);
+
+  // Debounced search
+  const debounce = (func, delay) => {
+    let timeoutId;
+    return (...args) => {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => func(...args), delay);
+    };
+  };
+
+  const handleSearchChange = useCallback(
+    debounce((value) => {
+      dispatch(setSearchTerm(value));
+    }, 300),
+    [dispatch]
+  );
+
+  // Validate file
+  const validateFile = (file) => {
+    if (!file) return true;
+    if (file.size > MAX_FILE_SIZE) {
+      toast.error("Image must be less than 4MB.");
+      return false;
+    }
+    if (!["image/jpeg", "image/png", "image/jpg"].includes(file.type)) {
+      toast.error("Only JPEG/JPG/PNG images are allowed.");
+      return false;
+    }
+    return true;
+  };
+
+  // Image upload handler
+  const handleImageUpload = (e, type) => {
+    const file = e.target.files[0];
+    if (validateFile(file)) {
+      if (type === "blog") {
+        dispatch(setBlogFormData({ image: file }));
+      } else {
+        dispatch(setBannerFormData({ image: file }));
+      }
+      toast.success("Image selected successfully!");
     } else {
-      setTenantId(storedTenantId);
-    }
-  }, [navigate]);
-
-  // Fetch blogs
-  useEffect(() => {
-    if (tenantId) {
-      fetchBlogs();
-    }
-  }, [tenantId, retryCount]);
-
-  const fetchBlogs = async () => {
-    try {
-      const response = await getAll(`/tenants/${tenantId}/blogs`);
-      if (response && Array.isArray(response)) {
-        setBlogs(
-          response.map((blog) => ({
-            id: blog.id,
-            title: blog.title,
-            content: blog.content,
-            image_url: blog.image_url || null,
-            is_visible: blog.is_visible,
-            created_at: blog.created_at.split("T")[0],
-            banners: blog.banners || [],
-          }))
-        );
-        showSuccessToast("Blogs loaded successfully!");
-        setRetryCount(0); // Reset retry count on success
-      } else {
-        setBlogs([]);
-        showErrorToast("No blogs found.");
-      }
-    } catch (err) {
-      console.error("Error fetching blogs:", err.response?.data || err.message);
-      if (retryCount < MAX_RETRIES) {
-        // Silently retry without toast
-        setTimeout(() => setRetryCount(retryCount + 1), 2000);
-      } else {
-        showErrorToast("Unable to load blogs. Please try again later.");
-        setBlogs([]);
-      }
+      e.target.value = "";
     }
   };
 
   // Blog Handlers
   const handleAddNewBlog = () => {
-    setShowBlogForm(true);
-    setIsEditingBlog(false);
-    setNewBlog({ title: "", content: "", image: null, is_visible: true });
+    dispatch(openForm({ isEditing: false }));
+    dispatch(resetBlogForm());
   };
 
   const handleEditBlog = (blog) => {
-    setShowBlogForm(true);
-    setIsEditingBlog(true);
-    setEditBlogId(blog.id);
-    setNewBlog({ title: blog.title, content: blog.content, image: null, is_visible: blog.is_visible });
+    dispatch(openForm({ isEditing: true, editId: blog.id }));
+    dispatch(setBlogFormData({
+      title: blog.title || "",
+      content: blog.content || "",
+      image: null,
+      is_visible: blog.is_visible || true,
+    }));
   };
 
   // Banner Handlers
   const handleAddNewBanner = (blogId = null) => {
     if (blogs.length === 0) {
-      showErrorToast("Please create a blog first to add a banner.");
+      toast.error("Please create a blog first to add a banner.");
       return;
     }
     setShowBannerForm(true);
     setIsEditingBanner(false);
-    setEditBlogId(blogId || blogs[0].id); // Default to first blog if no specific blogId
-    setNewBanner({ image: null, image_content: "", currentImage: null });
+    setEditBannerId(null);
+    setEditBlogId(blogId || blogs[0].id);
+    dispatch(resetBannerForm());
   };
 
   const handleEditBanner = (banner, blogId) => {
@@ -116,142 +189,202 @@ const BlogEditor = () => {
     setIsEditingBanner(true);
     setEditBannerId(banner.id);
     setEditBlogId(blogId);
-    setNewBanner({ image: null, image_content: banner.image_content, currentImage: banner.image_url });
+    dispatch(setBannerFormData({
+      image: null,
+      image_content: banner.image_content || "",
+      currentImage: banner.image_url || null,
+    }));
   };
 
-  const handleImageUpload = (e, type) => {
-    const file = e.target.files[0];
-    if (file) {
-      if (file.size > MAX_FILE_SIZE) {
-        showErrorToast("Image must be less than 4MB.");
-        return;
-      }
-      if (!["image/jpeg", "image/png", "image/jpg"].includes(file.type)) {
-        showErrorToast("Only JPEG/JPG/PNG images are allowed.");
-        return;
-      }
-      if (type === "blog") {
-        setNewBlog({ ...newBlog, image: file });
-      } else {
-        setNewBanner({ ...newBanner, image: file });
-      }
-      showSuccessToast("Image selected successfully!");
-    }
+  // Shared cancel
+  const handleCancel = () => {
+    dispatch(closeForm());
+    dispatch(resetBlogForm());
+    setShowBannerForm(false);
+    setIsEditingBanner(false);
+    setEditBannerId(null);
+    setEditBlogId(null);
+    dispatch(resetBannerForm());
+    setShowComments(false);
+    setSelectedBlogId(null);
+    setNewComment("");
   };
 
   const handleSaveBlog = async () => {
     if (!tenantId) {
-      showErrorToast("Tenant ID not found.");
+      toast.error("Tenant ID not found. Please log in again.");
+      navigate("/backoffice-login");
       return;
     }
-    if (!newBlog.title.trim()) {
-      showErrorToast("Blog title is required.");
+
+    if (!blogForm.title.trim()) {
+      toast.error("Blog title is required.");
       return;
     }
-    if (!newBlog.content.trim()) {
-      showErrorToast("Blog content is required.");
+
+    if (!blogForm.content.trim()) {
+      toast.error("Blog content is required.");
+      return;
+    }
+
+    if (blogForm.image && !validateFile(blogForm.image)) {
       return;
     }
 
     const formData = new FormData();
-    formData.append("title", newBlog.title);
-    formData.append("content", newBlog.content);
-    if (newBlog.image) formData.append("image", newBlog.image);
-    formData.append("is_visible", newBlog.is_visible);
+    formData.append("title", blogForm.title);
+    formData.append("content", blogForm.content);
+    if (blogForm.image) formData.append("image", blogForm.image);
+    formData.append("is_visible", blogForm.is_visible.toString());
 
-    setIsSubmitting(true);
+    dispatch(setSubmitting(true));
+
     try {
-      await (isEditingBlog
-        ? put(`/tenants/${tenantId}/blogs/${editBlogId}`, formData, true)
-        : post(`/tenants/${tenantId}/blogs`, formData, true));
-      showSuccessToast("Blog saved successfully!");
-      await fetchBlogs();
+      if (isEditing) {
+        await toast.promise(
+          dispatch(updateBlog({ tenantId, blogId: editId, formData })).unwrap(),
+          {
+            loading: "Updating blog...",
+            success: "Blog updated successfully!",
+            error: (err) => `Failed to update: ${err.message || "Unknown error"}`,
+          }
+        );
+      } else {
+        await toast.promise(
+          dispatch(createBlog({ tenantId, formData })).unwrap(),
+          {
+            loading: "Creating blog...",
+            success: "Blog created successfully!",
+            error: (err) => `Failed to create: ${err.message || "Unknown error"}`,
+          }
+        );
+      }
+      await dispatch(fetchBlogs(tenantId));
       handleCancel();
     } catch (err) {
-      console.error("Error saving blog:", err.response?.data || err.message);
-      showErrorToast(`Failed to save blog: ${err.response?.data?.message || err.message}`);
+      console.error("Error saving blog:", err);
+      if (err.status === 401) {
+        toast.error("Session expired. Please log in again.");
+        navigate("/backoffice-login");
+      } else {
+        toast.error(err.message || "Failed to save blog. Please try again.");
+      }
     } finally {
-      setIsSubmitting(false);
+      dispatch(setSubmitting(false));
     }
   };
 
   const handleSaveBanner = async () => {
     if (!tenantId || !editBlogId) {
-      showErrorToast("Invalid blog or tenant ID.");
+      toast.error("Invalid blog or tenant ID.");
       return;
     }
-    if (!isEditingBanner && !newBanner.image) {
-      showErrorToast("Image is required for a new banner.");
+
+    if (!isEditingBanner && !bannerForm.image) {
+      toast.error("Image is required for a new banner.");
+      return;
+    }
+
+    if (bannerForm.image && !validateFile(bannerForm.image)) {
       return;
     }
 
     const formData = new FormData();
-    if (newBanner.image) formData.append("image", newBanner.image);
-    formData.append("image_content", newBanner.image_content);
+    if (bannerForm.image) formData.append("image", bannerForm.image);
+    formData.append("image_content", bannerForm.image_content);
 
-    setIsSubmitting(true);
+    dispatch(setSubmitting(true));
+
     try {
-      await (isEditingBanner
-        ? put(`/tenants/${tenantId}/blogs/${editBlogId}/banners/${editBannerId}`, formData, true)
-        : post(`/tenants/${tenantId}/blogs/${editBlogId}/banners`, formData, true));
-      showSuccessToast("Banner saved successfully!");
-      await fetchBlogs();
+      if (isEditingBanner) {
+        await toast.promise(
+          dispatch(updateBanner({ tenantId, blogId: editBlogId, bannerId: editBannerId, formData })).unwrap(),
+          {
+            loading: "Updating banner...",
+            success: "Banner updated successfully!",
+            error: (err) => `Failed to update: ${err.message || "Unknown error"}`,
+          }
+        );
+      } else {
+        await toast.promise(
+          dispatch(createBanner({ tenantId, blogId: editBlogId, formData })).unwrap(),
+          {
+            loading: "Creating banner...",
+            success: "Banner created successfully!",
+            error: (err) => `Failed to create: ${err.message || "Unknown error"}`,
+          }
+        );
+      }
+      await dispatch(fetchBlogs(tenantId));
       handleCancel();
     } catch (err) {
-      console.error("Error saving banner:", err.response?.data || err.message);
-      showErrorToast(`Failed to save banner: ${err.response?.data?.message || err.message}`);
+      console.error("Error saving banner:", err);
+      if (err.status === 401) {
+        toast.error("Session expired. Please log in again.");
+        navigate("/backoffice-login");
+      } else {
+        toast.error(err.message || "Failed to save banner. Please try again.");
+      }
     } finally {
-      setIsSubmitting(false);
+      dispatch(setSubmitting(false));
     }
   };
 
-  // Shared Handlers
-  const handleCancel = () => {
-    setShowBlogForm(false);
-    setShowBannerForm(false);
-    setIsEditingBlog(false);
-    setIsEditingBanner(false);
-    setEditBlogId(null);
-    setEditBannerId(null);
-    setShowComments(false);
-    setSelectedBlogId(null);
-    setNewBlog({ title: "", content: "", image: null, is_visible: true });
-    setNewBanner({ image: null, image_content: "", currentImage: null });
-    setIsSubmitting(false);
-    setNewComment("");
-  };
-
   const handleDeleteBlog = async (id) => {
-    if (!confirm("Are you sure you want to delete this blog and its banners?")) return;
-    setIsSubmitting(true);
-    try {
-      await del(`/tenants/${tenantId}/blogs/${id}`);
-      showSuccessToast("Blog deleted successfully!");
-      setBlogs(blogs.filter((blog) => blog.id !== id));
-    } catch (err) {
-      console.error("Error deleting blog:", err.response?.data || err.message);
-      showErrorToast(`Failed to delete blog: ${err.response?.data?.message || err.message}`);
-    } finally {
-      setIsSubmitting(false);
+    if (window.confirm("Are you sure you want to delete this blog and its banners?")) {
+      dispatch(setSubmitting(true));
+      try {
+        await toast.promise(
+          dispatch(deleteBlog({ tenantId, blogId: id })).unwrap(),
+          {
+            loading: "Deleting blog...",
+            success: "Blog deleted successfully!",
+            error: (err) => `Failed to delete: ${err.message || "Unknown error"}`,
+          }
+        );
+        await dispatch(fetchBlogs(tenantId));
+      } catch (err) {
+        console.error("Error deleting blog:", err);
+        if (err.status === 401) {
+          toast.error("Session expired. Please log in again.");
+          navigate("/backoffice-login");
+        } else {
+          toast.error(err.message || "Failed to delete blog. Please try again.");
+        }
+      } finally {
+        dispatch(setSubmitting(false));
+      }
     }
   };
 
   const handleDeleteBanner = async (blogId, bannerId) => {
-    if (!confirm("Are you sure you want to delete this banner?")) return;
-    setIsSubmitting(true);
-    try {
-      await del(`/tenants/${tenantId}/blogs/${blogId}/banners/${bannerId}`);
-      showSuccessToast("Banner deleted successfully!");
-      await fetchBlogs();
-    } catch (err) {
-      console.error("Error deleting banner:", err.response?.data || err.message);
-      showErrorToast(`Failed to delete banner: ${err.response?.data?.message || err.message}`);
-    } finally {
-      setIsSubmitting(false);
+    if (window.confirm("Are you sure you want to delete this banner?")) {
+      dispatch(setSubmitting(true));
+      try {
+        await toast.promise(
+          dispatch(deleteBanner({ tenantId, blogId, bannerId })).unwrap(),
+          {
+            loading: "Deleting banner...",
+            success: "Banner deleted successfully!",
+            error: (err) => `Failed to delete: ${err.message || "Unknown error"}`,
+          }
+        );
+        await dispatch(fetchBlogs(tenantId));
+      } catch (err) {
+        console.error("Error deleting banner:", err);
+        if (err.status === 401) {
+          toast.error("Session expired. Please log in again.");
+          navigate("/backoffice-login");
+        } else {
+          toast.error(err.message || "Failed to delete banner. Please try again.");
+        }
+      } finally {
+        dispatch(setSubmitting(false));
+      }
     }
   };
 
-  // Comment Handlers
+  // Comment Handlers (local)
   const handleShowComments = (blogId) => {
     setSelectedBlogId(blogId);
     setShowComments(true);
@@ -259,18 +392,18 @@ const BlogEditor = () => {
 
   const handleAddComment = () => {
     if (!newComment.trim()) {
-      showErrorToast("Comment cannot be empty.");
+      toast.error("Comment cannot be empty.");
       return;
     }
     const newCommentObj = {
-      id: comments.length + 1,
+      id: Date.now(), // Simple ID
       blogId: selectedBlogId,
       content: newComment,
       is_approved: false,
     };
     setComments([...comments, newCommentObj]);
     setNewComment("");
-    showSuccessToast("Comment added (pending approval).");
+    toast.success("Comment added (pending approval).");
   };
 
   const handleApproveComment = (commentId) => {
@@ -279,18 +412,19 @@ const BlogEditor = () => {
         comment.id === commentId ? { ...comment, is_approved: true } : comment
       )
     );
-    showSuccessToast("Comment approved!");
+    toast.success("Comment approved!");
   };
 
   const handleDeleteComment = (commentId) => {
-    if (!confirm("Are you sure you want to delete this comment?")) return;
-    setComments(comments.filter((comment) => comment.id !== commentId));
-    showSuccessToast("Comment deleted!");
+    if (window.confirm("Are you sure you want to delete this comment?")) {
+      setComments(comments.filter((comment) => comment.id !== commentId));
+      toast.success("Comment deleted!");
+    }
   };
 
   const handleRetry = () => {
-    setRetryCount(0);
-    fetchBlogs();
+    dispatch(resetRetry());
+    dispatch(fetchBlogs(tenantId));
   };
 
   const filteredBlogs = blogs.filter(
@@ -301,11 +435,11 @@ const BlogEditor = () => {
 
   return (
     <div className="container mx-auto p-4">
-      <ToastNotification />
+      <Toaster position="top-right" toastOptions={{ duration: 3000 }} />
 
       {/* Header */}
       <div className="flex justify-between items-center mb-8">
-        {!showBlogForm && !showBannerForm && !showComments && (
+        {(!showForm && !showBannerForm && !showComments) && (
           <div className="flex gap-4">
             <button
               onClick={handleAddNewBlog}
@@ -323,14 +457,14 @@ const BlogEditor = () => {
             </button>
           </div>
         )}
-        {!showBlogForm && !showBannerForm && !showComments && (
+        {(!showForm && !showBannerForm && !showComments) && (
           <div className="relative w-72">
             <input
               type="text"
               placeholder="Search blogs..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm transition-all duration-200 shadow-sm hover:shadow-md"
+              onChange={(e) => handleSearchChange(e.target.value)}
+              className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-gray-300 text-sm transition-all duration-200 shadow-sm hover:border-gray-400"
+              aria-label="Search blogs"
             />
             <Search size={18} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500" />
           </div>
@@ -338,22 +472,21 @@ const BlogEditor = () => {
       </div>
 
       {/* Loading State */}
-      {isLoading && (
+      {loading && (
         <div className="text-center py-12">
-          <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-blue-600 mx-auto"></div>
-          <span className="text-gray-600 text-lg mt-4 block animate-pulse">Loading blogs...</span>
+          <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-gray-900 mx-auto"></div>
+          <span className="text-gray-500 text-lg mt-4 block animate-pulse">Loading blogs...</span>
         </div>
       )}
 
       {/* Error State */}
-      {error && retryCount >= MAX_RETRIES && !isLoading && (
+      {error && retryCount >= MAX_RETRIES && !loading && (
         <div className="p-12 text-center bg-white shadow-lg rounded-xl border border-gray-200">
           <svg
             className="mx-auto h-24 w-24 text-gray-400 mb-4"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
-            xmlns="http://www.w3.org/2000/svg"
           >
             <path
               strokeLinecap="round"
@@ -364,20 +497,18 @@ const BlogEditor = () => {
           </svg>
           <h3 className="text-xl font-semibold text-gray-700 mb-2">Unable to Load Blogs</h3>
           <p className="text-gray-500 mb-6">
-            {error.message || "An error occurred while loading blogs. You can start adding a blog or try again."}
+            {error.message || "An error occurred while loading blogs."}
           </p>
           <div className="flex justify-center gap-4">
             <button
               onClick={handleAddNewBlog}
               className="bg-black text-white px-6 py-2 rounded-full transition-all duration-200 hover:scale-105"
-              aria-label="Add new blog"
             >
               Add Blog
             </button>
             <button
               onClick={handleRetry}
               className="border border-gray-200 text-gray-700 px-6 py-2 rounded-full hover:bg-gray-100 transition-all duration-200"
-              aria-label="Retry loading blogs"
             >
               Retry
             </button>
@@ -385,11 +516,25 @@ const BlogEditor = () => {
         </div>
       )}
 
+      {/* No Tenant ID */}
+      {!tenantId && !loading && (
+        <div className="p-12 text-center bg-white shadow-lg rounded-xl border border-gray-200">
+          <h3 className="text-xl font-semibold text-gray-700 mb-2">Authentication Required</h3>
+          <p className="text-gray-500 mb-6">No tenant ID found. Please log in to continue.</p>
+          <button
+            onClick={() => navigate("/backoffice-login")}
+            className="bg-black text-white px-6 py-2 rounded-full transition-all duration-200 hover:scale-105"
+          >
+            Log In
+          </button>
+        </div>
+      )}
+
       {/* Blog List */}
-      {!isLoading && !error && !showBlogForm && !showBannerForm && !showComments && (
+      {!showForm && !showBannerForm && !showComments && !loading && tenantId && !error && (
         <div className="mb-12">
           <h2 className="text-2xl font-bold text-gray-800 mb-6">Blog List</h2>
-          <div className="bg-white shadow-xl rounded-xl overflow-hidden border border-gray-200 transition-all duration-300 hover:shadow-2xl">
+          <div className="bg-white shadow-xl rounded-xl overflow-hidden border border-gray-200 transition-all duration-300">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gradient-to-r from-gray-800 to-black text-white">
                 <tr>
@@ -447,6 +592,14 @@ const BlogEditor = () => {
                           <Edit size={18} />
                         </button>
                         <button
+                          onClick={() => handleShowComments(blog.id)}
+                          className="text-purple-600 hover:text-purple-800 hover:scale-110 transition-all duration-200"
+                          title="View Comments"
+                          disabled={isSubmitting}
+                        >
+                          <MessageCircle size={18} />
+                        </button>
+                        <button
                           onClick={() => handleDeleteBlog(blog.id)}
                           className="text-red-600 hover:text-red-800 hover:scale-110 transition-all duration-200"
                           title="Delete Blog"
@@ -465,10 +618,10 @@ const BlogEditor = () => {
       )}
 
       {/* Blog Banners */}
-      {!isLoading && !error && !showBlogForm && !showBannerForm && !showComments && (
+      {!showForm && !showBannerForm && !showComments && !loading && tenantId && !error && (
         <div>
           <h2 className="text-2xl font-bold text-gray-800 mb-6">Blog Banners</h2>
-          <div className="bg-white shadow-xl rounded-xl overflow-hidden border border-gray-200 transition-all duration-300 hover:shadow-2xl">
+          <div className="bg-white shadow-xl rounded-xl overflow-hidden border border-gray-200 transition-all duration-300">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gradient-to-r from-gray-800 to-black text-white">
                 <tr>
@@ -495,7 +648,7 @@ const BlogEditor = () => {
                         />
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-800">{banner.image_content.substring(0, 50)}...</td>
-                      <td className="px-6 py-4 text-sm text-gray-800">{banner.created_at.split("T")[0]}</td>
+                      <td className="px-6 py-4 text-sm text-gray-800">{banner.created_at}</td>
                       <td className="px-6 py-4 flex items-center gap-4">
                         <button
                           onClick={() => handleEditBanner(banner, blog.id)}
@@ -530,12 +683,79 @@ const BlogEditor = () => {
         </div>
       )}
 
+      {/* Comments Section */}
+      {showComments && (
+        <div className="bg-white shadow-lg rounded-xl p-6 border border-gray-200">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-xl font-semibold text-gray-800">
+              Comments for {blogs.find((b) => b.id === selectedBlogId)?.title}
+            </h3>
+            <button
+              onClick={() => {
+                setShowComments(false);
+                setSelectedBlogId(null);
+              }}
+              className="text-gray-500 hover:text-gray-700"
+            >
+              <X size={20} />
+            </button>
+          </div>
+          {comments.length === 0 ? (
+            <p className="text-gray-500">No comments yet.</p>
+          ) : (
+            <div className="space-y-4 mb-6">
+              {comments.map((comment) => (
+                <div key={comment.id} className="border p-3 rounded">
+                  <p className="text-sm mb-2">{comment.content}</p>
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`px-2 py-1 rounded text-xs ${
+                        comment.is_approved ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"
+                      }`}
+                    >
+                      {comment.is_approved ? "Approved" : "Pending"}
+                    </span>
+                    <button
+                      onClick={() => handleApproveComment(comment.id)}
+                      className="text-blue-600 hover:underline text-xs"
+                    >
+                      Approve
+                    </button>
+                    <button
+                      onClick={() => handleDeleteComment(comment.id)}
+                      className="text-red-600 hover:underline text-xs"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          <div className="border-t pt-4">
+            <textarea
+              value={newComment}
+              onChange={(e) => setNewComment(e.target.value)}
+              placeholder="Add a new comment..."
+              className="w-full p-2 border rounded-md mb-2 focus:outline-none focus:ring-2 focus:ring-gray-300"
+              rows={3}
+            />
+            <button
+              onClick={handleAddComment}
+              className="bg-gray-800 text-white px-4 py-2 rounded-md hover:bg-gray-900 transition"
+            >
+              Add Comment
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Blog Form */}
-      {showBlogForm && (
-        <div className="bg-white p-8 rounded-xl shadow-md border border-gray-100 transition-all duration-300 animate-fade-in">
+      {showForm && (
+        <div className="bg-white p-8 rounded-xl shadow-md border border-gray-100 transition-all duration-300">
           <div className="flex justify-between items-center mb-6">
             <h3 className="text-xl font-semibold text-gray-800">
-              {isEditingBlog ? "Edit Blog" : "Create New Blog"}
+              {isEditing ? "Edit Blog" : "Create New Blog"}
             </h3>
             <button
               onClick={handleCancel}
@@ -552,9 +772,9 @@ const BlogEditor = () => {
               </label>
               <input
                 type="text"
-                value={newBlog.title}
-                onChange={(e) => setNewBlog({ ...newBlog, title: e.target.value })}
-                className="w-full px-4 py-3 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm transition-all duration-200 disabled:opacity-50 shadow-sm"
+                value={blogForm.title}
+                onChange={(e) => dispatch(setBlogFormData({ title: e.target.value }))}
+                className="w-full px-4 py-3 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-300 text-sm transition-all duration-200 disabled:opacity-50 shadow-sm"
                 placeholder="Enter blog title"
                 disabled={isSubmitting}
               />
@@ -565,34 +785,27 @@ const BlogEditor = () => {
                 type="file"
                 accept="image/jpeg,image/png,image/jpg"
                 onChange={(e) => handleImageUpload(e, "blog")}
-                className="w-full text-sm text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-medium file:bg-blue-100 file:text-blue-700 hover:file:bg-blue-200 transition-all duration-200 disabled:opacity-50"
+                className="w-full text-sm text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-medium file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                 disabled={isSubmitting}
               />
-              {newBlog.image && (
+              {(blogForm.image || (isEditing && editingBlog?.image_url)) && (
                 <div className="mt-3 relative">
+                  <p className="text-xs text-gray-500">{blogForm.image ? "Selected:" : "Current:"}</p>
                   <img
-                    src={URL.createObjectURL(newBlog.image)}
+                    src={blogForm.image ? URL.createObjectURL(blogForm.image) : editingBlog.image_url}
                     alt="Preview"
-                    className="w-40 h-24 object-cover rounded-md shadow-sm"
-                  />
-                  <button
-                    onClick={() => setNewBlog({ ...newBlog, image: null })}
-                    className="absolute top-2 right-2 bg-red-500 text-white p-1.5 rounded-full hover:bg-red-600 transition-all duration-200"
-                    disabled={isSubmitting}
-                  >
-                    <X size={14} />
-                  </button>
-                </div>
-              )}
-              {isEditingBlog && !newBlog.image && blogs.find((b) => b.id === editBlogId)?.image_url && (
-                <div className="mt-3">
-                  <p className="text-xs text-gray-500 mb-1">Current Image:</p>
-                  <img
-                    src={blogs.find((b) => b.id === editBlogId).image_url}
-                    alt="Current"
                     className="w-40 h-24 object-cover rounded-md shadow-sm"
                     onError={(e) => (e.target.src = "https://via.placeholder.com/150?text=No+Image")}
                   />
+                  {blogForm.image && (
+                    <button
+                      onClick={() => dispatch(setBlogFormData({ image: null }))}
+                      className="absolute top-2 right-2 bg-red-500 text-white p-1.5 rounded-full hover:bg-red-600 transition-all duration-200"
+                      disabled={isSubmitting}
+                    >
+                      <X size={14} />
+                    </button>
+                  )}
                 </div>
               )}
             </div>
@@ -601,9 +814,9 @@ const BlogEditor = () => {
                 Content <span className="text-red-500">*</span>
               </label>
               <textarea
-                value={newBlog.content}
-                onChange={(e) => setNewBlog({ ...newBlog, content: e.target.value })}
-                className="w-full px-4 py-3 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm transition-all duration-200 h-40 resize-y disabled:opacity-50 shadow-sm"
+                value={blogForm.content}
+                onChange={(e) => dispatch(setBlogFormData({ content: e.target.value }))}
+                className="w-full px-4 py-3 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-300 text-sm transition-all duration-200 h-40 resize-y disabled:opacity-50 shadow-sm"
                 placeholder="Enter blog content"
                 disabled={isSubmitting}
               />
@@ -611,9 +824,9 @@ const BlogEditor = () => {
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
               <select
-                value={newBlog.is_visible ? "Visible" : "Hidden"}
-                onChange={(e) => setNewBlog({ ...newBlog, is_visible: e.target.value === "Visible" })}
-                className="w-full px-4 py-3 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm transition-all duration-200 disabled:opacity-50 shadow-sm"
+                value={blogForm.is_visible ? "Visible" : "Hidden"}
+                onChange={(e) => dispatch(setBlogFormData({ is_visible: e.target.value === "Visible" }))}
+                className="w-full px-4 py-3 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-300 text-sm transition-all duration-200 disabled:opacity-50 shadow-sm"
                 disabled={isSubmitting}
               >
                 <option value="Visible">Visible</option>
@@ -631,13 +844,13 @@ const BlogEditor = () => {
             </button>
             <button
               onClick={handleSaveBlog}
-              className="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-blue-800 text-white rounded-full hover:from-blue-700 hover:to-blue-900 hover:scale-105 transition-all duration-200 text-sm font-medium shadow-md flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-6 py-2.5 bg-gradient-to-r from-gray-800 to-black text-white rounded-full hover:from-gray-900 hover:to-black hover:scale-105 transition-all duration-200 text-sm font-medium shadow-md flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={isSubmitting}
             >
               {isSubmitting && (
                 <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-white"></div>
               )}
-              {isSubmitting ? "Saving..." : isEditingBlog ? "Update Blog" : "Save Blog"}
+              {isSubmitting ? "Saving..." : isEditing ? "Update Blog" : "Save Blog"}
             </button>
           </div>
         </div>
@@ -645,7 +858,7 @@ const BlogEditor = () => {
 
       {/* Banner Form */}
       {showBannerForm && (
-        <div className="bg-white p-8 rounded-xl shadow-md border border-gray-100 transition-all duration-300 animate-fade-in">
+        <div className="bg-white p-8 rounded-xl shadow-md border border-gray-100 transition-all duration-300">
           <div className="flex justify-between items-center mb-6">
             <h3 className="text-xl font-semibold text-gray-800">
               {isEditingBanner ? "Edit Banner" : "Create New Banner"}
@@ -672,49 +885,42 @@ const BlogEditor = () => {
             )}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Image (Max 4MB) {isEditingBanner ? "" : <span className="text-red-500">*</span>}
+                Image (Max 4MB) {!isEditingBanner && <span className="text-red-500">*</span>}
               </label>
               <input
                 type="file"
                 accept="image/jpeg,image/png,image/jpg"
                 onChange={(e) => handleImageUpload(e, "banner")}
-                className="w-full text-sm text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-medium file:bg-teal-100 file:text-teal-700 hover:file:bg-teal-200 transition-all duration-200 disabled:opacity-50"
+                className="w-full text-sm text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-medium file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                 disabled={isSubmitting}
               />
-              {newBanner.image && (
+              {(bannerForm.image || (isEditingBanner && bannerForm.currentImage)) && (
                 <div className="mt-3 relative">
+                  <p className="text-xs text-gray-500">{bannerForm.image ? "Selected:" : "Current:"}</p>
                   <img
-                    src={URL.createObjectURL(newBanner.image)}
+                    src={bannerForm.image ? URL.createObjectURL(bannerForm.image) : bannerForm.currentImage}
                     alt="Preview"
-                    className="w-40 h-24 object-cover rounded-md shadow-sm"
-                  />
-                  <button
-                    onClick={() => setNewBanner({ ...newBanner, image: null })}
-                    className="absolute top-2 right-2 bg-red-500 text-white p-1.5 rounded-full hover:bg-red-600 transition-all duration-200"
-                    disabled={isSubmitting}
-                  >
-                    <X size={14} />
-                  </button>
-                </div>
-              )}
-              {isEditingBanner && newBanner.currentImage && !newBanner.image && (
-                <div className="mt-3">
-                  <p className="text-xs text-gray-500 mb-1">Current Image:</p>
-                  <img
-                    src={newBanner.currentImage}
-                    alt="Current"
                     className="w-40 h-24 object-cover rounded-md shadow-sm"
                     onError={(e) => (e.target.src = "https://via.placeholder.com/150?text=No+Image")}
                   />
+                  {bannerForm.image && (
+                    <button
+                      onClick={() => dispatch(setBannerFormData({ image: null }))}
+                      className="absolute top-2 right-2 bg-red-500 text-white p-1.5 rounded-full hover:bg-red-600 transition-all duration-200"
+                      disabled={isSubmitting}
+                    >
+                      <X size={14} />
+                    </button>
+                  )}
                 </div>
               )}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Image Content</label>
               <textarea
-                value={newBanner.image_content}
-                onChange={(e) => setNewBanner({ ...newBanner, image_content: e.target.value })}
-                className="w-full px-4 py-3 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-400 text-sm transition-all duration-200 h-32 resize-y disabled:opacity-50 shadow-sm"
+                value={bannerForm.image_content}
+                onChange={(e) => dispatch(setBannerFormData({ image_content: e.target.value }))}
+                className="w-full px-4 py-3 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-300 text-sm transition-all duration-200 h-32 resize-y disabled:opacity-50 shadow-sm"
                 placeholder="Enter banner content"
                 disabled={isSubmitting}
               />
@@ -730,7 +936,7 @@ const BlogEditor = () => {
             </button>
             <button
               onClick={handleSaveBanner}
-              className="px-6 py-2.5 bg-gradient-to-r from-teal-600 to-teal-800 text-white rounded-full hover:from-teal-700 hover:to-teal-900 hover:scale-105 transition-all duration-200 text-sm font-medium shadow-md flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-6 py-2.5 bg-gradient-to-r from-gray-800 to-black text-white rounded-full hover:from-gray-900 hover:to-black hover:scale-105 transition-all duration-200 text-sm font-medium shadow-md flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={isSubmitting}
             >
               {isSubmitting && (

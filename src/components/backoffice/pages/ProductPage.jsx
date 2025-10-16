@@ -1,12 +1,33 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import useTenantApi from "@/hooks/useTenantApi";
+import { useDispatch, useSelector } from "react-redux";
 import toast, { Toaster } from "react-hot-toast";
+import {
+  fetchProductPage,
+  updateProductPage,
+  createProductPage,
+  selectProductPageData,
+  selectProductPageLoading,
+  selectProductPageError,
+} from "@/store/slices/productPageSlice";
+import {
+  setSubmitting,
+  incrementRetry,
+  resetRetry,
+  selectRetryCount,
+  selectIsSubmitting,
+} from "@/store/slices/uiSlice";
 
 export default function ProductPage() {
   const { tenantId: paramTenantId } = useParams();
   const navigate = useNavigate();
-  const { data, loading: isLoading, error, getAll, post, put } = useTenantApi();
+  const dispatch = useDispatch();
+
+  const data = useSelector(selectProductPageData);
+  const loading = useSelector(selectProductPageLoading);
+  const error = useSelector(selectProductPageError);
+  const retryCount = useSelector(selectRetryCount);
+  const isSubmitting = useSelector(selectIsSubmitting);
 
   const [tenantId, setTenantId] = useState(null);
   const [bannerText, setBannerText] = useState("");
@@ -16,8 +37,6 @@ export default function ProductPage() {
   const [videoFile, setVideoFile] = useState(null);
   const [youtubeLink, setYoutubeLink] = useState("");
   const [activeSection, setActiveSection] = useState("banner");
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [retryCount, setRetryCount] = useState(0);
 
   const MAX_IMAGE_SIZE = 4 * 1024 * 1024; // 4MB
   const MAX_VIDEO_SIZE = 50 * 1024 * 1024; // 50MB
@@ -34,42 +53,24 @@ export default function ProductPage() {
 
   useEffect(() => {
     if (tenantId) {
-      fetchProductPage();
+      dispatch(fetchProductPage(tenantId));
     }
-  }, [tenantId, retryCount]);
+  }, [tenantId, dispatch]);
 
-  const fetchProductPage = async () => {
-    try {
-      const response = await toast.promise(
-        getAll(`/tenants/${tenantId}/product-page`),
-        {
-          loading: "Fetching product page...",
-          success: "Product page loaded!",
-          error: "Failed to load product page.",
-        }
-      );
-      if (response) {
-        setBannerText(response.banner_content || "Welcome to Our Products");
-        setBannerImage(response.banner_image_url || null);
-        setAboutDescription(response.about_description || "Discover our amazing products.");
-        setYoutubeLink(response.video_section_link || "");
-      } else {
-        // Initialize with defaults if no data exists
-        setBannerText("Welcome to Our Products");
-        setBannerImage(null);
-        setAboutDescription("Discover our amazing products.");
-        setYoutubeLink("");
-      }
-    } catch (err) {
-      console.error("Error fetching product page:", err.response?.data || err.message);
-      if (retryCount < 3) {
-        toast.error(`Failed to load product page. Retrying... (${retryCount + 1}/3)`);
-        setTimeout(() => setRetryCount(retryCount + 1), 2000);
-      } else {
-        toast.error("Unable to load product page. Please try again later.");
-      }
+  useEffect(() => {
+    if (data) {
+      setBannerText(data.banner_content || "Welcome to Our Products");
+      setBannerImage(data.banner_image_url || null);
+      setAboutDescription(data.about_description || "Discover our amazing products.");
+      setYoutubeLink(data.video_section_link || "");
+    } else {
+      // Initialize with defaults if no data exists
+      setBannerText("Welcome to Our Products");
+      setBannerImage(null);
+      setAboutDescription("Discover our amazing products.");
+      setYoutubeLink("");
     }
-  };
+  }, [data]);
 
   const validateFile = (file, type, maxSize) => {
     if (!file) return true; // Files are optional
@@ -169,43 +170,42 @@ export default function ProductPage() {
       },
     };
 
-    setIsSubmitting(true);
+    dispatch(setSubmitting(true));
     try {
-      const existingPage = await getAll(`/tenants/${tenantId}/product-page`);
-      await toast.promise(
-        existingPage && existingPage.id
-          ? put(`/tenants/${tenantId}/product-page`, formData, true, config)
-          : post(`/tenants/${tenantId}/product-page`, formData, true, config),
-        {
-          loading: existingPage && existingPage.id ? "Updating product page..." : "Creating product page...",
-          success: existingPage && existingPage.id ? "Product page updated successfully!" : "Product page created successfully!",
-          error: (err) => `Failed to save: ${err.response?.data?.message || err.message}`,
-        }
-      );
-      await fetchProductPage();
+      const existingPage = data;
+      const promise = existingPage && existingPage.id
+        ? dispatch(updateProductPage({ tenantId, formData })).unwrap()
+        : dispatch(createProductPage({ tenantId, formData })).unwrap();
+
+      await toast.promise(promise, {
+        loading: existingPage && existingPage.id ? "Updating product page..." : "Creating product page...",
+        success: existingPage && existingPage.id ? "Product page updated successfully!" : "Product page created successfully!",
+        error: (err) => `Failed to save: ${err.message || "Unknown error"}`,
+      });
+      dispatch(fetchProductPage(tenantId));
       setBannerImageFile(null);
       setVideoFile(null);
     } catch (err) {
-      console.error("Error saving product page:", err.response?.data || err.message);
-      if (err.response?.status === 401) {
+      console.error("Error saving product page:", err);
+      if (err.status === 401) {
         toast.error("Session expired. Please log in again.");
         navigate("/backoffice-login");
       }
     } finally {
-      setIsSubmitting(false);
+      dispatch(setSubmitting(false));
       toast.dismiss("upload-progress");
     }
   };
 
   const handleCancel = () => {
-    fetchProductPage();
+    dispatch(fetchProductPage(tenantId));
     setBannerImageFile(null);
     setVideoFile(null);
   };
 
   const handleRetry = () => {
-    setRetryCount(0);
-    fetchProductPage();
+    dispatch(resetRetry());
+    dispatch(fetchProductPage(tenantId));
   };
 
   const navItems = [
@@ -405,7 +405,7 @@ export default function ProductPage() {
 
       <main className="flex-1 p-6 overflow-y-auto">
         <div className="max-w-3xl mx-auto bg-white p-6 rounded-xl shadow-lg border border-gray-200">
-          {isLoading ? (
+          {loading ? (
             <div className="flex justify-center items-center py-10">
               <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-gray-900"></div>
               <span className="text-gray-500 text-lg ml-3 animate-pulse">Loading...</span>

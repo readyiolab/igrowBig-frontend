@@ -1,81 +1,97 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import useTenantApi from "@/hooks/useTenantApi";
+import { useDispatch, useSelector } from "react-redux";
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
 import toast, { Toaster } from "react-hot-toast";
 
+// Redux imports
+import {
+  fetchHomePage,
+  updateHomePage,
+  selectHomePageData,
+  selectHomePageLoading,
+  selectHomePageError,
+} from "@/store/slices/homePageSlice";
+
+import {
+  setSubmitting,
+  selectIsSubmitting,
+} from "@/store/slices/uiSlice";
+
+import { selectTenantId } from "@/store/slices/authSlice";
+
+const MAX_FILE_SIZE = 4 * 1024 * 1024; // 4MB
+const MAX_RETRIES = 3;
+
 const HomepageAboutCompany = () => {
   const navigate = useNavigate();
-  const { data, loading: isLoading, error, getAll, put } = useTenantApi();
+  const dispatch = useDispatch();
 
-  const [tenantId, setTenantId] = useState(null);
-  const [title, setTitle] = useState("");
-  const [aboutContent1, setAboutContent1] = useState("");
-  const [aboutContent2, setAboutContent2] = useState("");
+  // Redux state
+  const homePageData = useSelector(selectHomePageData);
+  const loading = useSelector(selectHomePageLoading);
+  const error = useSelector(selectHomePageError);
+  const tenantId = useSelector(selectTenantId);
+  const isSubmitting = useSelector(selectIsSubmitting);
+
+  // Local form state
+  const [formData, setFormData] = useState({
+    title: "",
+    aboutContent1: "",
+    aboutContent2: "",
+  });
+
   const [image, setImage] = useState(null);
-  const [existingImageUrl, setExistingImageUrl] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
+  const [existingImageUrl, setExistingImageUrl] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
 
+  // Sync initial data from Redux to local state
   useEffect(() => {
-    const storedTenantId = localStorage.getItem("tenant_id");
-    if (storedTenantId && tenantId !== storedTenantId) {
-      setTenantId(storedTenantId);
+    if (homePageData && Object.keys(homePageData).length > 0) {
+      setFormData({
+        title: homePageData.about_company_title || "",
+        aboutContent1: homePageData.about_company_content_1 || "",
+        aboutContent2: homePageData.about_company_content_2 || "",
+      });
+      setExistingImageUrl(homePageData.about_company_image_url || null);
+      setIsEditing(true);
     }
-  }, []);
+  }, [homePageData]);
 
+  // Fetch on mount
   useEffect(() => {
-    if (tenantId) {
-      fetchAboutCompanyData();
+    if (!tenantId) {
+      const storedTenantId = localStorage.getItem("tenant_id");
+      if (!storedTenantId) {
+        toast.error("Please log in to continue.");
+        navigate("/backoffice-login");
+      }
+      return;
     }
-  }, [tenantId, retryCount]);
 
-  const fetchAboutCompanyData = async () => {
-    try {
-      const response = await toast.promise(
-        getAll(`/tenants/${tenantId}/home-page`),
-        {
-          loading: "Fetching about company data...",
-          success: "Data loaded successfully!",
-          error: "Failed to load data.",
+    dispatch(fetchHomePage(tenantId))
+      .unwrap()
+      .then(() => {
+        toast.success("Data loaded successfully!");
+        setRetryCount(0);
+      })
+      .catch((err) => {
+        console.error("Error fetching data:", err);
+        if (retryCount < MAX_RETRIES) {
+          setTimeout(() => setRetryCount(retryCount + 1), 2000);
+        } else {
+          toast.error("Unable to load data. Start adding content.");
+          setIsEditing(false);
         }
-      );
-      if (response && Object.keys(response).length > 0) {
-        setTitle(response.about_company_title || "");
-        setAboutContent1(response.about_company_content_1 || "");
-        setAboutContent2(response.about_company_content_2 || "");
-        setExistingImageUrl(response.about_company_image_url || null);
-        setImage(null);
-        setImagePreview(null);
-        setIsEditing(true);
-      } else {
-        setTitle("");
-        setAboutContent1("");
-        setAboutContent2("");
-        setExistingImageUrl(null);
-        setImage(null);
-        setImagePreview(null);
-        setIsEditing(false);
-      }
-    } catch (err) {
-      console.error("Error fetching about company data:", err.response?.data || err.message);
-      if (retryCount < 3) {
-        toast.error(`Failed to load data. Retrying... (${retryCount + 1}/3)`);
-        setTimeout(() => setRetryCount(retryCount + 1), 2000);
-      } else {
-        toast.error("Unable to load data. Please try again later or start adding content.");
-        setIsEditing(false);
-      }
-    }
-  };
+      });
+  }, [tenantId, retryCount, dispatch, navigate]);
 
   const validateImage = (file) => {
     if (!file) return true;
-    const maxSizeBytes = 4 * 1024 * 1024; // 4MB
-    if (file.size > maxSizeBytes) {
+    if (file.size > MAX_FILE_SIZE) {
       toast.error("Image size exceeds 4MB limit.");
       return false;
     }
@@ -95,26 +111,14 @@ const HomepageAboutCompany = () => {
         setImagePreview(reader.result);
       };
       reader.readAsDataURL(file);
-      toast.info("Image selected successfully!");
+      toast.info("Image selected!");
     }
   };
 
-  const debounce = (func, delay) => {
-    let timeoutId;
-    return (...args) => {
-      clearTimeout(timeoutId);
-      timeoutId = setTimeout(() => func(...args), delay);
-    };
+  // Local change handlers
+  const handleFieldChange = (field, value) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
   };
-
-  const handleContentChange = useCallback(
-    debounce((field, value) => {
-      if (field === "title") setTitle(value);
-      if (field === "aboutContent1") setAboutContent1(value);
-      if (field === "aboutContent2") setAboutContent2(value);
-    }, 300),
-    []
-  );
 
   const handleSave = async () => {
     if (!tenantId) {
@@ -123,100 +127,96 @@ const HomepageAboutCompany = () => {
       return;
     }
 
-    if (!title.trim()) {
+    if (!formData.title.trim()) {
       toast.error("Title is required.");
       return;
     }
 
-    if (!aboutContent1.trim()) {
+    if (!formData.aboutContent1.trim()) {
       toast.error("About Content 1 is required.");
       return;
     }
 
-    if (!validateImage(image)) {
+    if (image && !validateImage(image)) {
       return;
     }
 
-    const formData = new FormData();
-    formData.append("about_company_title", title);
-    formData.append("about_company_content_1", aboutContent1);
-    formData.append("about_company_content_2", aboutContent2 || "");
+    const data = new FormData();
+    data.append("about_company_title", formData.title);
+    data.append("about_company_content_1", formData.aboutContent1);
+    data.append("about_company_content_2", formData.aboutContent2 || "");
+
+    // Only append image if new one uploaded
     if (image) {
-      formData.append("about_company_image", image);
+      data.append("about_company_image", image);
     } else if (existingImageUrl) {
-      formData.append("about_company_image_url", existingImageUrl);
+      data.append("about_company_image_url", existingImageUrl);
     }
 
-    const existingPage = await getAll(`/tenants/${tenantId}/home-page`);
-    if (existingPage && Object.keys(existingPage).length > 0) {
-      // If updating, include existing fields or defaults
-      formData.append("welcome_description", existingPage.welcome_description || "Default welcome");
-      formData.append("introduction_content", existingPage.introduction_content || "Default introduction");
-      formData.append("why_network_marketing_title", existingPage.why_network_marketing_title || "Why Network Marketing");
-      formData.append("why_network_marketing_content", existingPage.why_network_marketing_content || "Default why content");
-      formData.append("opportunity_video_header_title", existingPage.opportunity_video_header_title || "Opportunity Video");
-      formData.append("opportunity_video_url", existingPage.opportunity_video_url || "");
-      formData.append("support_content", existingPage.support_content || "Default support content");
-    } else {
-      // If adding new, provide default values for required fields
-      const defaultFields = {
-        welcome_description: "Welcome to our platform",
-        introduction_content: "Default introduction content",
-        why_network_marketing_title: "Why Network Marketing",
-        why_network_marketing_content: "Network marketing offers great opportunities.",
-        opportunity_video_header_title: "Our Opportunity",
-        support_content: "We provide excellent support to our users.",
-      };
-      Object.entries(defaultFields).forEach(([key, value]) => {
-        formData.append(key, value);
-      });
-    }
+    // Preserve existing fields from other sections
+    const preserveFields = {
+      welcome_description: homePageData.welcome_description || "",
+      introduction_content: homePageData.introduction_content || "",
+      introduction_image_url: homePageData.introduction_image_url || "",
+      why_network_marketing_title: homePageData.why_network_marketing_title || "",
+      why_network_marketing_content: homePageData.why_network_marketing_content || "",
+      opportunity_video_header_title: homePageData.opportunity_video_header_title || "",
+      opportunity_video_url: homePageData.opportunity_video_url || "",
+      support_content: homePageData.support_content || "",
+    };
 
-    setIsSubmitting(true);
+    Object.entries(preserveFields).forEach(([key, value]) => {
+      if (value) {
+        data.append(key, value);
+      }
+    });
+
+    dispatch(setSubmitting(true));
+
     try {
       await toast.promise(
-        put(`/tenants/${tenantId}/home-page`, formData, true),
+        dispatch(updateHomePage({ tenantId, formData: data })).unwrap(),
         {
-          loading: "Saving about company data...",
-          success: "About company saved successfully!",
-          error: (err) => `Failed to save: ${err.response?.data?.message || err.message}`,
+          loading: "Saving...",
+          success: "Saved successfully!",
+          error: (err) => `Failed: ${err.message || 'Unknown error'}`,
         }
       );
-      await fetchAboutCompanyData();
+      await dispatch(fetchHomePage(tenantId)); // Refresh data
     } catch (err) {
-      console.error("Error saving about company:", err.response?.data || err.message);
-      if (err.response?.status === 401) {
-        toast.error("Session expired. Please log in again.");
+      console.error("Save error:", err);
+      if (err.status === 401) {
+        toast.error("Session expired. Logging out...");
         navigate("/backoffice-login");
       }
     } finally {
-      setIsSubmitting(false);
+      dispatch(setSubmitting(false));
     }
   };
 
   const handleReset = () => {
-    setTitle("");
-    setAboutContent1("");
-    setAboutContent2("");
+    setFormData({
+      title: homePageData.about_company_title || "",
+      aboutContent1: homePageData.about_company_content_1 || "",
+      aboutContent2: homePageData.about_company_content_2 || "",
+    });
     setImage(null);
     setImagePreview(null);
-    setExistingImageUrl(null);
-    setIsEditing(false);
-    toast.success("Form reset successfully!");
+    toast.success("Form reset!");
   };
 
   const handleStartEditing = () => {
-    setTitle("About Your Company");
-    setAboutContent1("Start writing about your company here...");
-    setAboutContent2("");
-    setImage(null);
-    setImagePreview(null);
+    setFormData({
+      title: "About Your Company",
+      aboutContent1: "Start writing here...",
+      aboutContent2: "",
+    });
     setIsEditing(true);
   };
 
   const handleRetry = () => {
     setRetryCount(0);
-    fetchAboutCompanyData();
+    dispatch(fetchHomePage(tenantId));
   };
 
   const quillModules = {
@@ -227,7 +227,6 @@ const HomepageAboutCompany = () => {
       [{ color: [] }, { background: [] }],
       ["bold", "italic", "underline", "strike"],
       [{ script: "sub" }, { script: "super" }],
-      [{ direction: "rtl" }],
       [{ list: "ordered" }, { list: "bullet" }],
       [{ indent: "-1" }, { indent: "+1" }],
       [{ align: [] }],
@@ -236,158 +235,135 @@ const HomepageAboutCompany = () => {
     ],
   };
 
+  const handleImageError = (e) => {
+    e.target.src = "/placeholder-image.jpg";
+  };
+
   return (
     <div className="container mx-auto p-4">
-      <Toaster position="top-right" toastOptions={{ duration: 3000 }} />
+      <Toaster position="top-right" />
 
-      {isLoading ? (
+      {loading ? (
         <div className="text-center py-6">
           <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-gray-900 mx-auto"></div>
-          <span className="text-gray-500 text-lg mt-2 block animate-pulse">Loading about company data...</span>
+          <span className="text-gray-500 text-lg mt-2 block">Loading...</span>
         </div>
-      ) : error && retryCount >= 3 ? (
+      ) : error && retryCount >= MAX_RETRIES ? (
         <div className="p-12 text-center bg-white shadow-lg rounded-xl border border-gray-200">
-          <svg
-            className="mx-auto h-24 w-24 text-gray-400 mb-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2"
-              d="M12 6v6m0 0v6m0-6h6m0-6H6"
-            />
-          </svg>
-          <h3 className="text-xl font-semibold text-gray-700 mb-2">Unable to Load Content</h3>
-          <p className="text-gray-500 mb-6">
-            {error.message || "An error occurred while loading data. You can start adding content or try again."}
-          </p>
+          <h3 className="text-xl font-semibold text-gray-700 mb-2">Unable to Load</h3>
+          <p className="text-gray-500 mb-6">{error.message || "Error loading data."}</p>
           <div className="flex justify-center gap-4">
             <button
               onClick={handleStartEditing}
-              className="bg-black text-white px-6 py-2 rounded-full transition-all duration-200 hover:scale-105"
+              className="bg-black text-white px-6 py-2 rounded-full hover:scale-105"
             >
-              Add About Company
+              Add Content
             </button>
             <button
               onClick={handleRetry}
-              className="border border-gray-200 text-gray-700 px-6 py-2 rounded-full hover:bg-gray-100 transition-all duration-200"
+              className="border border-gray-200 text-gray-700 px-6 py-2 rounded-full hover:bg-gray-100"
             >
               Retry
             </button>
           </div>
         </div>
       ) : (
-        <div className="bg-white p-6 rounded-xl shadow-md border border-gray-100 transition-all duration-300 hover:shadow-lg">
+        <div className="bg-white p-6 rounded-xl shadow-md border border-gray-100">
           <h3 className="text-lg font-semibold text-gray-800 mb-6 border-b pb-2">
-            {isEditing ? "Edit About Company" : "Create About Company"}
+            {isEditing ? "Edit" : "Create"} About Company
           </h3>
 
           <div className="space-y-6">
             <div>
-              <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
                 Title <span className="text-red-500">*</span>
               </label>
               <input
-                id="title"
                 type="text"
-                value={title}
-                onChange={(e) => handleContentChange("title", e.target.value)}
-                className="w-full px-4 py-2 text-xl font-semibold text-gray-800 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-300 hover:border-gray-300 transition-all duration-200 bg-gray-50 disabled:opacity-50"
+                value={formData.title}
+                onChange={(e) => handleFieldChange("title", e.target.value)}
+                className="w-full px-4 py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-gray-300"
                 placeholder="Enter title"
                 disabled={isSubmitting}
-                aria-required="true"
               />
             </div>
 
             <div>
-              <label htmlFor="aboutContent1" className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
                 About Content 1 <span className="text-red-500">*</span>
               </label>
               <ReactQuill
-                value={aboutContent1}
-                onChange={(value) => handleContentChange("aboutContent1", value)}
+                value={formData.aboutContent1}
+                onChange={(value) => handleFieldChange("aboutContent1", value)}
                 modules={quillModules}
                 className="bg-white rounded-lg shadow-sm border border-gray-200"
-                placeholder="Enter content for About Section 1..."
+                placeholder="Enter content..."
                 readOnly={isSubmitting}
-                aria-required="true"
               />
             </div>
 
             <div>
-              <label htmlFor="aboutContent2" className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
                 About Content 2
               </label>
               <ReactQuill
-                value={aboutContent2}
-                onChange={(value) => handleContentChange("aboutContent2", value)}
+                value={formData.aboutContent2}
+                onChange={(value) => handleFieldChange("aboutContent2", value)}
                 modules={quillModules}
                 className="bg-white rounded-lg shadow-sm border border-gray-200"
-                placeholder="Enter content for About Section 2 (optional)..."
+                placeholder="Enter optional content..."
                 readOnly={isSubmitting}
               />
             </div>
 
+            {/* Image upload and preview */}
             <div>
-              <label htmlFor="imageUpload" className="block text-sm font-medium text-gray-700 mb-2">
-                About Company Image (JPEG, JPG, PNG, Max 4MB, 348px × 348px recommended)
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Image (Max 4MB, 348x348 recommended)
               </label>
               <input
-                id="imageUpload"
                 type="file"
                 accept="image/jpeg,image/jpg,image/png"
                 onChange={handleImageUpload}
                 disabled={isSubmitting}
-                className="w-full text-sm text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-medium file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200 transition-all duration-200 disabled:opacity-50"
+                className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-black file:text-white hover:file:bg-gray-800"
               />
-              {imagePreview && (
+              {(imagePreview || existingImageUrl) && (
                 <div className="mt-2">
                   <p className="text-xs text-gray-500">Preview:</p>
                   <img
-                    src={imagePreview}
-                    alt="Selected Preview"
+                    src={imagePreview || existingImageUrl}
+                    alt="Preview"
                     className="w-[348px] h-[348px] object-cover rounded-lg shadow-sm"
-                  />
-                </div>
-              )}
-              {isEditing && !imagePreview && existingImageUrl && (
-                <div className="mt-2">
-                  <p className="text-xs text-gray-500">Current:</p>
-                  <img
-                    src={existingImageUrl}
-                    alt="Current Image"
-                    className="w-[348px] h-[348px] object-cover rounded-lg shadow-sm"
-                    onError={(e) => (e.target.src = "/placeholder-image.jpg")}
+                    onError={handleImageError}
                   />
                 </div>
               )}
             </div>
 
+            {/* Preview Section */}
             <div>
-              <h4 className="text-md font-semibold text-gray-700 mb-2">Complete Preview</h4>
-              <div className="border border-gray-200 rounded-lg p-4 bg-gray-50 shadow-inner">
-                <h1 className="text-2xl font-bold text-gray-800 mb-4">{title || "No title yet"}</h1>
+              <h4 className="text-md font-semibold text-gray-700 mb-2">Preview</h4>
+              <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                <h1 className="text-2xl font-bold">{formData.title || "No title"}</h1>
                 <div
+                  dangerouslySetInnerHTML={{ __html: formData.aboutContent1 || "No content" }}
                   className="prose max-w-none text-gray-700"
-                  dangerouslySetInnerHTML={{ __html: aboutContent1 || "No content yet" }}
                 />
                 <div
+                  dangerouslySetInnerHTML={{ __html: formData.aboutContent2 || "" }}
                   className="prose max-w-none text-gray-700 mt-4"
-                  dangerouslySetInnerHTML={{ __html: aboutContent2 || "No content yet" }}
                 />
-                {imagePreview || existingImageUrl ? (
+                {(imagePreview || existingImageUrl) ? (
                   <img
                     src={imagePreview || existingImageUrl}
-                    alt="Company Preview"
-                    className="w-[348px] h-[348px] mt-6 object-cover rounded-lg shadow-md"
+                    alt="Preview"
+                    className="w-[348px] h-[348px] mt-4 rounded object-cover"
+                    onError={handleImageError}
                   />
                 ) : (
-                  <div className="w-[348px] h-[348px] bg-gray-100 mt-6 flex items-center justify-center border-2 border-dashed border-gray-300 rounded-lg">
-                    <span className="text-gray-500 font-medium">Image Placeholder (348px × 348px)</span>
+                  <div className="w-[348px] h-[348px] bg-gray-200 border-2 border-dashed rounded mt-4 flex items-center justify-center">
+                    <span className="text-gray-500">Image Placeholder</span>
                   </div>
                 )}
               </div>
@@ -398,21 +374,17 @@ const HomepageAboutCompany = () => {
             <button
               onClick={handleReset}
               disabled={isSubmitting}
-              className="px-6 py-2.5 border border-gray-200 rounded-full text-gray-700 hover:bg-gray-100 hover:scale-105 transition-all duration-200 font-medium shadow-sm disabled:opacity-50"
-              aria-label="Reset form"
+              className="px-6 py-2.5 border border-gray-200 rounded-full text-gray-700 hover:bg-gray-100"
             >
               Reset
             </button>
             <button
               onClick={handleSave}
-              disabled={isSubmitting || !tenantId}
-              className="px-6 py-2.5 bg-gradient-to-r from-gray-800 to-black text-white rounded-full hover:from-gray-900 hover:to-black hover:scale-105 transition-all duration-200 font-medium shadow-md flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-              aria-label={isEditing ? "Update about company" : "Save about company"}
+              disabled={isSubmitting}
+              className="px-6 py-2.5 bg-black text-white rounded-full hover:scale-105 flex items-center gap-2"
             >
-              {isSubmitting && (
-                <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-white"></div>
-              )}
-              {isSubmitting ? "Saving..." : isEditing ? "Update" : "Save"}
+              {isSubmitting && <div className="animate-spin h-4 w-4 border-t-2 border-white rounded-full"></div>}
+              {isSubmitting ? "Saving..." : "Save"}
             </button>
           </div>
         </div>

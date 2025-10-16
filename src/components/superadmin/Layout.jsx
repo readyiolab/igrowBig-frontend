@@ -11,7 +11,7 @@ export default function AdminLayout() {
 
   const handleLogout = () => {
     localStorage.removeItem("token");
-    sessionStorage.clear();
+    localStorage.clear();
     navigate("/superadmin-login");
   };
 
