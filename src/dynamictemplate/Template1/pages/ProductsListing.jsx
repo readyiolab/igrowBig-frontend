@@ -1,3 +1,4 @@
+// ProductsListing.jsx
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import useTenantApi from "@/hooks/useTenantApi";
@@ -17,7 +18,7 @@ const ProductsListing = () => {
     const fetchData = async () => {
       try {
         const response = await getAll("/site/data");
-        setCategories(response.site_data?.categories || []);
+        setCategories(response.categories || []);
       } catch (err) {
         setError(err.message);
       } finally {

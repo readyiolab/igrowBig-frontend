@@ -1,3 +1,4 @@
+// ProductDetail.jsx
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import useTenantApi from "@/hooks/useTenantApi";
@@ -19,7 +20,7 @@ const ProductDetail = () => {
     const fetchData = async () => {
       try {
         const response = await getAll("/site/data");
-        setSiteData(response.site_data);
+        setSiteData(response);
       } catch (err) {
         setError(err.message);
       } finally {

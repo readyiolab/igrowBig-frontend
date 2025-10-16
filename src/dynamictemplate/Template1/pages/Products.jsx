@@ -1,3 +1,4 @@
+// EcommerceProducts.jsx
 import React, { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import useTenantApi from "@/hooks/useTenantApi";
@@ -29,7 +30,7 @@ const EcommerceProducts = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { getAll } = useTenantApi();
-  const [data, setData] = useState(null);
+  const [siteData, setSiteData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
@@ -40,7 +41,7 @@ const EcommerceProducts = () => {
     const fetchData = async () => {
       try {
         const response = await getAll("/site/data");
-        setData(response.site_data);
+        setSiteData(response);
       } catch (err) {
         setError(err.message);
       } finally {
@@ -114,17 +115,16 @@ const EcommerceProducts = () => {
     );
   }
 
-  const productPage = data?.product_page || {};
-  const categories = data?.categories || [];
-  const products = data?.products || [];
+  const productPage = siteData?.productPage || {};
+  const categories = siteData?.categories || [];
+  const products = siteData?.products || [];
 
   // Filter products based on category and search term
   const filteredProducts = selectedCategory
     ? products.filter(
         (p) => {
-          const matchCategory = categories.find(
-            (c) => c.name.toLowerCase() === selectedCategory
-          )?.id === p.category_id;
+          const categoryObj = categories.find((c) => c.name.toLowerCase() === selectedCategory);
+          const matchCategory = categoryObj?.id === p.category_id;
           
           const matchSearch = searchTerm === "" || 
             p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -146,7 +146,9 @@ const EcommerceProducts = () => {
   };
 
   const handleProductClick = (productId) => {
-    navigate(`/product/${productId}`);
+    const categoryObj = categories.find((c) => c.id === product.category_id);
+    const catSlug = categoryObj?.name.toLowerCase().replace(/\s+&\s+/g, '-');
+    navigate(`/products/${catSlug}/${productId}`);
   };
 
   // Banner for product page

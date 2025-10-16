@@ -1,3 +1,4 @@
+// Header.jsx
 import React, { useState, useEffect } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -17,7 +18,7 @@ function Header() {
     const fetchData = async () => {
       try {
         const response = await getAll("/site/data");
-        setSiteData(response.site_data);
+        setSiteData(response);
       } catch (err) {
         setError(err.message);
       } finally {
@@ -43,7 +44,7 @@ function Header() {
   };
 
   // Get the logo URL from siteData
-  const logoUrl = siteData?.tenant_setting?.site_logo_url || './1.png'; // Fallback to default logo if not available
+  const logoUrl = siteData?.settings?.site_logo_url || './1.png'; // Fallback to default logo if not available
 
   return (
     <header className="sticky top-0 shadow-lg py-5 bg-gradient-to-r from-[#2e7d32] to-[#388e3c] text-white z-50 transition-all duration-300">

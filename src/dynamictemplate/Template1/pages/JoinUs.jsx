@@ -1,3 +1,4 @@
+// JoinUs.jsx
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import useTenantApi from "@/hooks/useTenantApi";
@@ -8,7 +9,7 @@ import { ArrowRight, UserPlus, Phone, CheckCircle, HelpCircle } from "lucide-rea
 const JoinUs = () => {
   const navigate = useNavigate();
   const { getAll } = useTenantApi();
-  const [data, setData] = useState(null);
+  const [siteData, setSiteData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -16,10 +17,10 @@ const JoinUs = () => {
     const fetchData = async () => {
       try {
         const response = await getAll("/site/data");
-        setData(response.site_data);
+        setSiteData(response);
       } catch (err) {
         setError(err.message || "Failed to load information");
-        setData({}); // Show fallback content
+        setSiteData({}); // Show fallback content
       } finally {
         setLoading(false);
       }
@@ -49,7 +50,7 @@ const JoinUs = () => {
     );
   }
 
-  const joinUsPage = data?.join_us || {};
+  const joinUsPage = siteData?.joinUsPage || {};
 
   // Fallback content if empty
   const bannerImage = joinUsPage.joinus_image_banner_url || "https://images.unsplash.com/photo-1552664730-d307ca884978?ixlib=rb-4.0.3&auto=format&fit=crop&w=1350&q=80";

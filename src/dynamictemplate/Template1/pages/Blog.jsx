@@ -1,3 +1,4 @@
+// Blog.jsx
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import useTenantApi from "@/hooks/useTenantApi";
@@ -9,7 +10,7 @@ import { Clock, Eye, Heart, Share2, Search } from "lucide-react";
 const Blog = () => {
   const navigate = useNavigate();
   const { getAll } = useTenantApi();
-  const [data, setData] = useState(null);
+  const [siteData, setSiteData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -22,10 +23,10 @@ const Blog = () => {
     const fetchData = async () => {
       try {
         const response = await getAll("/site/data");
-        setData(response.site_data);
+        setSiteData(response);
       } catch (err) {
         setError(err.message);
-        setData({});
+        setSiteData({});
       } finally {
         setLoading(false);
       }
@@ -34,9 +35,9 @@ const Blog = () => {
   }, [getAll]);
 
   useEffect(() => {
-    if (!data?.blogs) return;
+    if (!siteData?.blogs) return;
     
-    let updatedPosts = [...data.blogs];
+    let updatedPosts = [...siteData.blogs];
     
     if (activeCategory !== "ALL") {
       updatedPosts = updatedPosts.filter((post) => post.category === activeCategory);
@@ -54,7 +55,7 @@ const Blog = () => {
     }
     
     setFilteredPosts(updatedPosts);
-  }, [data, searchQuery, activeCategory, sortBy]);
+  }, [siteData, searchQuery, activeCategory, sortBy]);
 
   if (loading) {
     return (
@@ -71,8 +72,8 @@ const Blog = () => {
     );
   }
 
-  const blogPosts = data?.blogs || [];
-  const blogBanners = data?.blog_banners || [];
+  const blogPosts = siteData?.blogs || [];
+  const blogBanners = siteData?.sliders || []; // Assuming sliders for blog if separate not present
   const categories = ["ALL", ...new Set(blogPosts.map((post) => post.category).filter(Boolean))];
 
   const handleLike = (postId) => {

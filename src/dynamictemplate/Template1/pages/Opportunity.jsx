@@ -1,3 +1,4 @@
+// Opportunity.jsx
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import useTenantApi from "@/hooks/useTenantApi";
@@ -8,7 +9,7 @@ import { ArrowRight, Download } from "lucide-react";
 const Opportunity = () => {
   const navigate = useNavigate();
   const { getAll } = useTenantApi();
-  const [data, setData] = useState(null);
+  const [siteData, setSiteData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -16,10 +17,10 @@ const Opportunity = () => {
     const fetchData = async () => {
       try {
         const response = await getAll("/site/data");
-        setData(response.site_data);
+        setSiteData(response);
       } catch (err) {
         setError(err.message);
-        setData({});
+        setSiteData({});
       } finally {
         setLoading(false);
       }
@@ -50,7 +51,7 @@ const Opportunity = () => {
     );
   }
 
-  const opportunityPage = data?.opportunity || {};
+  const opportunityPage = siteData?.opportunityPage || {};
 
   // Fallback content
   const bannerImage = opportunityPage.banner_image_url || "https://images.unsplash.com/photo-1552664730-d307ca884978?ixlib=rb-4.0.3&auto=format&fit=crop&w=1350&q=80";

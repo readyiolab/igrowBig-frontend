@@ -1,3 +1,4 @@
+// BlogPost.jsx
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import useTenantApi from "@/hooks/useTenantApi";
@@ -9,7 +10,7 @@ const BlogPost = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { getAll } = useTenantApi();
-  const [data, setData] = useState(null);
+  const [siteData, setSiteData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [liked, setLiked] = useState(false);
@@ -18,10 +19,10 @@ const BlogPost = () => {
     const fetchData = async () => {
       try {
         const response = await getAll("/site/data");
-        setData(response.site_data);
+        setSiteData(response);
       } catch (err) {
         setError(err.message);
-        setData({});
+        setSiteData({});
       } finally {
         setLoading(false);
       }
@@ -55,7 +56,7 @@ const BlogPost = () => {
     );
   }
 
-  const post = data?.blogs?.find((p) => p.id === parseInt(id));
+  const post = siteData?.blogs?.find((p) => p.id === parseInt(id));
 
   if (!post) {
     return (

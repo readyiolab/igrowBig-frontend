@@ -1,3 +1,4 @@
+// Home.jsx
 import React, { useEffect, useState } from "react";
 import { BookOpen, CircleEllipsis, User, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -14,7 +15,7 @@ function Home() {
     const fetchData = async () => {
       try {
         const response = await getAll("/site/data");
-        setSiteData(response.site_data);
+        setSiteData(response);
       } catch (err) {
         setError(err.message);
       } finally {
@@ -54,8 +55,8 @@ function Home() {
     );
   }
 
-  const homeData = siteData?.home || {};
-  const sliderBanners = siteData?.slider_banners || [];
+  const homeData = siteData?.homePage || {};
+  const sliderBanners = siteData?.sliders || [];
 
   // Dummy data for fallback
   const dummyBanners = [
