@@ -11,7 +11,6 @@ const CategoryProducts = () => {
   const navigate = useNavigate();
   const { getAll } = useTenantApi();
   const [siteData, setSiteData] = useState(null);
-  const [productPageData, setProductPageData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
@@ -22,10 +21,6 @@ const CategoryProducts = () => {
       try {
         const response = await getAll("/site/data");
         setSiteData(response);
-        
-        // Fetch product page data from tbl_product_page
-        const productPageResponse = await getAll("/product-page");
-        setProductPageData(productPageResponse.data || {});
       } catch (err) {
         setError(err.message);
       } finally {
@@ -67,9 +62,19 @@ const CategoryProducts = () => {
 
   const categories = siteData?.categories || [];
   const products = siteData?.products || [];
-  const aboutProductPage = siteData?.aboutProductPage || {}; // Use the object from site/data
+  const productPage = siteData?.productPage || {};
 
-  const selectedCat = categories.find((c) => c.name.toLowerCase().replace(/ & /g, '-').replace(/\s+/g, '-') === category?.toLowerCase());
+  // Normalize category param: replace hyphens with spaces, handle & 
+  const normalizedCategory = decodeURIComponent(category || "")
+    .replace(/-/g, ' ')
+    .replace(/%20/g, ' ')
+    .replace(/&/g, '&')
+    .trim();
+
+  const selectedCat = categories.find((c) => 
+    c.name.toLowerCase() === normalizedCategory.toLowerCase()
+  );
+
   const filteredProducts = selectedCat
     ? products.filter(
         (p) =>
@@ -94,10 +99,10 @@ const CategoryProducts = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Category Banner */}
-      {aboutProductPage?.banner_image_url && (
+      {productPage?.banner_image_url && (
         <div className="relative h-64 md:h-80 overflow-hidden bg-black group">
           <img
-            src={aboutProductPage.banner_image_url}
+            src={productPage.banner_image_url}
             alt={selectedCat.name}
             className="w-full h-full object-cover opacity-60 group-hover:opacity-70 transition-opacity duration-500"
           />
@@ -111,21 +116,21 @@ const CategoryProducts = () => {
       )}
 
       {/* About Description */}
-      {aboutProductPage?.about_description && (
+      {productPage?.about_description && (
         <div className="py-8 px-4 bg-white border-b border-gray-200">
           <div className="max-w-6xl mx-auto text-center text-gray-700 leading-relaxed text-lg">
-            <div dangerouslySetInnerHTML={{ __html: aboutProductPage.about_description }} />
+            <div dangerouslySetInnerHTML={{ __html: productPage.about_description }} />
           </div>
         </div>
       )}
 
       {/* Video Section if available */}
-      {aboutProductPage?.video_section_link && (
+      {productPage?.video_section_link && (
         <div className="py-12 px-4 bg-gray-50">
           <div className="max-w-6xl mx-auto">
             <div className="relative aspect-video rounded-2xl overflow-hidden shadow-xl hover:shadow-2xl transition-shadow duration-300">
               <video
-                src={aboutProductPage.video_section_link}
+                src={productPage.video_section_link}
                 controls
                 className="w-full h-full bg-black"
                 poster="https://images.unsplash.com/photo-1517694712202-14dd9538aa97?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=60"
