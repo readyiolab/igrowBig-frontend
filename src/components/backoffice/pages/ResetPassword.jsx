@@ -1,7 +1,7 @@
 // src/components/backoffice/pages/ResetPassword.jsx
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { useAppDispatch, useAppSelector } from '@/hooks';
+import { useDispatch,useSelector } from 'react-redux';
 import { resetPasswordAsync, clearError, clearMessage } from '@/store/slices/authSlice'; // Merged
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -12,7 +12,7 @@ import { Loader2, CheckCircle, XCircle, Lock } from 'lucide-react';
 
 const ResetPassword = () => {
   const [searchParams] = useSearchParams();
-  const dispatch = useAppDispatch();
+  const dispatch = useDispatch();
   const navigate = useNavigate();
 
   const token = searchParams.get('token');
@@ -21,9 +21,9 @@ const ResetPassword = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [localError, setLocalError] = useState('');
 
-  const loading = useAppSelector(selectAuthLoading);
-  const error = useAppSelector(selectAuthError);
-  const message = useAppSelector(selectAuthMessage);
+  const loading = useSelector(selectAuthLoading);
+  const error = useSelector(selectAuthError);
+  const message = useSelector(selectAuthMessage);
   const [validParams, setValidParams] = useState(true);
 
   useEffect(() => {
