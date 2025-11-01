@@ -25,19 +25,21 @@ export const theme = {
 };
 
 export const menuConfig = [
-  { to: '/backoffice/dashboard', label: 'Dashboard', icon: Home }, // Added Dashboard here
+  { to: '/backoffice/dashboard', label: 'Dashboard', icon: Home },
   {
     id: 'home',
     label: 'Home',
     icon: Home,
     subItems: [
-      { to: '/backoffice/slider-banners', label: 'Sliders Banner' },
-      { to: '/backoffice/welcome-message', label: 'Welcome Message' },
-      { to: '/backoffice/introduction', label: 'Introduction' },
-      { to: '/backoffice/about-company', label: 'About Company' },
-      { to: '/backoffice/why-network-marketing', label: 'Network Marketing' },
-      { to: '/backoffice/opportunity-video', label: 'Opportunity Video' },
-      { to: '/backoffice/support-message', label: 'Support Message' },
+      // { to: '/backoffice/slider-banners', label: 'Sliders Banner' },
+            { to: '/backoffice/homepage-hero', label: 'Hero Section' },
+      // { to: '/backoffice/welcome-message', label: 'Welcome Message' },
+
+      { to: '/backoffice/homepage-welcome', label: 'Welcome Section' },
+      { to: '/backoffice/homepage-about', label: 'About Section' },
+      { to: '/backoffice/homepage-history', label: 'History Section' },
+      { to: '/backoffice/homepage-video', label: 'Video Section' },
+      { to: '/backoffice/homepage-help', label: 'Help Section' },
     ],
   },
   {
@@ -55,21 +57,16 @@ export const menuConfig = [
     label: 'Opportunity',
     icon: Award,
     subItems: [
-      { to: '/backoffice/opportunity/page-banner', label: 'Page Banner' },
-      { to: '/backoffice/opportunity/page-content', label: 'Page Content' },
-      { to: '/backoffice/opportunity/video-section', label: 'Video Section' },
-      { to: '/backoffice/opportunity/compensation-plan', label: 'Compensation Plan' },
-    ],
+    { to: "/backoffice/opportunity/hero", label: "Hero Section" },
+    { to: "/backoffice/opportunity/description", label: "Description" },
+    { to: "/backoffice/opportunity/door", label: "Door of Opportunity" },
+    { to: "/backoffice/opportunity/marketing", label: "Why Network Marketing" },
+    { to: "/backoffice/opportunity/business-model", label: "Business Model" },
+    { to: "/backoffice/opportunity/video", label: "Overview Video" },
+    { to: "/backoffice/opportunity/compensation-plan", label: "Compensation Plan" },
+  ],
   },
-  {
-    id: 'join-us',
-    label: 'Join Us',
-    icon: UserPlus,
-    subItems: [
-      { to: '/backoffice/join-us/page-banner', label: 'Page Banner' },
-      { to: '/backoffice/join-us/page-content', label: 'Page Content' },
-    ],
-  },
+  
   { to: '/backoffice/contact-us', label: 'Contact Us', icon: MessageSquare },
   { to: '/backoffice/blogs', label: 'Blogs', icon: FileText },
   { to: '/backoffice/social-media', label: 'Social Media', icon: Share2 },
@@ -77,5 +74,5 @@ export const menuConfig = [
   { to: '/backoffice/subscriber-message', label: 'Subscriber Message', icon: Mail },
   { to: '/backoffice/notifications', label: 'Notifications', icon: HelpCircle },
   { to: '/backoffice/settings', label: 'Settings', icon: Settings },
-  {to : '/backoffice/training' , label:"Training" , icon:Settings}
+  { to: '/backoffice/training', label: 'Training', icon: Settings },
 ];

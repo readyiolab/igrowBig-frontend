@@ -1,248 +1,423 @@
-import React from 'react';
-import { Carousel, CarouselContent, CarouselItem } from '@/components/ui/carousel';
-import { Button } from '@/components/ui/button';
-import { Link } from 'react-router-dom';
-import TestimonialsSection from './TestimonialsSection';
-import { BookOpen, CircleEllipsis, User, ArrowRight } from 'lucide-react';
+import React, { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { BookOpen, CircleEllipsis, User, Play } from "lucide-react";
 
-// Editable Banner Data
-const banners = [
-    {
-        id: 1,
-        image: 'https://via.placeholder.com/1200x500',
-        description: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit.',
-        ctaText: 'Lorem Ipsum',
-        ctaLink: '/lorem-ipsum-1',
-    },
-    {
-        id: 2,
-        image: 'https://via.placeholder.com/1200x500',
-        description: 'Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.',
-        ctaText: 'Lorem Ipsum',
-        ctaLink: '/lorem-ipsum-2',
-    },
-    {
-        id: 3,
-        image: 'https://via.placeholder.com/1200x500',
-        description: 'Ut enim ad minim veniam, quis nostrud exercitation ullamco.',
-        ctaText: 'Lorem Ipsum',
-        ctaLink: '/lorem-ipsum-3',
-    },
-    {
-        id: 4,
-        image: 'https://via.placeholder.com/1200x500',
-        description: 'Duis aute irure dolor in reprehenderit in voluptate velit esse.',
-        ctaText: 'Lorem Ipsum',
-        ctaLink: '/lorem-ipsum-4',
-    },
-];
+// Mock API data - Replace with actual API call
+const mockApiData = {
+  hero_section_title: "Do you know what it means to have Dream Life?",
+  hero_section_content:
+    "<p>Living the Best Life means <strong>Excellent Health</strong>, Better Financial Potential, Enriching Personal Relationships and the freedom to spend YOUR time enjoying what makes you happy... we call that a <strong>Dream Life</strong>!</p>",
+  hero_banner_image_url:
+    "https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=1200&h=500&fit=crop",
+
+  welcome_section_title: "Welcome to Get Dream Life",
+  welcome_section_content:
+    "<p>Get Dream Life (GDL) welcomes to the world of opportunity and infinite potential for a great life. Yes, we mean it, '<strong>Infinite Human Potential</strong>'. If you're worried about job security, interested in extra income opportunities or looking for a change in your professional career, your worries stop here. You are at the right place.</p><p>This is the time to start your own business, be your own boss, choose your time of working and <strong>Live Your Dream Life</strong>. Get what you deserve, more than you expect. GDL is promoting a great network marketing opportunity which is making entrepreneurs around the world over last 15 years.</p><p>Enjoy peace of mind and be stress free by earning a second income easily promoting products you use every day. GDL is proud to work with <strong>NHT Global</strong> as an independent distributor. Learn more about this exciting opportunity on our site. And Yes, don't hesitate to contact us if need assistance.</p>",
+  welcome_section_image_url:
+    "https://images.unsplash.com/photo-1600880292203-757bb62b4baf?w=600&h=400&fit=crop",
+
+  about_section_title: "About NHT Global",
+  about_section_content:
+    "<p>NHT Global mission is to improve the way you feel- about yourself and about work. Providing effective, quality-of-life products for our customers and possibly the most lucrative compensation plan ever for the members and committed to the wellness of people across the globe.</p><ul><li>Proven company with a record breaking 15+ years history</li><li>Revolutionary e-commerce business model that is the envy of the industry</li><li>Currently operating in more than 38 countries and shipping product into more than 50</li><li>High impacting products promoting a healthy lifestyle</li><li>A balanced healthy lifestyle created through improved Physical health, Emotional health, and Financial health</li><li>Training system in place to ensure your success</li></ul>",
+  about_section_image_url:
+    "https://images.unsplash.com/photo-1560179707-f14e90ef3623?w=600&h=400&fit=crop",
+
+  history_section_title: "History of NHT Global",
+  history_section_content:
+    "<p><strong>Started in 2001</strong>, global headquarters in Los Angeles, California</p><p>To date, global sales are regularly increasing and growing at a record pace. Financial stable and carrying a legacy of 15+ years old company.</p><h3>Facts about the high impacting and high quality products:</h3><ul><li>Contain nobel prize winning research</li><li>Proprietary formulas developed to satisfy your wants</li><li>Are consumable, highly marketable and priced right</li><li>Developed loyal customers who know & love NHT global</li></ul><h3>Seamless global compensation plan that has:</h3><ul><li>Developed many successful individuals</li><li>Allowed to become entrepreneurs with their efforts and company's support</li></ul>",
+  history_section_image_url:
+    "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=600&h=400&fit=crop",
+
+  video_section_title: "Watch NHT Global Video",
+  video_section_youtube_url: "https://www.youtube.com/embed/dQw4w9WgXcQ",
+  video_section_file_url: null,
+
+  help_section_title: "How Get Dream Life Can Help",
+  help_section_content:
+    "<p>We are team of professional believe in your success is our success. Will provide you all possible support like:</p><ul><li>Training to understand the business in detail</li><li>Marketing platform and all possible tools to get success faster</li><li>Direct contact with founding members and top leaders committed to your success</li><li>All support to open new market or country where you can become pioneer</li></ul>",
+  help_section_image_url:
+    "https://images.unsplash.com/photo-1556761175-b413da4baf72?w=600&h=400&fit=crop",
+};
 
 function Home() {
+  const [pageData, setPageData] = useState(mockApiData);
+  const [loading, setLoading] = useState(false);
+
+  // Color palette
+  const colors = {
+    primary: "#d3d6db", // Light gray
+    secondary: "#3a4750", // Dark gray-blue
+    tertiary: "#303841", // Darker gray
+    accent: "#be3144", // Red accent
+  };
+
+  useEffect(() => {
+    setPageData(mockApiData);
+  }, []);
+
+  const renderContent = (htmlContent) => {
+    return { __html: htmlContent || "" };
+  };
+
+  if (loading) {
     return (
-        <div className="min-h-screen bg-white">
-            {/* Hero Carousel */}
-            <section aria-label="Featured Section" className="relative">
-                <Carousel className="w-full">
-                    <CarouselContent>
-                        {banners.map((banner) => (
-                            <CarouselItem key={banner.id}>
-                                <div className="relative h-64 sm:h-80 md:h-96 lg:h-[500px] overflow-hidden">
-                                    <img
-                                        src={banner.image}
-                                        alt={`Placeholder - ${banner.description}`}
-                                        className="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
-                                        loading="lazy"
-                                    />
-                                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent"></div>
-                                    <div className="absolute bottom-0 left-0 right-0 text-white p-4 sm:p-6 md:p-8">
-                                        <p className="text-xs sm:text-sm md:text-lg lg:text-xl font-medium drop-shadow-lg mb-4 max-w-3xl mx-auto text-center">
-                                            {banner.description}
-                                        </p>
-                                    </div>
-                                </div>
-                            </CarouselItem>
-                        ))}
-                    </CarouselContent>
-                </Carousel>
-            </section>
-
-            {/* Welcome Section */}
-            <section
-                aria-label="Welcome Section"
-                className="py-8 sm:py-12 md:py-16 px-4 sm:px-6 lg:px-16 bg-gradient-to-b from-indigo-50 to-white"
-            >
-                <div className="max-w-4xl mx-auto text-center">
-                    <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-medium mb-4 sm:mb-6 text-teal-900">
-                        Lorem Ipsum Dolor Sit Amet
-                    </h2>
-                    <p className="text-sm sm:text-md md:text-lg leading-relaxed mb-6 sm:mb-8 text-gray-700 px-2">
-                        Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
-                    </p>
-                    <Button
-                        asChild
-                        className="bg-teal-900 hover:bg-teal-600 text-white transition-all duration-300 rounded-md px-4 py-2 sm:px-6 sm:py-3"
-                    >
-                        <Link to="/join" className="flex items-center justify-center gap-2">
-                            Lorem Ipsum <User />
-                        </Link>
-                    </Button>
-                </div>
-            </section>
-
-            {/* Team Section */}
-            <section
-                aria-label="Message Section"
-                className="py-8 sm:py-12 md:py-16 px-4 sm:px-6 lg:px-16 bg-gradient-to-r from-teal-50 to-white"
-            >
-                <div className="max-w-6xl mx-auto">
-                    <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-medium mb-4 sm:mb-5 text-gray-900 text-center tracking-tight">
-                        Lorem Ipsum from Placeholder
-                    </h2>
-                    <div className="w-16 sm:w-24 h-1 bg-black mx-auto mb-6"></div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8 lg:gap-12 items-center">
-                        <div className="order-1 md:order-2 relative h-64 sm:h-72 md:h-[400px] lg:h-[500px] overflow-hidden rounded-xl shadow-2xl">
-                            <img
-                                src="https://via.placeholder.com/600x400"
-                                alt="Placeholder image"
-                                className="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
-                                loading="lazy"
-                            />
-                        </div>
-
-                        <div className="order-2 md:order-1 flex flex-col justify-center">
-                            <div className="space-y-6 sm:space-y-9 text-gray-700">
-                                <p className="text-sm sm:text-md md:text-lg leading-relaxed">
-                                    <span className="font-medium text-gray-900">Lorem ipsum</span>, dolor sit amet consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
-                                </p>
-                                <p className="text-sm sm:text-md md:text-lg leading-relaxed">
-                                    Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
-                                </p>
-                            </div>
-                            <div className="mt-4 sm:mt-5 text-center md:text-left">
-                                <p className="text-sm sm:text-md md:text-lg text-gray-600 mb-4 italic">
-                                    Lorem ipsum dolor sit amet?
-                                </p>
-                                <Button
-                                    asChild
-                                    className="text-white rounded-md px-4 py-2 sm:px-6 sm:py-3 font-medium shadow-md transition-all duration-300"
-                                >
-                                    <Link to="/learn" className="flex items-center justify-center gap-2">
-                                        Lorem Ipsum <CircleEllipsis />
-                                    </Link>
-                                </Button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            {/* About Section */}
-            <section
-                aria-label="About Placeholder"
-                className="py-8 sm:py-12 md:py-16 px-4 sm:px-6 lg:px-16 bg-gradient-to-r from-teal-50 to-white"
-            >
-                <div className="max-w-6xl mx-auto">
-                    <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-medium mb-4 sm:mb-5 text-teal-900 text-center tracking-tight">
-                        About Lorem Ipsum
-                    </h2>
-                    <div className="w-16 sm:w-24 h-1 bg-teal-900 mx-auto mb-6"></div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-10 lg:gap-14 items-center">
-                        <div className="order-2 md:order-1 flex flex-col justify-center">
-                            <ol className="text-sm sm:text-md md:text-lg leading-relaxed mb-6 sm:mb-8 text-gray-700 list-decimal pl-4 sm:pl-6 space-y-3 sm:space-y-4">
-                                <li className="font-medium">Lorem ipsum dolor sit amet.</li>
-                                <li className="font-medium">Consectetur adipiscing elit.</li>
-                                <li className="font-medium">Sed do eiusmod tempor incididunt.</li>
-                                <li className="font-medium">Ut enim ad minim veniam.</li>
-                                <li>
-                                    <span className="font-medium">Duis aute irure dolor:</span>
-                                    <ul className="list-disc pl-4 sm:pl-6 mt-2 space-y-2 text-gray-600 text-sm sm:text-md">
-                                        <li>Lorem ipsum</li>
-                                        <li>Dolor sit amet</li>
-                                        <li>Consectetur adipiscing</li>
-                                    </ul>
-                                </li>
-                                <li className="font-medium">Exercitation ullamco laboris.</li>
-                            </ol>
-                            <Button
-                                asChild
-                                className="bg-teal-600 hover:bg-teal-700 text-white rounded-lg px-4 py-2 sm:px-6 sm:py-3 font-semibold shadow-lg transition-all duration-300 w-fit mx-auto md:mx-0"
-                            >
-                                <Link to="/about" className="flex items-center justify-center gap-2">
-                                    Lorem Ipsum <CircleEllipsis />
-                                </Link>
-                            </Button>
-                        </div>
-
-                        <div className="order-1 md:order-2 relative h-64 sm:h-72 md:h-[400px] lg:h-[500px] overflow-hidden rounded-xl shadow-2xl">
-                            <img
-                                src="https://via.placeholder.com/600x400"
-                                alt="Placeholder image"
-                                className="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
-                                loading="lazy"
-                            />
-                        </div>
-                    </div>
-
-                    <div className="mt-8 sm:mt-12 p-6 sm:p-8 bg-white border border-teal-100 shadow-md rounded-2xl italic max-w-3xl sm:max-w-4xl mx-auto">
-                        <p className="text-sm sm:text-md md:text-lg leading-relaxed text-gray-700 text-center">
-                            <span className="font-semibold font-serif text-teal-800">Lorem ipsum</span> dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
-                        </p>
-                    </div>
-                </div>
-            </section>
-
-            {/* Why Section */}
-            <section
-                aria-label="Why Placeholder"
-                className="py-8 sm:py-12 md:py-16 px-4 sm:px-6 lg:px-16 bg-gradient-to-b from-indigo-50 to-white"
-            >
-                <div className="max-w-6xl mx-auto">
-                    <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-medium mb-4 sm:mb-5 text-center tracking-tight">
-                        Why Lorem Ipsum?
-                    </h2>
-                    <div className="w-16 sm:w-24 h-1 bg-black mx-auto mb-6"></div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-10 lg:gap-14 items-center">
-                        <div className="order-2 md:order-1 relative h-64 sm:h-72 md:h-[400px] lg:h-[500px] overflow-hidden rounded-xl shadow-2xl">
-                            <div
-                                className="w-full h-full bg-cover bg-center transition-transform duration-500 hover:scale-105"
-                                style={{
-                                    backgroundImage: `url('https://via.placeholder.com/600x400')`,
-                                    backgroundAttachment: 'fixed',
-                                    backgroundPosition: 'center',
-                                }}
-                            ></div>
-                        </div>
-
-                        <div className="order-1 md:order-2 flex flex-col justify-center">
-                            <ol className="text-sm sm:text-md md:text-lg leading-relaxed mb-6 sm:mb-8 text-gray-700 list-decimal pl-4 sm:pl-6 space-y-3 sm:space-y-4">
-                                <li className="font-medium">Lorem ipsum dolor sit amet.</li>
-                                <li className="font-medium">Consectetur adipiscing elit.</li>
-                                <li className="font-medium">Sed do eiusmod tempor incididunt.</li>
-                                <li className="font-medium">Ut enim ad minim veniam.</li>
-                                <li className="font-medium">Quis nostrud exercitation.</li>
-                                <li className="font-medium">Ullamco laboris nisi.</li>
-                                <li className="font-medium">Aliquip ex ea commodo.</li>
-                                <li className="font-medium">Duis aute irure dolor.</li>
-                                <li className="font-medium">Voluptate velit esse.</li>
-                            </ol>
-                            <Button
-                                asChild
-                                className="text-white rounded-lg px-4 py-2 sm:px-6 sm:py-3 font-semibold shadow-lg transition-all duration-300 w-fit mx-auto md:mx-0"
-                            >
-                                <Link to="/explore" className="flex items-center justify-center gap-2">
-                                    Lorem Ipsum <BookOpen />
-                                </Link>
-                            </Button>
-                        </div>
-                    </div>
-                </div>
-            </section>
-            {/* <TestimonialsSection /> */}
-        </div>
+      <div
+        className="min-h-screen flex items-center justify-center"
+        style={{ background: colors.primary }}
+      >
+        <div
+          className="animate-spin rounded-full h-12 w-12 border-b-2"
+          style={{ borderColor: colors.accent }}
+        ></div>
+      </div>
     );
+  }
+
+  return (
+    <div className="min-h-screen" style={{ background: colors.primary }}>
+     
+      {/* Hero Section */}
+<section aria-label="Hero Section" className="relative">
+  <div className="flex flex-col lg:flex-row min-h-[400px] md:min-h-[500px] lg:min-h-[600px]">
+    {/* Left Side: Content */}
+    <div className="lg:w-1/2 flex items-center justify-center bg-gradient-to-r from-[rgba(34,40,49,0.95)] via-[rgba(34,40,49,0.7)] to-[rgba(34,40,49,0.3)] lg:to-transparent py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-2xl text-center lg:text-left">
+        <h1
+          className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-semibold mb-6 leading-tight tracking-tight"
+          style={{
+            color: colors.primary,
+            textShadow: '2px 2px 4px rgba(0, 0, 0, 0.5)',
+          }}
+        >
+          {pageData?.hero_section_title || 'Default Hero Title'}
+        </h1>
+        <div
+          className="text-lg sm:text-xl max-w-none font-medium"
+          style={{
+            color: colors.primary,
+            textShadow: '1px 1px 3px rgba(0, 0, 0, 0.3)',
+          }}
+          dangerouslySetInnerHTML={renderContent(
+            pageData?.hero_section_content || 'Default hero content goes here.'
+          )}
+        />
+        <Button
+        size="lg"
+          className="mt-10 px-10 py-5 text-xl  duration-300 text-white font-medium cursor-pointer"
+          style={{ background: colors.accent }}
+        >
+          {pageData?.hero_button_text || 'Get Started Today'}
+        </Button>
+      </div>
+    </div>
+
+    {/* Right Side: Image */}
+    <div className="lg:w-1/2 h-[300px] lg:h-auto overflow-hidden">
+      <img
+        src={pageData?.hero_banner_image_url || 'https://via.placeholder.com/800x600'}
+        alt={pageData?.hero_image_alt || 'Hero Banner'}
+        className="w-full h-full object-cover"
+        loading="eager"
+      />
+    </div>
+  </div>
+</section>
+
+      {/* Welcome Section */}
+      <section
+        className="py-16 md:py-24 px-4 sm:px-6 lg:px-8"
+        style={{ background: "#ffffff" }}
+      >
+        <div className="max-w-7xl mx-auto">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+            <div className="order-2 lg:order-1">
+              <h2
+                className="text-3xl md:text-4xl lg:text-5xl font-semibold mb-6"
+                style={{ color: colors.tertiary }}
+              >
+                {pageData.welcome_section_title}
+              </h2>
+              <div
+                className="prose prose-lg max-w-none leading-relaxed"
+                style={{ color: colors.secondary }}
+                dangerouslySetInnerHTML={renderContent(
+                  pageData.welcome_section_content
+                )}
+              />
+              <Button
+                className="mt-8 px-6 py-3  shadow-lg flex items-center gap-2 text-white font-semibold"
+                style={{ background: colors.accent }}
+              >
+                Join Our Community <User className="w-5 h-5" />
+              </Button>
+            </div>
+            <div className="order-1 lg:order-2 relative">
+              <div className="relative   transform  transition-transform duration-500">
+                <img
+                  src={pageData.welcome_section_image_url}
+                  alt="Welcome"
+                  className="w-full h-[400px] object-cover"
+                  loading="lazy"
+                />
+                <div
+                  className="absolute inset-0"
+                  style={{
+                    background:
+                      "linear-gradient(to top, rgba(190, 49, 68, 0.2), transparent)",
+                  }}
+                ></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* About Section */}
+      <section
+        className="py-16 md:py-24 px-4 sm:px-6 lg:px-8"
+        style={{ background: colors.primary }}
+      >
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-12">
+            <h2
+              className="text-3xl md:text-4xl lg:text-5xl font-semibold mb-4"
+              style={{ color: colors.tertiary }}
+            >
+              {pageData.about_section_title}
+            </h2>
+            <div
+              className="w-24 h-1 mx-auto"
+              style={{ background: colors.accent }}
+            ></div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+            <div className="relative">
+              <div className="relative  transition-transform duration-500">
+                <img
+                  src={pageData.about_section_image_url}
+                  alt="About Us"
+                  className="w-full h-[400px] object-cover"
+                  loading="lazy"
+                />
+              </div>
+            </div>
+            <div>
+              <div
+                className="prose prose-lg max-w-none leading-relaxed"
+                style={{ color: colors.secondary }}
+                dangerouslySetInnerHTML={renderContent(
+                  pageData.about_section_content
+                )}
+              />
+              <Button
+                className="mt-8 px-6 py-3  shadow-lg flex items-center gap-2 text-white font-semibold"
+                style={{ background: colors.accent }}
+              >
+                Learn More <CircleEllipsis className="w-5 h-5" />
+              </Button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* History Section */}
+      <section
+        className="py-16 md:py-24 px-4 sm:px-6 lg:px-8"
+        style={{ background: "#ffffff" }}
+      >
+        <div className="max-w-7xl mx-auto">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+            <div>
+              <h2
+                className="text-3xl md:text-4xl lg:text-5xl font-semibold mb-6"
+                style={{ color: colors.tertiary }}
+              >
+                {pageData.history_section_title}
+              </h2>
+              <div
+                className="prose prose-lg max-w-none leading-relaxed"
+                style={{ color: colors.secondary }}
+                dangerouslySetInnerHTML={renderContent(
+                  pageData.history_section_content
+                )}
+              />
+            </div>
+            <div className="relative">
+              <div className="relative ">
+                <img
+                  src={pageData.history_section_image_url}
+                  alt="Our History"
+                  className="w-full h-[400px] object-cover"
+                  loading="lazy"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Video Section */}
+      {(pageData.video_section_youtube_url ||
+        pageData.video_section_file_url) && (
+        <section
+          className="py-16 md:py-24 px-4 sm:px-6 lg:px-8"
+          style={{ background: colors.tertiary }}
+        >
+          <div className="max-w-5xl mx-auto text-center">
+            <h2
+              className="text-3xl md:text-4xl lg:text-5xl font-semibold mb-4"
+              style={{ color: colors.primary }}
+            >
+              {pageData.video_section_title}
+            </h2>
+            <div
+              className="w-24 h-1 mx-auto mb-12"
+              style={{ background: colors.accent }}
+            ></div>
+
+            <div className="relative rounded-2xl overflow-hidden shadow-2xl aspect-video bg-black">
+              {pageData.video_section_youtube_url ? (
+                <iframe
+                  src={pageData.video_section_youtube_url}
+                  className="w-full h-full"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                ></iframe>
+              ) : (
+                <video
+                  src={pageData.video_section_file_url}
+                  controls
+                  className="w-full h-full"
+                >
+                  Your browser does not support the video tag.
+                </video>
+              )}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* Help Section */}
+      <section
+        className="py-16 md:py-24 px-4 sm:px-6 lg:px-8"
+        style={{ background: colors.primary }}
+      >
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-12">
+            <h2
+              className="text-3xl md:text-4xl lg:text-5xl font-semibold mb-4"
+              style={{ color: colors.tertiary }}
+            >
+              {pageData.help_section_title}
+            </h2>
+            <div
+              className="w-24 h-1 mx-auto"
+              style={{ background: colors.accent }}
+            ></div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+            <div className="order-2 lg:order-1">
+              <div
+                className="prose prose-lg max-w-none leading-relaxed"
+                style={{ color: colors.secondary }}
+                dangerouslySetInnerHTML={renderContent(
+                  pageData.help_section_content
+                )}
+              />
+              <Button
+                className="mt-8 px-6 py-3  flex items-center gap-2 text-white font-semibold"
+                style={{ background: colors.accent }}
+              >
+                Explore Resources <BookOpen className="w-5 h-5" />
+              </Button>
+            </div>
+            <div className="order-1 lg:order-2 relative">
+              <div className="relative  transform transition-transform duration-500">
+                <img
+                  src={pageData.help_section_image_url}
+                  alt="How We Help"
+                  className="w-full h-[400px] object-cover"
+                  loading="lazy"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* CTA Section */}
+      <section
+        className="py-20 px-4 sm:px-6 lg:px-8 m-10 rounded-2xl"
+        style={{ background: colors.secondary }}
+      >
+        <div className="max-w-4xl mx-auto text-center">
+          <h2 className="text-3xl md:text-4xl lg:text-5xl font-medium mb-6 text-white">
+            Ready to Start Your Journey?
+          </h2>
+          <p className="text-xl mb-8 text-white">
+            Join thousands of successful entrepreneurs today
+          </p>
+          <Button
+            className="px-8 py-6 text-lg  shadow-xl transform  transition-all duration-300 text-white font-medium"
+            style={{ background: colors.accent }}
+          >
+            Get Started Now
+          </Button>
+        </div>
+      </section>
+
+      {/* Custom Styles for React Quill Content */}
+      <style>{`
+                .prose h3 {
+                    font-size: 1.5rem;
+                    font-weight: 700;
+                    margin-top: 1.5rem;
+                    margin-bottom: 1rem;
+                    color: ${colors.tertiary};
+                }
+                .prose ul, .prose ol {
+                    margin-top: 1rem;
+                    margin-bottom: 1rem;
+                    padding-left: 1.5rem;
+                }
+                .prose li {
+                    margin-top: 0.5rem;
+                    margin-bottom: 0.5rem;
+                }
+                .prose ul li {
+                    list-style-type: disc;
+                }
+                .prose ol li {
+                    list-style-type: decimal;
+                }
+                .prose strong {
+                    font-weight: 700;
+                    color: ${colors.accent};
+                }
+                .prose em {
+                    font-style: italic;
+                }
+                .prose p {
+                    margin-top: 1rem;
+                    margin-bottom: 1rem;
+                    line-height: 1.8;
+                }
+                
+                /* Hero section specific styles */
+                [aria-label="Hero Section"] strong {
+                    font-weight: 700;
+                    color: ${colors.primary};
+                }
+                [aria-label="Hero Section"] p {
+                    margin-top: 0.5rem;
+                    margin-bottom: 0.5rem;
+                    line-height: 1.8;
+                }
+            `}</style>
+    </div>
+  );
 }
 
 export default Home;

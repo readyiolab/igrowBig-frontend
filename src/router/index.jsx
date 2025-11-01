@@ -28,15 +28,22 @@ const BackofficeLogin = lazy(() => import("@/components/backoffice/pages/Backoff
 const BackofficeDashboard = lazy(() => import("@/components/backoffice/pages/Dashboard"));
 const SliderBanner = lazy(() => import("@/components/backoffice/pages/SliderBanner"));
 const WelcomeMessage = lazy(() => import("@/components/backoffice/pages/WelcomeMessage"));
-const HomePageIntroduction = lazy(() => import("@/components/backoffice/pages/HomePageIntroduction"));
-const HomepageAboutCompany = lazy(() => import("@/components/backoffice/pages/HomepageAboutCompany"));
+const HomepageHeroSection = lazy(() => import("@/components/backoffice/pages/HomepageHeroSection"));
+const HomepageWelcomeSection = lazy(() => import("@/components/backoffice/pages/HomepageWelcomeSection"));
+const HomepageAboutSection = lazy(() => import("@/components/backoffice/pages/HomepageAboutSection"));
+const HomepageHistorySection = lazy(() => import("@/components/backoffice/pages/HomepageHistorySection"));
+const HomepageVideoSection = lazy(() => import("@/components/backoffice/pages/HomepageVideoSection"));
+const HomepageHelpSection = lazy(() => import("@/components/backoffice/pages/HomepageHelpSection"));
 const ProductPage = lazy(() => import("@/components/backoffice/pages/ProductPage"));
 const CategoryEditor = lazy(() => import("@/components/backoffice/pages/CategoryEditor"));
 const ProductEditor = lazy(() => import("@/components/backoffice/pages/ProductEditor"));
-const OpportunityOverviewPageBanner = lazy(() => import("@/components/backoffice/pages/OpportunityOverviewPageBanner"));
-const OpportunityOverviewPageContent = lazy(() => import("@/components/backoffice/pages/OpportunityOverviewPageContent"));
-const OpportunityOverviewVideoSection = lazy(() => import("@/components/backoffice/pages/OpportunityOverviewVideoSection"));
-const OpportunityOverviewCompensationPlan = lazy(() => import("@/components/backoffice/pages/OpportunityOverviewCompensationPlan"));
+const OpportunityHeroSection = lazy(() => import("@/components/backoffice/pages/OpportunityHeroSection"));
+const OpportunityDescriptionSection = lazy(() => import("@/components/backoffice/pages/OpportunityDescriptionSection"));
+const OpportunityDoorSection = lazy(() => import("@/components/backoffice/pages/OpportunityDoorSection"));
+const OpportunityMarketingSection = lazy(() => import("@/components/backoffice/pages/OpportunityMarketingSection"));
+const OpportunityBusinessModelSection = lazy(() => import("@/components/backoffice/pages/OpportunityBusinessModelSection"));
+const OpportunityVideoSection = lazy(() => import("@/components/backoffice/pages/OpportunityVideoSection"));
+const OpportunityCompensationPlan = lazy(() => import("@/components/backoffice/pages/OpportunityCompensationPlan"));
 const PageBannerEditor = lazy(() => import("@/components/backoffice/pages/PageBannerEditor"));
 const PageContentEditor = lazy(() => import("@/components/backoffice/pages/PageContentEditor"));
 const ContactUsEditor = lazy(() => import("@/components/backoffice/pages/ContactUsEditor"));
@@ -45,9 +52,6 @@ const SocialMediaEditor = lazy(() => import("@/components/backoffice/pages/Socia
 const FooterEditor = lazy(() => import("@/components/backoffice/pages/FooterEditor"));
 const TenantSettings = lazy(() => import("@/components/backoffice/pages/TenantSettings"));
 const BackofficeSignup = lazy(() => import("@/components/backoffice/pages/BackofficeSignup"));
-const HomepageOpportunityVideo = lazy(() => import("@/components/backoffice/pages/HomepageOpportunityVideo"));
-const HomepageSupportMessage = lazy(() => import("@/components/backoffice/pages/HomepageSupportMessage"));
-const HomepageWhyNetworkMarketing = lazy(() => import("@/components/backoffice/pages/HomepageWhyNetworkMarketing"));
 const SuperadminNotificationList = lazy(() => import("@/components/backoffice/pages/SuperadminNotificationList"));
 const SubscriberMessagePlaceholder = lazy(() => import("@/components/backoffice/pages/SubscriberMessagePlaceholder"));
 const TenantTrainingList = lazy(() => import("@/components/backoffice/pages/TenantTrainingList"));
@@ -55,9 +59,11 @@ const TenantTrainingList = lazy(() => import("@/components/backoffice/pages/Tena
 const MainLayout = lazy(() => import("@/templates/Template1/layouts/MainLayout"));
 const MainLayout2 = lazy(() => import("@/templates/Template2/layouts/MainLayout"));
 const EcommerceHome = lazy(() => import("@/templates/Template1/pages/Home"));
-const EcommerceProducts = lazy(() => import("@/templates/Template1/pages/Products"));
-const EcommerceProductDetail = lazy(() => import("@/templates/Template1/pages/ProductDetail"));
+const EcommerceProducts = lazy(() => import("@/templates/Template1/pages/ProductsPage "));
+const EcommerceCategoryProductsPage  = lazy(() => import("@/templates/Template1/pages/CategoryProductsPage"));
+const EcommerceProductDetail = lazy(() => import("@/templates/Template1/pages/ProductDetailPage"));
 const EcommerceOpportunity = lazy(() => import("@/templates/Template1/pages/Opportunity"));
+const EcommerceOpportunityOverView = lazy(() => import("@/templates/Template1/pages/OpportunityOverview"));
 const EcommerceJoinUs = lazy(() => import("@/templates/Template1/pages/JoinUs"));
 const EcommerceContact = lazy(() => import("@/templates/Template1/pages/Contact"));
 const EcommerceBlog = lazy(() => import("@/templates/Template1/pages/Blog"));
@@ -75,6 +81,7 @@ const ProductsListing = lazy(() => import("@/dynamictemplate/Template1/pages/Pro
 const CategoryProducts = lazy(() => import("@/dynamictemplate/Template1/pages/CategoryProducts"));
 const ProductDetail = lazy(() => import("@/dynamictemplate/Template1/pages/ProductDetail"));
 const DynamicOpportunity = lazy(() => import("@/dynamictemplate/Template1/pages/Opportunity"));
+const DynamicOpportunityOverView = lazy(() => import("@/dynamictemplate/Template1/pages/OpportunityOverview"));
 const DynamicJoinUs = lazy(() => import("@/dynamictemplate/Template1/pages/JoinUs"));
 const DynamicContact = lazy(() => import("@/dynamictemplate/Template1/pages/Contact"));
 const DynamicBlog = lazy(() => import("@/dynamictemplate/Template1/pages/Blog"));
@@ -118,52 +125,54 @@ const router = createBrowserRouter([
 
   // BACKOFFICE - Add the rest following this pattern
   protect(
-    {
-      path: "/backoffice",
-      element: wrap(BackofficeLayout)(),
-      children: [
-        { path: "dashboard", element: wrap(BackofficeDashboard)() },
-        { path: "slider-banners", element: wrap(SliderBanner)() },
-        { path: "welcome-message", element: wrap(WelcomeMessage)() },
-        { path: "introduction", element: wrap(HomePageIntroduction)() },
-        { path: "about-company", element: wrap(HomepageAboutCompany)() },
-        { path: "why-network-marketing", element: wrap(HomepageWhyNetworkMarketing)() },
-        { path: "opportunity-video", element: wrap(HomepageOpportunityVideo)() },
-        { path: "support-message", element: wrap(HomepageSupportMessage)() },
-        { path: "about-page", element: wrap(ProductPage)() },
-        { path: "categories", element: wrap(CategoryEditor)() },
-        { path: "products-list", element: wrap(ProductEditor)() },
-        {
-          path: "opportunity",
-          children: [
-            { index: true, element: wrap(OpportunityOverviewPageBanner)() },
-            { path: "page-banner", element: wrap(OpportunityOverviewPageBanner)() },
-            { path: "page-content", element: wrap(OpportunityOverviewPageContent)() },
-            { path: "video-section", element: wrap(OpportunityOverviewVideoSection)() },
-            { path: "compensation-plan", element: wrap(OpportunityOverviewCompensationPlan)() },
-          ],
-        },
-        {
-          path: "join-us",
-          children: [
-            { index: true, element: wrap(PageBannerEditor)() },
-            { path: "page-banner", element: wrap(PageBannerEditor)() },
-            { path: "page-content", element: wrap(PageContentEditor)() },
-          ],
-        },
-        { path: "contact-us", element: wrap(ContactUsEditor)() },
-        { path: "blogs", element: wrap(BlogEditor)() },
-        { path: "social-media", element: wrap(SocialMediaEditor)() },
-        { path: "footer-disclaimer", element: wrap(FooterEditor)() },
-        { path: "subscriber-message", element: wrap(SubscriberMessagePlaceholder)() },
-        { path: "settings", element: wrap(TenantSettings)() },
-        { path: "notifications", element: wrap(SuperadminNotificationList)() },
-        { path: "training", element: wrap(TenantTrainingList)() },
-        // ADD MORE BACKOFFICE PAGES HERE USING wrap(Component)()
-      ],
-    },
-    BackofficeProtectedRoute
-  ),
+  {
+    path: "/backoffice",
+    element: wrap(BackofficeLayout)(),
+    children: [
+      { path: "dashboard", element: wrap(BackofficeDashboard)() },
+      { path: "slider-banners", element: wrap(SliderBanner)() },
+      { path: "welcome-message", element: wrap(WelcomeMessage)() },
+      { path: "homepage-hero", element: wrap(HomepageHeroSection)() },
+      { path: "homepage-welcome", element: wrap(HomepageWelcomeSection)() },
+      { path: "homepage-about", element: wrap(HomepageAboutSection)() },
+      { path: "homepage-history", element: wrap(HomepageHistorySection)() },
+      { path: "homepage-video", element: wrap(HomepageVideoSection)() },
+      { path: "homepage-help", element: wrap(HomepageHelpSection)() },
+      { path: "about-page", element: wrap(ProductPage)() },
+      { path: "categories", element: wrap(CategoryEditor)() },
+      { path: "products-list", element: wrap(ProductEditor)() },
+      {
+  path: "opportunity",
+  children: [
+    { path: "hero", element: wrap(OpportunityHeroSection)() },
+    { path: "description", element: wrap(OpportunityDescriptionSection)() },
+    { path: "door", element: wrap(OpportunityDoorSection)() },
+    { path: "marketing", element: wrap(OpportunityMarketingSection)() },
+    { path: "business-model", element: wrap(OpportunityBusinessModelSection)() },
+    { path: "video", element: wrap(OpportunityVideoSection)() },
+    { path: "compensation-plan", element: wrap(OpportunityCompensationPlan)() },
+  ],
+},
+      {
+        path: "join-us",
+        children: [
+          { index: true, element: wrap(PageBannerEditor)() },
+          { path: "page-banner", element: wrap(PageBannerEditor)() },
+          { path: "page-content", element: wrap(PageContentEditor)() },
+        ],
+      },
+      { path: "contact-us", element: wrap(ContactUsEditor)() },
+      { path: "blogs", element: wrap(BlogEditor)() },
+      { path: "social-media", element: wrap(SocialMediaEditor)() },
+      { path: "footer-disclaimer", element: wrap(FooterEditor)() },
+      { path: "subscriber-message", element: wrap(SubscriberMessagePlaceholder)() },
+      { path: "settings", element: wrap(TenantSettings)() },
+      { path: "notifications", element: wrap(SuperadminNotificationList)() },
+      { path: "training", element: wrap(TenantTrainingList)() },
+    ],
+  },
+  BackofficeProtectedRoute
+),
 
   // AUTH
   { path: "backoffice-login", element: wrap(BackofficeLogin)() },
@@ -177,14 +186,46 @@ const router = createBrowserRouter([
     path: "/template1",
     element: wrap(MainLayout)(),
     children: [
-      { path: "", element: wrap(EcommerceHome)() },
-      { path: "products", element: wrap(EcommerceProducts)() },
-      { path: "product/:id", element: wrap(EcommerceProductDetail)() },
-      { path: "opportunity", element: wrap(EcommerceOpportunity)() },
-      { path: "join-us", element: wrap(EcommerceJoinUs)() },
-      { path: "contact", element: wrap(EcommerceContact)() },
-      { path: "blog", element: wrap(EcommerceBlog)() },
-      { path: "blog/:id", element: wrap(EcommerceBlogPost)() },
+      { 
+        path: "", 
+        element: wrap(EcommerceHome)() 
+      },
+      { 
+        path: "products", 
+        element: wrap(EcommerceProducts)() 
+      },
+      { 
+        path: "products/:categorySlug", 
+        element: wrap(EcommerceCategoryProductsPage)() 
+      },
+      { 
+        path: "products/:categorySlug/:productSlug", 
+        element: wrap(EcommerceProductDetail)() 
+      },
+      { 
+        path: "opportunity", 
+        element: wrap(EcommerceOpportunity)() 
+      },
+      {
+        path: "opportunity-overview",
+        element: wrap(EcommerceOpportunityOverView)()
+      },
+      { 
+        path: "join-us", 
+        element: wrap(EcommerceJoinUs)() 
+      },
+      { 
+        path: "contact", 
+        element: wrap(EcommerceContact)() 
+      },
+      { 
+        path: "blog", 
+        element: wrap(EcommerceBlog)() 
+      },
+      { 
+        path: "blog/:id", 
+        element: wrap(EcommerceBlogPost)() 
+      },
     ],
   },
 
@@ -220,6 +261,10 @@ const router = createBrowserRouter([
   {
     path: "/opportunity",
     element: <DynamicTemplateLoader>{wrap(DynamicOpportunity)()}</DynamicTemplateLoader>,
+  },
+  {
+    path: "/opportunity-overview",
+    element: <DynamicTemplateLoader>{wrap(DynamicOpportunityOverView)()}</DynamicTemplateLoader>,
   },
   {
     path: "/join-us",

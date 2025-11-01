@@ -1,16 +1,9 @@
 import React, { useState } from 'react';
-import {
-  Carousel,
-  CarouselContent,
-  CarouselItem,
-  CarouselNext,
-  CarouselPrevious
-} from '@/components/ui/carousel';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Phone, MapPin } from 'lucide-react'; // Fixed icon name from Pin to MapPin
+import { Phone, MapPin, Mail, Clock, Send, MessageCircle, ArrowRight } from 'lucide-react';
 
 function Contact() {
   const [formData, setFormData] = useState({
@@ -21,24 +14,6 @@ function Contact() {
     message: '',
     captcha: ''
   });
-
-  const carouselItems = [
-    {
-      id: 1,
-      text: "Get in Touch",
-      image: "https://images.unsplash.com/photo-1557426272-fc91fdb8f385?q=80&w=2070&auto=format&fit=crop"
-    },
-    {
-      id: 2,
-      text: "We’re Here to Help",
-      image: "https://images.unsplash.com/photo-1516321310766-16f15db3248e?q=80&w=2070&auto=format&fit=crop"
-    },
-    {
-      id: 3,
-      text: "Connect With Us",
-      image: "https://images.unsplash.com/photo-1528747045269-390fe33c19f2?q=80&w=2070&auto=format&fit=crop"
-    },
-  ];
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -52,207 +27,209 @@ function Contact() {
   const handleSubmit = (e) => {
     e.preventDefault();
     console.log('Form submitted:', formData);
-    // Add your form submission logic here (e.g., API call)
     setFormData({ name: '', email: '', phone: '', country: '', message: '', captcha: '' });
   };
 
   return (
-    <div className="bg-gray-50 min-h-screen flex flex-col">
-      {/* Carousel */}
-      <section aria-label="Contact Us Highlights" className="relative w-full">
-        <Carousel className="w-full">
-          <CarouselContent>
-            {carouselItems.map((banner) => (
-              <CarouselItem key={banner.id}>
-                <div className="relative h-64 sm:h-80 md:h-96 lg:h-[500px] w-full overflow-hidden">
-                  <img
-                    src={banner.image}
-                    alt={`${banner.text} - NHT Global`}
-                    className="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
-                    loading="lazy"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-gray-900/70 to-transparent" />
-                  <div className="absolute bottom-4 left-4 sm:bottom-6 sm:left-6 text-white">
-                    <h1 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-semibold drop-shadow-md">
-                      {banner.text}
-                    </h1>
-                  </div>
-                </div>
-              </CarouselItem>
-            ))}
-          </CarouselContent>
-          <CarouselPrevious className="left-2 sm:left-4 top-1/2 -translate-y-1/2" />
-          <CarouselNext className="right-2 sm:right-4 top-1/2 -translate-y-1/2" />
-        </Carousel>
+    <div className="bg-[#d3d6db] min-h-screen flex flex-col">
+      {/* Hero Section */}
+      <section className="relative w-full h-64 sm:h-72 md:h-80 lg:h-96 overflow-hidden">
+        <img
+          src="https://plus.unsplash.com/premium_photo-1681487748082-839c7c0ee0c4?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTN8fGNvbnRhY3R8ZW58MHx8MHx8fDA%3D&auto=format&fit=crop&q=60&w=600"
+          alt="Contact NHT Global"
+          className="w-full h-full object-cover"
+          loading="lazy"
+        />
+        <div className="absolute inset-0 bg-gradient-to-br from-[#303841]/95 via-[#3a4750]/85 to-[#303841]/90" />
+        <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-4">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-semibold text-white mb-4">
+            Let's Connect
+          </h1>
+          
+        </div>
       </section>
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 flex-grow">
-        {/* Contact Form Section */}
-        <section className=" p-6 sm:p-8 mb-8 sm:mb-12">
-          <h1 className="text-2xl sm:text-3xl md:text-4xl font-medium text-gray-800 mb-4 text-center">
-            Contact Us
-          </h1>
-          <p className="text-base sm:text-lg text-gray-700 text-center mb-6 sm:mb-8 max-w-2xl mx-auto">
-            We’d love to hear from you! Fill out the form below to get in touch.
-          </p>
-          <form onSubmit={handleSubmit} className="max-w-4xl mx-auto space-y-6">
-            <div className="grid md:grid-cols-2 gap-4 sm:gap-6">
-              {/* Left Column */}
-              <div className="space-y-4 sm:space-y-6">
-                <div>
-                  <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
-                    Your Name
-                  </label>
-                  <Input
-                    id="name"
-                    name="name"
-                    value={formData.name}
-                    onChange={handleChange}
-                    placeholder="Enter your name"
-                    className="w-full"
-                    required
-                  />
-                </div>
-                <div>
-                  <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-                    Your Email
-                  </label>
-                  <Input
-                    id="email"
-                    name="email"
-                    type="email"
-                    value={formData.email}
-                    onChange={handleChange}
-                    placeholder="Enter your email"
-                    className="w-full"
-                    required
-                  />
-                </div>
-                <div>
-                  <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
-                    Phone No.
-                  </label>
-                  <Input
-                    id="phone"
-                    name="phone"
-                    type="tel"
-                    value={formData.phone}
-                    onChange={handleChange}
-                    placeholder="Enter your phone number"
-                    className="w-full"
-                    required
-                  />
-                </div>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 flex-grow">
+        <div className="grid lg:grid-cols-3 gap-8 lg:gap-12 mb-16">
+          {/* Contact Info Cards */}
+          <div className="lg:col-span-1 space-y-6">
+            <div className=" p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+              <div className="bg-[#be3144] w-12 h-12 rounded-lg flex items-center justify-center mb-4">
+                <Mail className="w-6 h-6 text-white" />
               </div>
+              <h3 className="text-xl font-semibold text-black mb-2">Email Us</h3>
+              <a href="mailto:support@nhtglobal.com" className="text-black  transition-colors">
+                support@nhtglobal.com
+              </a>
+            </div>
 
-              {/* Right Column */}
-              <div className="space-y-4 sm:space-y-6">
-                <div>
-                  <label htmlFor="country" className="block text-sm font-medium text-gray-700 mb-1">
-                    Country
-                  </label>
-                  <Select
-                    value={formData.country}
-                    onValueChange={handleSelectChange}
-                    required
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select your country" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="usa">USA</SelectItem>
-                      <SelectItem value="canada">Canada</SelectItem>
-                      <SelectItem value="uk">UK</SelectItem>
-                      <SelectItem value="india">India</SelectItem>
-                      {/* Add more countries as needed */}
-                    </SelectContent>
-                  </Select>
+            <div className=" p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+              <div className="bg-[#be3144] w-12 h-12 rounded-lg flex items-center justify-center mb-4">
+                <Phone className="w-6 h-6 text-white" />
+              </div>
+              <h3 className="text-xl font-semibold text-black mb-2">Call Us</h3>
+              <p className="text-black">+1 (800) 555-1234</p>
+            </div>
+
+            <div className=" p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+              <div className="bg-[#be3144] w-12 h-12 rounded-lg flex items-center justify-center mb-4">
+                <MapPin className="w-6 h-6 text-white" />
+              </div>
+              <h3 className="text-xl font-semibold text-black mb-2">Visit Us</h3>
+              <p className="text-black">123 Wellness Ave<br/>Health City, USA</p>
+            </div>
+
+            <div className=" p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+              <div className="bg-[#be3144] w-12 h-12 rounded-lg flex items-center justify-center mb-4">
+                <Clock className="w-6 h-6 text-white" />
+              </div>
+              <h3 className="text-xl font-semibold text-black mb-2">Business Hours</h3>
+              <p className="text-black">Monday - Friday<br/>9:00 AM - 5:00 PM EST</p>
+            </div>
+          </div>
+
+          {/* Contact Form */}
+          <div className="lg:col-span-2">
+            <div className="bg-white p-8 sm:p-10 rounded-2xl shadow-xl">
+              <div className="flex items-center gap-3 mb-6">
+                <MessageCircle className="w-8 h-8 text-[#be3144]" />
+                <h2 className="text-3xl font-bold text-[#303841]">Send us a Message</h2>
+              </div>
+              <p className="text-[#3a4750] mb-8">
+                Fill out the form below and we'll get back to you as soon as possible.
+              </p>
+              
+              <form onSubmit={handleSubmit} className="space-y-6">
+                <div className="grid sm:grid-cols-2 gap-6">
+                  <div>
+                    <label htmlFor="name" className="block text-sm font-semibold text-[#303841] mb-2">
+                      Your Name *
+                    </label>
+                    <Input
+                      id="name"
+                      name="name"
+                      value={formData.name}
+                      onChange={handleChange}
+                      placeholder="John Doe"
+                      className="w-full border-2 border-[#d3d6db] focus:border-[#be3144] transition-colors"
+                      required
+                    />
+                  </div>
+                  
+                  <div>
+                    <label htmlFor="email" className="block text-sm font-semibold text-[#303841] mb-2">
+                      Your Email *
+                    </label>
+                    <Input
+                      id="email"
+                      name="email"
+                      type="email"
+                      value={formData.email}
+                      onChange={handleChange}
+                      placeholder="john@example.com"
+                      className="w-full border-2 border-[#d3d6db] focus:border-[#be3144] transition-colors"
+                      required
+                    />
+                  </div>
                 </div>
+
+                <div className="grid sm:grid-cols-2 gap-6">
+                  <div>
+                    <label htmlFor="phone" className="block text-sm font-semibold text-[#303841] mb-2">
+                      Phone Number *
+                    </label>
+                    <Input
+                      id="phone"
+                      name="phone"
+                      type="tel"
+                      value={formData.phone}
+                      onChange={handleChange}
+                      placeholder="+1 (555) 000-0000"
+                      className="w-full border-2 border-[#d3d6db] focus:border-[#be3144] transition-colors"
+                      required
+                    />
+                  </div>
+                  
+                  <div>
+                    <label htmlFor="country" className="block text-sm font-semibold text-[#303841] mb-2">
+                      Country *
+                    </label>
+                    <Select
+                      value={formData.country}
+                      onValueChange={handleSelectChange}
+                      required
+                    >
+                      <SelectTrigger className="w-full border-2 border-[#d3d6db] focus:border-[#be3144]">
+                        <SelectValue placeholder="Select your country" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="usa">USA</SelectItem>
+                        <SelectItem value="canada">Canada</SelectItem>
+                        <SelectItem value="uk">UK</SelectItem>
+                        <SelectItem value="india">India</SelectItem>
+                        <SelectItem value="australia">Australia</SelectItem>
+                        <SelectItem value="germany">Germany</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
                 <div>
-                  <label htmlFor="message" className="block text-sm font-medium text-gray-700 mb-1">
-                    Message
+                  <label htmlFor="message" className="block text-sm font-semibold text-[#303841] mb-2">
+                    Your Message *
                   </label>
                   <Textarea
                     id="message"
                     name="message"
                     value={formData.message}
                     onChange={handleChange}
-                    placeholder="Enter your message"
-                    className="w-full"
-                    rows="3"
+                    placeholder="Tell us how we can help you..."
+                    className="w-full border-2 border-[#d3d6db] focus:border-[#be3144] transition-colors min-h-32"
                     required
                   />
                 </div>
-                <div>
-                  <label htmlFor="captcha" className="block text-sm font-medium text-gray-700 mb-1">
-                    Captcha Code
-                  </label>
-                  <Input
-                    id="captcha"
-                    name="captcha"
-                    value={formData.captcha}
-                    onChange={handleChange}
-                    placeholder="Enter the captcha code"
-                    className="w-full"
-                    required
-                  />
-                  <div className="mt-2 bg-gray-200 h-10 flex items-center justify-center text-gray-500 text-sm rounded">
-                    CAPTCHA Placeholder (e.g., 5 + 3 = ?)
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div className="flex justify-center">
-              <Button
-                type="submit"
-                className="bg-gray-900 hover:bg-gray-800 text-white py-2 px-6 sm:py-3 sm:px-8 rounded-md transition-transform duration-200 hover:scale-105"
-              >
-                Send Message
-              </Button>
-            </div>
-          </form>
-        </section>
 
-        {/* Contact Info Section */}
-        <section className="flex flex-col md:flex-row gap-6 sm:gap-8">
-          {/* Left Side: Image */}
-          <div className="md:w-1/2">
-            <img
-              src="https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?q=80&w=2070&auto=format&fit=crop"
-              alt="Contact NHT Global Team"
-              className="w-full h-64 sm:h-72 md:h-96 object-cover rounded-lg shadow-md"
-              loading="lazy"
-            />
-          </div>
+               
 
-          {/* Right Side: Contact Details */}
-          <div className="md:w-1/2 flex flex-col justify-center">
-            <h2 className="text-xl sm:text-2xl md:text-3xl font-semibold text-gray-800 mb-4">
-              Reach Out to Us
-            </h2>
-            <ul className="space-y-3 text-gray-700 text-base sm:text-md">
-              <li className="flex items-center gap-3">
-                <span className="text-gray-900">📧</span>
-                <span>
-                  Email: <a href="mailto:support@nhtglobal.com" className="hover:text-gray-900 transition-colors">support@nhtglobal.com</a>
-                </span>
-              </li>
-              <li className="flex items-center gap-3">
-                <Phone className="w-5 h-5 text-gray-900" />
-                <span>Phone: +1 (800) 555-1234</span>
-              </li>
-              <li className="flex items-start gap-3">
-                <MapPin className="w-5 h-5 text-gray-900" />
-                <span>Address: 123 Wellness Ave, Health City, USA</span>
-              </li>
-            </ul>
-            <p className="mt-4 text-gray-700 text-base sm:text-md">
-              Available Monday to Friday, 9 AM - 5 PM (EST). We’re excited to assist you!
-            </p>
+                <Button
+                  type="submit"
+                  className="w-full bg-[#be3144] hover:bg-[#a02839] text-white py-6 text-lg font-semibold rounded-lg transition-all duration-300 hover:shadow-lg flex items-center justify-center gap-2"
+                >
+                  <Send className="w-5 h-5" />
+                  Send Message
+                </Button>
+              </form>
+            </div>
           </div>
-        </section>
+        </div>
+
+       
       </div>
+
+      {/* CTA Section */}
+      <section className="bg-[#be3144] py-16 sm:py-20 m-10 rounded-2xl shadow-xl">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <h2 className="text-3xl sm:text-4xl md:text-5xl font-sembold text-white mb-6">
+            Ready to Start Your Wellness Journey?
+          </h2>
+          <p className="text-lg sm:text-xl text-white mb-10 max-w-3xl mx-auto">
+            Join thousands of satisfied customers who have transformed their lives with NHT Global. 
+            Experience premium quality products and exceptional support.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+            <Button className="bg-white hover:bg-[#d3d6db] cursor-pointer text-black px-8 py-6 text-lg font-medium rounded-lg transition-all duration-300 hover:shadow-xl  flex items-center gap-2">
+              Explore Products
+              <ArrowRight className="w-5 h-5" />
+            </Button>
+            <Button className="bg-white hover:bg-[#d3d6db] cursor-pointer text-[#303841] px-8 py-6 text-lg font-medium rounded-lg transition-all duration-300 hover:shadow-xl ">
+              Learn More
+            </Button>
+          </div>
+        </div>
+      </section>
+
+      
     </div>
   );
 }

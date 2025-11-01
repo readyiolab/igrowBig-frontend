@@ -1,41 +1,24 @@
 // EcommerceProducts.jsx
 import React, { useEffect, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import useTenantApi from "@/hooks/useTenantApi";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Grid3X3, LayoutList, Search } from "lucide-react";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
-import CategoryGrid from "@/components/sections/CategoryGrid";
-import ProductGrid from "@/components/sections/ProductGrid";
-import SectionHeader from "@/components/sections/SectionHeader";
-import BannerCarousel from "@/components/sections/BannerCarousel";
-import CategorySkeleton from "@/components/loaders/CategorySkeleton";
-import ProductSkeleton from "@/components/loaders/ProductSkeleton";
-import parse from "html-react-parser";
+import { ArrowRight, Package, Play } from "lucide-react";
 
 const EcommerceProducts = () => {
   const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
   const { getAll } = useTenantApi();
   const [siteData, setSiteData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [viewMode, setViewMode] = useState("grid");
-  const selectedCategory = searchParams.get("category")?.toLowerCase() || null;
+
+  // Color palette to match new design
+  const colors = {
+    first: "#d3d6db",
+    second: "#3a4750",
+    third: "#303841",
+    accent: "#be3144",
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -51,47 +34,38 @@ const EcommerceProducts = () => {
     fetchData();
   }, [getAll]);
 
+  const renderContent = (htmlContent) => {
+    return { __html: htmlContent || "" };
+  };
+
+  const createSlug = (name) => {
+    return name
+      .toLowerCase()
+      .replace(/\s+&\s+/g, '-and-')
+      .replace(/\s+/g, '-')
+      .replace(/[^a-z0-9-]/g, '')
+      .trim();
+  };
+
+  const handleCategoryClick = (category) => {
+    const slug = createSlug(category.name);
+    navigate(`/products/${slug}`);
+  };
+
   if (loading) {
     return (
-      <div className="bg-gray-50 min-h-screen">
-        <div className="relative h-64 sm:h-80 md:h-96 overflow-hidden bg-gray-200 animate-pulse" />
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-10 md:py-12">
-          {!selectedCategory ? (
-            <>
-              <div className="text-center mb-8">
-                <div className="h-10 w-1/3 mx-auto bg-gray-200 animate-pulse rounded-md mb-4" />
-                <div className="h-5 w-1/2 mx-auto bg-gray-200 animate-pulse rounded-md mb-8" />
-              </div>
-              <CategorySkeleton count={8} />
-            </>
-          ) : (
-            <div className="flex flex-col lg:flex-row gap-8">
-              <div className="hidden lg:block lg:w-1/4">
-                <Card className="animate-pulse bg-gray-100">
-                  <CardHeader>
-                    <div className="h-6 w-24 bg-gray-200 rounded-md" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-3">
-                      {[...Array(6)].map((_, i) => (
-                        <div key={i} className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded bg-gray-200" />
-                          <div className="h-4 w-24 bg-gray-200 rounded-md" />
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-              <div className="w-full lg:w-3/4 space-y-6">
-                <div className="flex items-center justify-between">
-                  <div className="h-8 w-32 bg-gray-200 rounded-md" />
-                  <div className="h-8 w-48 bg-gray-200 rounded-md" />
-                </div>
-                <ProductSkeleton count={6} />
-              </div>
-            </div>
-          )}
+      <div
+        className="min-h-screen flex items-center justify-center"
+        style={{ background: colors.first }}
+      >
+        <div className="text-center">
+          <div
+            className="animate-spin rounded-full h-16 w-16 border-b-4 mx-auto mb-4"
+            style={{ borderColor: colors.accent }}
+          ></div>
+          <p className="font-medium" style={{ color: colors.third }}>
+            Loading categories...
+          </p>
         </div>
       </div>
     );
@@ -99,14 +73,14 @@ const EcommerceProducts = () => {
 
   if (error) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50">
-        <div className="text-red-600 text-xl font-semibold">
-          <h2>Error Occurred</h2>
-          <p>{error}</p>
+      <div className="flex items-center justify-center min-h-screen" style={{ background: colors.first }}>
+        <div className="text-center">
+          <h2 className="text-2xl font-bold mb-2" style={{ color: colors.second }}>Error Occurred</h2>
+          <p className="text-gray-600 mb-6">{error}</p>
           <Button 
-            onClick={() => window.location.reload()} 
-            variant="outline"
-            className="mt-4"
+            onClick={() => window.location.reload()}
+            className="text-white transition-all duration-300"
+            style={{ background: colors.accent }}
           >
             Try Again
           </Button>
@@ -117,250 +91,284 @@ const EcommerceProducts = () => {
 
   const productPage = siteData?.productPage || {};
   const categories = siteData?.categories || [];
-  const products = siteData?.products || [];
-
-  // Filter products based on category and search term
-  const filteredProducts = selectedCategory
-    ? products.filter(
-        (p) => {
-          const categoryObj = categories.find((c) => c.name.toLowerCase() === selectedCategory);
-          const matchCategory = categoryObj?.id === p.category_id;
-          
-          const matchSearch = searchTerm === "" || 
-            p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            (p.description && p.description.toLowerCase().includes(searchTerm.toLowerCase()));
-          
-          return matchCategory && matchSearch;
-        }
-      )
-    : [];
-
-  const handleCategorySelect = (categoryName) => {
-    setSearchParams({ category: categoryName.toLowerCase() });
-    setSearchTerm(""); // Reset search when changing category
-  };
-
-  const clearCategory = () => {
-    setSearchParams({});
-    setSearchTerm("");
-  };
-
-  const handleProductClick = (productId) => {
-    const categoryObj = categories.find((c) => c.id === product.category_id);
-    const catSlug = categoryObj?.name.toLowerCase().replace(/\s+&\s+/g, '-');
-    navigate(`/products/${catSlug}/${productId}`);
-  };
-
-  // Banner for product page
-  const banner = [{
-    id: 1,
-    image: productPage.banner_image_url || "https://via.placeholder.com/1200x400?text=Product+Banner",
-    description: productPage.banner_content || "Discover Our Products"
-  }];
 
   return (
-    <div className="bg-gray-50 min-h-screen">
-      {/* Product Banner */}
-      <BannerCarousel 
-        banners={banner} 
-        height="h-64 sm:h-80 md:h-96" 
-        showControls={false}
-      />
-
-      {/* About Description */}
-      {productPage.about_description && (
-        <div className="p-7 text-center leading-8 text-gray-700 text-sm sm:text-base md:text-lg prose prose-gray mx-auto max-w-6xl">
-          {parse(productPage.about_description)}
+    <div className="min-h-screen" style={{ background: colors.first }}>
+      {/* Banner Section */}
+      <section className="relative h-96 md:h-[500px] overflow-hidden">
+        <img
+          src={productPage.banner_section_image_url || "https://via.placeholder.com/1200x600"}
+          alt="Banner"
+          className="w-full h-full object-cover"
+        />
+        <div
+          className="absolute inset-0"
+          style={{
+            background: `linear-gradient(to right, ${colors.third}cc, ${colors.second}99, transparent)`,
+          }}
+        ></div>
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="text-center text-white px-4 max-w-4xl">
+            <h1
+              className="text-4xl md:text-5xl font-bold mb-4 tracking-tight"
+              style={{ textShadow: "2px 2px 4px rgba(0, 0, 0, 0.5)" }}
+            >
+              {productPage.banner_section_content || "Welcome to Our Products"}
+            </h1>
+            <p className="text-lg md:text-xl text-gray-100">
+              Explore our complete range of wellness solutions
+            </p>
+          </div>
         </div>
-      )}
+      </section>
 
-      {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-10 md:py-12">
-        {!selectedCategory ? (
-          <>
-            {/* Categories Section */}
-            <section>
-              <SectionHeader
-                title="Shop by Category"
-                subtitle="Find the perfect products tailored to your wellness needs."
-                centered={true}
-                className="mb-10"
-              />
-              
-              <CategoryGrid 
-                categories={categories} 
-                onSelectCategory={handleCategorySelect} 
-              />
-            </section>
-          </>
-        ) : (
-          <div className="flex flex-col lg:flex-row gap-8">
-            {/* Sidebar (Desktop) */}
-            <aside className="hidden lg:block lg:w-1/4">
-              <Card className="sticky top-4 border border-gray-200 shadow-sm hover:shadow-md transition-shadow duration-300">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-lg font-semibold text-gray-800">
-                    Categories
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <ul className="space-y-2">
-                    {categories.map((category) => (
-                      <li
-                        key={category.id}
-                        className={`flex items-center gap-3 p-2 rounded-md cursor-pointer transition-all duration-200 ${
-                          selectedCategory === category.name.toLowerCase()
-                            ? "bg-primary text-white"
-                            : "hover:bg-gray-100"
-                        }`}
-                        onClick={() => handleCategorySelect(category.name)}
-                      >
-                        <img
-                          src={category.image_url || "https://via.placeholder.com/40x40?text=No+Image"}
-                          alt={category.name}
-                          className="w-8 h-8 rounded object-cover"
-                        />
-                        <span className="text-sm font-medium">{category.name}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </CardContent>
-              </Card>
-            </aside>
-
-            {/* Products Section */}
-            <div className="w-full lg:w-3/4">
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
-                <Button
-                  variant="outline"
-                  onClick={clearCategory}
-                  className="flex items-center gap-2 hover:bg-gray-100 transition-colors duration-200"
+      {/* About Section */}
+      {productPage.about_section_content && (
+        <section className="py-20 px-4" style={{ background: "#ffffff" }}>
+          <div className="max-w-7xl mx-auto">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+              <div>
+                <h2
+                  className="text-3xl md:text-4xl font-semibold mb-6"
+                  style={{ color: colors.second }}
                 >
-                  <ArrowLeft className="w-4 h-4" />
-                  Back to Categories
-                </Button>
-                
-                <div className="flex flex-col sm:flex-row w-full sm:w-auto gap-4">
-                  {/* Mobile Category Dropdown */}
-                  <div className="lg:hidden w-full">
-                    <Select
-                      value={selectedCategory}
-                      onValueChange={handleCategorySelect}
-                    >
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Select a category" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {categories.map((category) => (
-                          <SelectItem key={category.id} value={category.name.toLowerCase()}>
-                            {category.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  {/* Search Input */}
-                  <div className="relative w-full sm:w-60">
-                    <Input
-                      type="text"
-                      placeholder="Search products..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pr-8 w-full"
-                    />
-                    <Search className="absolute right-2 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  </div>
-                  
-                  {/* View Mode Toggle */}
-                  <div className="hidden sm:flex border rounded-md overflow-hidden">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className={`rounded-none ${viewMode === 'grid' ? 'bg-gray-100' : ''}`}
-                      onClick={() => setViewMode('grid')}
-                    >
-                      <Grid3X3 className="w-4 h-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className={`rounded-none ${viewMode === 'list' ? 'bg-gray-100' : ''}`}
-                      onClick={() => setViewMode('list')}
-                    >
-                      <LayoutList className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-lg font-medium text-gray-800">
-                  {selectedCategory.toUpperCase()} ({filteredProducts.length} items)
+                  {productPage.about_section_title || "Discover Our Products"}
                 </h2>
-              </div>
-              
-              {viewMode === 'grid' ? (
-                <ProductGrid 
-                  products={filteredProducts} 
-                  onProductClick={handleProductClick}
-                  buttonText="Learn More & Buy"
+                <div
+                  className="prose prose-lg max-w-none leading-relaxed mb-6"
+                  style={{ color: colors.third }}
+                  dangerouslySetInnerHTML={renderContent(productPage.about_section_content)}
                 />
-              ) : (
-                <div className="space-y-4">
-                  {filteredProducts.length > 0 ? (
-                    filteredProducts.map((product) => (
-                      <Card
-                        key={product.id}
-                        className="cursor-pointer hover:shadow-lg transition-all duration-300 overflow-hidden"
-                        onClick={() => handleProductClick(product.id)}
-                      >
-                        <CardContent className="p-4">
-                          <div className="flex flex-col sm:flex-row gap-4">
-                            <div className="sm:w-1/4">
-                              <img
-                                src={product.image_url || "https://via.placeholder.com/300x200?text=No+Image"}
-                                alt={product.name}
-                                className="w-full h-40 object-cover rounded-lg"
-                                loading="lazy"
-                              />
-                            </div>
-                            <div className="sm:w-3/4 flex flex-col">
-                              <h3 className="text-lg font-semibold text-gray-800 mb-2">
-                                {product.name}
-                              </h3>
-                              <div className="text-sm text-gray-600 line-clamp-2 mb-4">
-                                {product.description ? (
-                                  parse(product.description.substring(0, 120) + '...')
-                                ) : (
-                                  "No description available"
-                                )}
-                              </div>
-                              <Button
-                                className="mt-auto self-start"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleProductClick(product.id);
-                                }}
-                              >
-                                Learn More & Buy
-                              </Button>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))
-                  ) : (
-                    <p className="text-center text-gray-600 py-8">
-                      No products found in this category.
-                    </p>
-                  )}
-                </div>
-              )}
+                <button
+                  onClick={() => window.scrollTo({ top: document.getElementById('categories').offsetTop, behavior: 'smooth' })}
+                  className="px-8 py-3 rounded-lg shadow-lg cursor-pointer font-semibold text-white hover:shadow-xl transition-all duration-300"
+                  style={{ background: colors.accent }}
+                >
+                  Learn More
+                </button>
+              </div>
+              <div className="relative">
+                <img
+                  src={productPage.about_section_image_url || productPage.banner_section_image_url || "https://via.placeholder.com/600x400"}
+                  alt="About"
+                  className="w-full h-[400px] object-cover rounded-lg shadow-xl"
+                />
+              </div>
             </div>
           </div>
-        )}
-      </div>
+        </section>
+      )}
+
+      {/* Video Section */}
+      {(productPage.video_section_youtube_url || productPage.video_section_file_url) && (
+        <section className="py-20 px-4" style={{ background: colors.first }}>
+          <div className="max-w-6xl mx-auto">
+            <div className="text-center mb-12">
+              <h2
+                className="text-3xl md:text-4xl font-semibold mb-6"
+                style={{ color: colors.second }}
+              >
+                {productPage.video_section_title || "Watch Our Product Video"}
+              </h2>
+              {productPage.video_section_content && (
+                <div
+                  className="prose prose-lg max-w-3xl mx-auto leading-relaxed"
+                  style={{ color: colors.third }}
+                  dangerouslySetInnerHTML={renderContent(productPage.video_section_content)}
+                />
+              )}
+            </div>
+            {productPage.video_section_youtube_url ? (
+              <div className="rounded-xl overflow-hidden shadow-2xl">
+                <div className="aspect-video">
+                  <iframe
+                    width="100%"
+                    height="100%"
+                    src={productPage.video_section_youtube_url}
+                    title="Product Video"
+                    frameBorder="0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                  ></iframe>
+                </div>
+              </div>
+            ) : productPage.video_section_file_url ? (
+              <div className="rounded-xl overflow-hidden shadow-2xl">
+                <video
+                  width="100%"
+                  height="auto"
+                  controls
+                  className="w-full h-auto"
+                >
+                  <source src={productPage.video_section_file_url} type="video/mp4" />
+                  Your browser does not support the video tag.
+                </video>
+              </div>
+            ) : (
+              <div
+                className="rounded-xl h-96 flex items-center justify-center"
+                style={{ background: colors.first }}
+              >
+                <div className="text-center">
+                  <Play
+                    className="w-16 h-16 mx-auto mb-4"
+                    style={{ color: colors.second }}
+                  />
+                  <p style={{ color: colors.second }}>No video available</p>
+                </div>
+              </div>
+            )}
+          </div>
+        </section>
+      )}
+
+      {/* Categories Introduction */}
+      <section className="py-16 px-4" style={{ background: "#ffffff" }}>
+        <div className="max-w-4xl mx-auto text-center">
+          <h2
+            className="text-3xl md:text-4xl font-semibold mb-6"
+            style={{ color: colors.second }}
+          >
+            Explore Products by Category
+          </h2>
+          <p
+            className="text-lg leading-relaxed"
+            style={{ color: colors.third }}
+          >
+            Most of our products can be universally used by Men, Women, Kids and Elderly people. 
+            Explore our products in the following categories which overall support our goal to achieve better health.
+          </p>
+        </div>
+      </section>
+
+      {/* Categories Grid */}
+      <section id="categories" className="py-16 px-4" style={{ background: colors.first }}>
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-12">
+            <h2
+              className="text-3xl md:text-4xl font-semibold mb-4"
+              style={{ color: colors.second }}
+            >
+              Browse by Category
+            </h2>
+            <p className="text-lg text-gray-600">
+              Select a category to explore our products
+            </p>
+          </div>
+
+          {categories.length === 0 ? (
+            <div className="text-center py-16">
+              <Package className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+              <h3
+                className="text-2xl font-bold mb-2"
+                style={{ color: colors.second }}
+              >
+                No Categories Found
+              </h3>
+              <p className="text-gray-600 mb-6">Categories are not available at the moment.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {categories.map((category) => (
+                <div
+                  key={category.id}
+                  onClick={() => handleCategoryClick(category)}
+                  className="group flex flex-col justify-center items-center bg-white overflow-hidden rounded-2xl transition-all duration-300 cursor-pointer hover:shadow-xl"
+                >
+                  <div className="relative w-24 h-24 sm:w-32 sm:h-32 mb-4 sm:mb-6">
+                    <img
+                      src={category.image_url || "https://via.placeholder.com/500x300"}
+                      loading="lazy"
+                      alt={category.name}
+                      className="w-full h-full mt-5 object-cover transition-transform duration-300 group-hover:scale-105"
+                    />
+                  </div>
+                  <div className="p-6">
+                    <h3
+                      className="text-xl font-bold mb-2 group-hover:text-accent transition-colors text-center"
+                      style={{ color: colors.second }}
+                    >
+                      {category.name}
+                    </h3>
+                    <p className="text-gray-600 text-sm mb-4 line-clamp-2 text-center">
+                      {category.description || "Explore our premium products."}
+                    </p>
+                    <div
+                      className="group flex items-center gap-2 px-6 py-3 cursor-pointer border transition-all text-white duration-300 hover:shadow-xl"
+                      style={{ borderColor: colors.accent, background: colors.accent }}
+                    >
+                      <span className="font-semibold tracking-wide transition-colors duration-300">
+                        Explore Products
+                      </span>
+                      <ArrowRight className="w-5 h-5 transition-transform duration-300 group-hover:translate-x-1" />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* CTA Section */}
+      <section
+        className="py-20 px-4 m-10 rounded-2xl shadow-lg text-center"
+        style={{ background: colors.accent }}
+      >
+        <div className="max-w-4xl mx-auto text-center">
+          <h2 className="text-3xl md:text-4xl font-semibold mb-4 text-white">
+            Start Your Wellness Journey Today
+          </h2>
+          <p className="text-lg text-gray-100 mb-8">
+            Discover the perfect products to enhance your health and well-being.
+            Take the first step now!
+          </p>
+          <button
+            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+            className="px-8 py-4 rounded-lg shadow-lg font-medium cursor-pointer text-black bg-white hover:bg-gray-100 hover:shadow-xl transition-all duration-300"
+          >
+            Shop All Products
+          </button>
+        </div>
+      </section>
+
+      {/* Custom Styles for HTML Content */}
+      <style>{`
+        .prose h3 {
+          font-size: 1.5rem;
+          font-weight: 700;
+          margin-top: 1.5rem;
+          margin-bottom: 1rem;
+          color: ${colors.second};
+        }
+        .prose ul, .prose ol {
+          margin-top: 1rem;
+          margin-bottom: 1rem;
+          padding-left: 1.5rem;
+        }
+        .prose li {
+          margin-top: 0.5rem;
+          margin-bottom: 0.5rem;
+        }
+        .prose ul li {
+          list-style-type: disc;
+        }
+        .prose ol li {
+          list-style-type: decimal;
+        }
+        .prose strong {
+          font-weight: 700;
+          color: ${colors.accent};
+        }
+        .prose em {
+          font-style: italic;
+        }
+        .prose p {
+          margin-top: 1rem;
+          margin-bottom: 1rem;
+          line-height: 1.8;
+        }
+      `}</style>
     </div>
   );
 };

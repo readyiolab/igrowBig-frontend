@@ -101,11 +101,7 @@ const Blog = () => {
           />
         )}
         <div className="absolute inset-0 bg-black/40"></div>
-        <div className="absolute inset-0 flex items-center justify-center px-4">
-          <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white text-center drop-shadow-lg">
-            {blogBanners[0]?.image_content || "Explore Our Blog"}
-          </h1>
-        </div>
+        
       </div>
 
       {/* Content */}

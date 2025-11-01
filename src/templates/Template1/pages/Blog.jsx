@@ -138,12 +138,7 @@ const Blog = () => {
                                             {item.title}
                                         </h1>
                                         <p className="text-base sm:text-lg md:text-xl mb-4">{item.description}</p>
-                                        <Button
-                                            variant="outline"
-                                            className="bg-transparent text-white border-white hover:bg-white hover:text-black transition-all duration-300"
-                                        >
-                                            Explore Now <ArrowRight className="ml-2 w-4 h-4" />
-                                        </Button>
+                                        
                                     </div>
                                 </div>
                             </CarouselItem>

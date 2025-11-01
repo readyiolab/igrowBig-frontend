@@ -11,7 +11,7 @@ const TemplatesSection = () => {
   useEffect(() => {
     const fetchTemplates = async () => {
       try {
-        const response = await fetch("http://localhost:3001/api/templates", {
+        const response = await fetch("https://igrowbig.com/api/templates", {
           method: "GET",
           credentials: "include",
         });
