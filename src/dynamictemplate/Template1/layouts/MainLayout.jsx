@@ -38,7 +38,7 @@ function MainLayout({ children }) {
   return (
     <div className="flex flex-col min-h-screen">
       <Header />
-      <main className="flex-grow container mx-auto" id="main-content">
+      <main className="flex-grow " id="main-content">
       <Suspense fallback={<div>Loading...</div>}>
           {children || <Outlet />}
         </Suspense>
