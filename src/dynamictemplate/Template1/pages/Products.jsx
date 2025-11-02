@@ -1,9 +1,9 @@
-// EcommerceProducts.jsx - FIXED VERSION
+// EcommerceProducts.jsx - COMPREHENSIVE FIX
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import useTenantApi from "@/hooks/useTenantApi";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Package, Play } from "lucide-react";
+import { ArrowRight, Package } from "lucide-react";
 
 const EcommerceProducts = () => {
   const navigate = useNavigate();
@@ -24,10 +24,10 @@ const EcommerceProducts = () => {
     const fetchData = async () => {
       try {
         const response = await getAll("/site/data");
-        console.log("Site data:", response); // DEBUG: Check what data you're getting
+        console.log("Site data:", response); // DEBUG
         setSiteData(response);
       } catch (err) {
-        console.error("Fetch error:", err); // DEBUG: Check errors
+        console.error("Fetch error:", err); // DEBUG
         setError(err.message);
       } finally {
         setLoading(false);
@@ -96,7 +96,7 @@ const EcommerceProducts = () => {
 
   return (
     <div className="min-h-screen" style={{ background: colors.first }}>
-      {/* Banner Section */}
+      {/* Banner Section - FIXED to use correct properties */}
       <section className="relative h-96 md:h-[500px] overflow-hidden">
         <img
           src={productPage.banner_section_image_url || "https://via.placeholder.com/1200x600"}
@@ -115,11 +115,15 @@ const EcommerceProducts = () => {
               className="text-4xl md:text-5xl font-bold mb-4 tracking-tight"
               style={{ textShadow: "2px 2px 4px rgba(0, 0, 0, 0.5)" }}
             >
-              {productPage.banner_section_content || "Welcome to Our Products"}
+              {/* FIXED: Use banner_section_title for heading */}
+              {productPage.banner_section_title || "Welcome to Our Products"}
             </h1>
-            <p className="text-lg md:text-xl text-gray-100">
-              Explore our complete range of wellness solutions
-            </p>
+            {/* FIXED: Use banner_section_content for subtitle/description */}
+            {productPage.banner_section_content && (
+              <p className="text-lg md:text-xl text-gray-100">
+                {productPage.banner_section_content}
+              </p>
+            )}
           </div>
         </div>
       </section>
@@ -145,13 +149,13 @@ const EcommerceProducts = () => {
                   onClick={() => {
                     const categoriesEl = document.getElementById('categories');
                     if (categoriesEl) {
-                      window.scrollTo({ top: categoriesEl.offsetTop, behavior: 'smooth' });
+                      window.scrollTo({ top: categoriesEl.offsetTop - 100, behavior: 'smooth' });
                     }
                   }}
                   className="px-8 py-3 rounded-lg shadow-lg cursor-pointer font-semibold text-white hover:shadow-xl transition-all duration-300"
                   style={{ background: colors.accent }}
                 >
-                  Learn More
+                  Explore Categories
                 </button>
               </div>
               <div className="relative">
@@ -235,7 +239,7 @@ const EcommerceProducts = () => {
         </div>
       </section>
 
-      {/* Categories Grid - FIXED */}
+      {/* Categories Grid */}
       <section id="categories" className="py-16 px-4" style={{ background: colors.first }}>
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-12">
@@ -269,7 +273,6 @@ const EcommerceProducts = () => {
                   onClick={() => handleCategoryClick(category)}
                   className="group bg-white overflow-hidden rounded-2xl transition-all duration-300 cursor-pointer hover:shadow-xl"
                 >
-                  {/* FIXED: Proper image container */}
                   <div className="relative w-full h-48 bg-gray-100 overflow-hidden">
                     <img
                       src={category.image_url || "https://via.placeholder.com/500x300"}
@@ -323,7 +326,7 @@ const EcommerceProducts = () => {
             onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
             className="px-8 py-4 rounded-lg shadow-lg font-medium cursor-pointer text-black bg-white hover:bg-gray-100 hover:shadow-xl transition-all duration-300"
           >
-            Shop All Products
+            Explore All Categories
           </button>
         </div>
       </section>

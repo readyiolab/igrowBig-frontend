@@ -6,14 +6,13 @@ import { Card, CardContent } from "@/components/ui/card";
 import { ArrowLeft, ArrowRight, Package } from "lucide-react";
 
 const CategoryProducts = () => {
-  const { category } = useParams(); // This is the slug now
+  const { category } = useParams();
   const navigate = useNavigate();
   const { getAll } = useTenantApi();
   const [siteData, setSiteData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Color palette to match new design
   const colors = {
     first: '#d3d6db',
     second: '#3a4750',
@@ -25,10 +24,10 @@ const CategoryProducts = () => {
     const fetchData = async () => {
       try {
         const response = await getAll("/site/data");
-        console.log("Site data:", response); // DEBUG
+        console.log("Site data:", response);
         setSiteData(response);
       } catch (err) {
-        console.error("Fetch error:", err); // DEBUG
+        console.error("Fetch error:", err);
         setError(err.message);
       } finally {
         setLoading(false);
@@ -36,6 +35,16 @@ const CategoryProducts = () => {
     };
     fetchData();
   }, [getAll]);
+
+  const generateSlug = (name) => {
+    if (!name) return '';
+    return name
+      .toLowerCase()
+      .replace(/\s+&\s+/g, '-and-')
+      .replace(/\s+/g, '-')
+      .replace(/[^a-z0-9-]/g, '')
+      .trim();
+  };
 
   if (loading) {
     return (
@@ -72,17 +81,6 @@ const CategoryProducts = () => {
   const products = siteData?.products || [];
   const productPage = siteData?.productPage || {};
 
-  // Helper to generate slug (consistent across app)
-  const generateSlug = (name) => {
-    return name
-      .toLowerCase()
-      .replace(/\s+&\s+/g, '-and-')
-      .replace(/\s+/g, '-')
-      .replace(/[^a-z0-9-]/g, '')
-      .trim();
-  };
-
-  // Find category by slug
   const categorySlug = decodeURIComponent(category || "").trim();
   const selectedCat = categories.find((c) => generateSlug(c.name) === categorySlug);
 
@@ -101,9 +99,18 @@ const CategoryProducts = () => {
     );
   }
 
+  const handleScrollToProducts = () => {
+    const productsEl = document.getElementById('products');
+    if (productsEl) {
+      const yOffset = -100; // Offset for fixed header
+      const y = productsEl.getBoundingClientRect().top + window.pageYOffset + yOffset;
+      window.scrollTo({ top: y, behavior: 'smooth' });
+    }
+  };
+
   return (
     <div className="min-h-screen" style={{ background: colors.first }}>
-      {/* Banner Section - FIXED PROPERTY NAME */}
+      {/* Banner Section */}
       <section className="relative h-96 md:h-[500px] overflow-hidden">
         <img
           src={productPage?.banner_section_image_url || selectedCat.image_url || 'https://via.placeholder.com/1200x600'}
@@ -136,7 +143,7 @@ const CategoryProducts = () => {
         <div className="max-w-7xl mx-auto flex items-center gap-2 text-sm">
           <button
             onClick={() => navigate("/products")}
-            className="font-medium flex items-center gap-1 transition-colors"
+            className="font-medium flex items-center gap-1 transition-colors hover:underline"
             style={{ color: colors.accent }}
           >
             <ArrowLeft className="w-4 h-4" />
@@ -149,14 +156,14 @@ const CategoryProducts = () => {
         </div>
       </div>
 
-      {/* About Section - FIXED PROPERTY NAME */}
+      {/* About Section */}
       {productPage?.about_section_content && (
         <section className="py-20 px-4 bg-white">
           <div className="max-w-7xl mx-auto">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
               <div>
                 <h2
-                  className="text-3xl md:text-4xl font-semibold mb-4"
+                  className="text-3xl md:text-4xl font-semibold mb-6"
                   style={{ color: colors.second }}
                 >
                   {productPage.about_section_title || `About ${selectedCat.name}`}
@@ -166,12 +173,7 @@ const CategoryProducts = () => {
                   dangerouslySetInnerHTML={{ __html: productPage.about_section_content }}
                 />
                 <button
-                  onClick={() => {
-                    const productsEl = document.getElementById('products');
-                    if (productsEl) {
-                      window.scrollTo({ top: productsEl.offsetTop, behavior: 'smooth' });
-                    }
-                  }}
+                  onClick={handleScrollToProducts}
                   className="px-8 py-3 rounded-lg shadow-lg cursor-pointer font-semibold text-white hover:shadow-xl transition-all duration-300"
                   style={{ background: colors.accent }}
                 >
@@ -190,7 +192,7 @@ const CategoryProducts = () => {
         </section>
       )}
 
-      {/* Video Section - FIXED: Use correct properties */}
+      {/* Video Section */}
       {(productPage?.video_section_youtube_url || productPage?.video_section_file_url) && (
         <section className="py-20 px-4" style={{ background: colors.first }}>
           <div className="max-w-6xl mx-auto">
@@ -225,7 +227,7 @@ const CategoryProducts = () => {
                 <video
                   src={productPage.video_section_file_url}
                   controls
-                  className="w-full h-full bg-black"
+                  className="w-full h-auto bg-black"
                   poster="https://images.unsplash.com/photo-1517694712202-14dd9538aa97?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=60"
                 />
               ) : null}
@@ -261,7 +263,7 @@ const CategoryProducts = () => {
               <p className="text-gray-600 mb-6">This category doesn't have any products yet.</p>
               <button
                 onClick={() => navigate("/products")}
-                className="px-6 py-3 rounded-lg font-semibold text-white transition-all duration-300"
+                className="px-6 py-3 rounded-lg font-semibold text-white hover:shadow-lg transition-all duration-300"
                 style={{ background: colors.accent }}
               >
                 Browse Other Categories
@@ -271,6 +273,13 @@ const CategoryProducts = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {filteredProducts.map((product) => {
                 const productSlug = generateSlug(product.name);
+                // Get first image from comma-separated list
+                const productImage = product.image_url 
+                  ? (typeof product.image_url === 'string' 
+                      ? product.image_url.split(',')[0].trim()
+                      : product.image_url)
+                  : 'https://via.placeholder.com/500x300';
+
                 return (
                   <div
                     key={product.id}
@@ -279,7 +288,7 @@ const CategoryProducts = () => {
                   >
                     <div className="aspect-square overflow-hidden bg-gray-100 relative">
                       <img
-                        src={product.image_url || 'https://via.placeholder.com/500x300'}
+                        src={productImage}
                         alt={product.name}
                         className="w-full h-full object-contain transition-transform duration-300 group-hover:scale-105"
                         loading="lazy"
@@ -293,14 +302,14 @@ const CategoryProducts = () => {
                         {product.name}
                       </h3>
                       
-                      {product.price && (
+                      {(product.your_price || product.base_price || product.price) && (
                         <p className="text-center text-lg font-bold mb-4" style={{ color: colors.second }}>
-                          ₹{product.price}
+                          ₹{product.your_price || product.base_price || product.price}
                         </p>
                       )}
 
                       <div
-                        className="group flex items-center justify-center gap-2 px-6 py-3 cursor-pointer rounded-lg transition-all duration-300 hover:shadow-xl text-white"
+                        className="flex items-center justify-center gap-2 px-6 py-3 cursor-pointer rounded-lg transition-all duration-300 hover:shadow-xl text-white"
                         style={{ background: colors.accent }}
                       >
                         <span className="font-medium tracking-wide transition-colors duration-300">
@@ -331,12 +340,7 @@ const CategoryProducts = () => {
             Take the first step now!
           </p>
           <button
-            onClick={() => {
-              const productsEl = document.getElementById('products');
-              if (productsEl) {
-                window.scrollTo({ top: productsEl.offsetTop, behavior: 'smooth' });
-              }
-            }}
+            onClick={handleScrollToProducts}
             className="px-8 py-4 rounded-lg shadow-lg font-medium cursor-pointer text-black bg-white hover:bg-gray-100 hover:shadow-xl transition-all duration-300"
           >
             Shop {selectedCat.name} Products

@@ -2,8 +2,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import useTenantApi from "@/hooks/useTenantApi";
-import { Button } from "@/components/ui/button";
-import { Play } from "lucide-react";
 
 const Opportunity = () => {
   const navigate = useNavigate();

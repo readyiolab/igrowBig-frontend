@@ -16,8 +16,10 @@ function Footer() {
     const fetchData = async () => {
       try {
         const response = await getAll("/site/data");
+        console.log("Footer data received:", response); // DEBUG
         setFooterData(response);
       } catch (err) {
+        console.error("Footer fetch error:", err); // DEBUG
         setError(err.message);
       } finally {
         setLoading(false);
@@ -53,7 +55,9 @@ function Footer() {
     );
   }
 
-  const disclaimers = footerData?.footer_disclaimers?.[0] || {
+  // FIXED: Handle disclaimers array properly
+  const disclaimersArray = footerData?.disclaimers || [];
+  const disclaimers = disclaimersArray.length > 0 ? disclaimersArray[0] : {
     site_disclaimer: "This is an Independent Distributor Website and not an NHT Global website.",
     product_disclaimer:
       "Product statements are not FDA-evaluated and not intended to diagnose, treat, cure, or prevent diseases. Results may vary. Consult a healthcare professional before use.",
@@ -125,24 +129,28 @@ function Footer() {
                 </li>
               )}
               {siteSettings.site_address && (
-                <li className="flex items-center gap-2">
-                  <span>Address:</span> {parse(siteSettings.site_address)}
+                <li className="flex items-start gap-2">
+                  <span className="flex-shrink-0">Address:</span> 
+                  <span>{parse(siteSettings.site_address)}</span>
                 </li>
               )}
             </ul>
           </div>
 
           {/* Disclaimers */}
-          <div className="md:col-span-1 text-xs sm:text-sm space-y-3 prose prose-sm prose-invert">
-            <p>
-              <strong>Site Disclaimer:</strong> {parse(disclaimers.site_disclaimer)}
-            </p>
-            <p>
-              <strong>Product Disclaimer:</strong> {parse(disclaimers.product_disclaimer)}
-            </p>
-            <p>
-              <strong>Income Disclaimer:</strong> {parse(disclaimers.income_disclaimer)}
-            </p>
+          <div className="md:col-span-1 text-xs sm:text-sm space-y-3">
+            <div>
+              <strong>Site Disclaimer:</strong>
+              <p className="mt-1">{parse(disclaimers.site_disclaimer)}</p>
+            </div>
+            <div>
+              <strong>Product Disclaimer:</strong>
+              <p className="mt-1">{parse(disclaimers.product_disclaimer)}</p>
+            </div>
+            <div>
+              <strong>Income Disclaimer:</strong>
+              <p className="mt-1">{parse(disclaimers.income_disclaimer)}</p>
+            </div>
           </div>
         </div>
 
