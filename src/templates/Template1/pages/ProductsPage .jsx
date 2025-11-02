@@ -8,7 +8,6 @@ const ProductsPage = () => {
   const [categories, setCategories] = useState([]);
   const [productPageData, setProductPageData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const tenantId = 1;
 
   // Color palette
   const colors = {
@@ -32,7 +31,6 @@ const ProductsPage = () => {
       // MOCK DATA - Keep this as is since you don't have product-page API endpoint yet
       const mockProductPageData = {
         id: 1,
-        tenant_id: 1,
         banner_section_image_url:
           "https://images.unsplash.com/photo-1556228720-195a672e8a03?w=1200&h=600&fit=crop",
         banner_section_content: "Welcome to Our Products",
@@ -64,7 +62,6 @@ const ProductsPage = () => {
       // Map backend data to frontend format
       const mappedCategories = data.map(category => ({
         id: category.categoryId,
-        tenant_id: 1,
         name: category.categoryName,
         description: category.description || "Explore our premium products.",
         image_url: category.categoryBanner || "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=500&h=300&fit=crop",
