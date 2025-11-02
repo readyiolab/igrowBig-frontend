@@ -1,4 +1,4 @@
-// EcommerceProducts.jsx
+// EcommerceProducts.jsx - FIXED VERSION
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import useTenantApi from "@/hooks/useTenantApi";
@@ -24,8 +24,10 @@ const EcommerceProducts = () => {
     const fetchData = async () => {
       try {
         const response = await getAll("/site/data");
+        console.log("Site data:", response); // DEBUG: Check what data you're getting
         setSiteData(response);
       } catch (err) {
+        console.error("Fetch error:", err); // DEBUG: Check errors
         setError(err.message);
       } finally {
         setLoading(false);
@@ -140,7 +142,12 @@ const EcommerceProducts = () => {
                   dangerouslySetInnerHTML={renderContent(productPage.about_section_content)}
                 />
                 <button
-                  onClick={() => window.scrollTo({ top: document.getElementById('categories').offsetTop, behavior: 'smooth' })}
+                  onClick={() => {
+                    const categoriesEl = document.getElementById('categories');
+                    if (categoriesEl) {
+                      window.scrollTo({ top: categoriesEl.offsetTop, behavior: 'smooth' });
+                    }
+                  }}
                   className="px-8 py-3 rounded-lg shadow-lg cursor-pointer font-semibold text-white hover:shadow-xl transition-all duration-300"
                   style={{ background: colors.accent }}
                 >
@@ -204,20 +211,7 @@ const EcommerceProducts = () => {
                   Your browser does not support the video tag.
                 </video>
               </div>
-            ) : (
-              <div
-                className="rounded-xl h-96 flex items-center justify-center"
-                style={{ background: colors.first }}
-              >
-                <div className="text-center">
-                  <Play
-                    className="w-16 h-16 mx-auto mb-4"
-                    style={{ color: colors.second }}
-                  />
-                  <p style={{ color: colors.second }}>No video available</p>
-                </div>
-              </div>
-            )}
+            ) : null}
           </div>
         </section>
       )}
@@ -241,7 +235,7 @@ const EcommerceProducts = () => {
         </div>
       </section>
 
-      {/* Categories Grid */}
+      {/* Categories Grid - FIXED */}
       <section id="categories" className="py-16 px-4" style={{ background: colors.first }}>
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-12">
@@ -273,29 +267,31 @@ const EcommerceProducts = () => {
                 <div
                   key={category.id}
                   onClick={() => handleCategoryClick(category)}
-                  className="group flex flex-col justify-center items-center bg-white overflow-hidden rounded-2xl transition-all duration-300 cursor-pointer hover:shadow-xl"
+                  className="group bg-white overflow-hidden rounded-2xl transition-all duration-300 cursor-pointer hover:shadow-xl"
                 >
-                  <div className="relative w-24 h-24 sm:w-32 sm:h-32 mb-4 sm:mb-6">
+                  {/* FIXED: Proper image container */}
+                  <div className="relative w-full h-48 bg-gray-100 overflow-hidden">
                     <img
                       src={category.image_url || "https://via.placeholder.com/500x300"}
                       loading="lazy"
                       alt={category.name}
-                      className="w-full h-full mt-5 object-cover transition-transform duration-300 group-hover:scale-105"
+                      className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                     />
                   </div>
+                  
                   <div className="p-6">
                     <h3
-                      className="text-xl font-bold mb-2 group-hover:text-accent transition-colors text-center"
+                      className="text-xl font-bold mb-2 transition-colors text-center"
                       style={{ color: colors.second }}
                     >
                       {category.name}
                     </h3>
-                    <p className="text-gray-600 text-sm mb-4 line-clamp-2 text-center">
+                    <p className="text-gray-600 text-sm mb-4 text-center line-clamp-2">
                       {category.description || "Explore our premium products."}
                     </p>
                     <div
-                      className="group flex items-center gap-2 px-6 py-3 cursor-pointer border transition-all text-white duration-300 hover:shadow-xl"
-                      style={{ borderColor: colors.accent, background: colors.accent }}
+                      className="group flex items-center justify-center gap-2 px-6 py-3 cursor-pointer rounded-lg transition-all text-white duration-300 hover:shadow-xl"
+                      style={{ background: colors.accent }}
                     >
                       <span className="font-semibold tracking-wide transition-colors duration-300">
                         Explore Products

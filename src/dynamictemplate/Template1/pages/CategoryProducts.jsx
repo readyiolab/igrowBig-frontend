@@ -25,8 +25,10 @@ const CategoryProducts = () => {
     const fetchData = async () => {
       try {
         const response = await getAll("/site/data");
+        console.log("Site data:", response); // DEBUG
         setSiteData(response);
       } catch (err) {
+        console.error("Fetch error:", err); // DEBUG
         setError(err.message);
       } finally {
         setLoading(false);
@@ -101,10 +103,10 @@ const CategoryProducts = () => {
 
   return (
     <div className="min-h-screen" style={{ background: colors.first }}>
-      {/* Banner Section */}
+      {/* Banner Section - FIXED PROPERTY NAME */}
       <section className="relative h-96 md:h-[500px] overflow-hidden">
         <img
-          src={productPage?.banner_image_url || 'https://via.placeholder.com/1200x600'}
+          src={productPage?.banner_section_image_url || selectedCat.image_url || 'https://via.placeholder.com/1200x600'}
           alt={selectedCat.name}
           className="w-full h-full object-cover"
         />
@@ -147,9 +149,9 @@ const CategoryProducts = () => {
         </div>
       </div>
 
-      {/* About Section */}
-      {productPage?.about_description && (
-        <section className="py-20 px-4" style={{ background: colors.first }}>
+      {/* About Section - FIXED PROPERTY NAME */}
+      {productPage?.about_section_content && (
+        <section className="py-20 px-4 bg-white">
           <div className="max-w-7xl mx-auto">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
               <div>
@@ -157,14 +159,19 @@ const CategoryProducts = () => {
                   className="text-3xl md:text-4xl font-semibold mb-4"
                   style={{ color: colors.second }}
                 >
-                  About {selectedCat.name}
+                  {productPage.about_section_title || `About ${selectedCat.name}`}
                 </h2>
                 <div 
-                  className="text-lg text-gray-600 leading-relaxed mb-6"
-                  dangerouslySetInnerHTML={{ __html: productPage.about_description }}
+                  className="prose prose-lg max-w-none text-gray-600 leading-relaxed mb-6"
+                  dangerouslySetInnerHTML={{ __html: productPage.about_section_content }}
                 />
                 <button
-                  onClick={() => window.scrollTo({ top: document.getElementById('products').offsetTop, behavior: 'smooth' })}
+                  onClick={() => {
+                    const productsEl = document.getElementById('products');
+                    if (productsEl) {
+                      window.scrollTo({ top: productsEl.offsetTop, behavior: 'smooth' });
+                    }
+                  }}
                   className="px-8 py-3 rounded-lg shadow-lg cursor-pointer font-semibold text-white hover:shadow-xl transition-all duration-300"
                   style={{ background: colors.accent }}
                 >
@@ -173,9 +180,9 @@ const CategoryProducts = () => {
               </div>
               <div>
                 <img
-                  src={productPage?.banner_image_url || 'https://via.placeholder.com/600x400'}
+                  src={productPage?.about_section_image_url || productPage?.banner_section_image_url || 'https://via.placeholder.com/600x400'}
                   alt={selectedCat.name}
-                  className="w-full h-full object-cover rounded-xl"
+                  className="w-full h-[400px] object-cover rounded-xl shadow-xl"
                 />
               </div>
             </div>
@@ -183,30 +190,45 @@ const CategoryProducts = () => {
         </section>
       )}
 
-      {/* Video Section */}
-      {productPage?.video_section_link && (
+      {/* Video Section - FIXED: Use correct properties */}
+      {(productPage?.video_section_youtube_url || productPage?.video_section_file_url) && (
         <section className="py-20 px-4" style={{ background: colors.first }}>
-          <div className="max-w-4xl mx-auto">
+          <div className="max-w-6xl mx-auto">
             <div className="text-center mb-12">
               <h2
-                className="text-3xl md:text-4xl font-semibold mb-4"
+                className="text-3xl md:text-4xl font-semibold mb-6"
                 style={{ color: colors.second }}
               >
-                Learn About {selectedCat.name}
+                {productPage.video_section_title || `Learn About ${selectedCat.name}`}
               </h2>
-              <p className="text-lg text-gray-600">
-                Discover the benefits of our {selectedCat.name} products through this video.
-              </p>
+              {productPage.video_section_content && (
+                <div
+                  className="prose prose-lg max-w-3xl mx-auto text-gray-600 leading-relaxed"
+                  dangerouslySetInnerHTML={{ __html: productPage.video_section_content }}
+                />
+              )}
             </div>
             <div className="rounded-xl overflow-hidden shadow-2xl">
-              <div className="aspect-video">
+              {productPage.video_section_youtube_url ? (
+                <div className="aspect-video">
+                  <iframe
+                    width="100%"
+                    height="100%"
+                    src={productPage.video_section_youtube_url}
+                    title="Product Video"
+                    frameBorder="0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                  ></iframe>
+                </div>
+              ) : productPage.video_section_file_url ? (
                 <video
-                  src={productPage.video_section_link}
+                  src={productPage.video_section_file_url}
                   controls
                   className="w-full h-full bg-black"
                   poster="https://images.unsplash.com/photo-1517694712202-14dd9538aa97?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=60"
                 />
-              </div>
+              ) : null}
             </div>
           </div>
         </section>
@@ -253,19 +275,19 @@ const CategoryProducts = () => {
                   <div
                     key={product.id}
                     onClick={() => navigate(`/products/${categorySlug}/${productSlug}`)}
-                    className="group bg-white cursor-pointer"
+                    className="group bg-white cursor-pointer rounded-lg overflow-hidden shadow-md hover:shadow-xl transition-all duration-300"
                   >
                     <div className="aspect-square overflow-hidden bg-gray-100 relative">
                       <img
                         src={product.image_url || 'https://via.placeholder.com/500x300'}
                         alt={product.name}
-                        className="w-full h-full object-contain transition-transform duration-300"
+                        className="w-full h-full object-contain transition-transform duration-300 group-hover:scale-105"
                         loading="lazy"
                       />
                     </div>
                     <div className="p-6">
                       <h3
-                        className="text-xl font-medium mb-2 group-hover:text-accent text-center transition-colors line-clamp-1"
+                        className="text-xl font-medium mb-2 text-center transition-colors line-clamp-2"
                         style={{ color: colors.second }}
                       >
                         {product.name}
@@ -278,13 +300,13 @@ const CategoryProducts = () => {
                       )}
 
                       <div
-                        className="group flex items-center justify-center gap-2 px-6 py-3 cursor-pointer border transition-all duration-300 hover:shadow-xl text-white"
-                        style={{ borderColor: colors.accent, background: colors.accent }}
+                        className="group flex items-center justify-center gap-2 px-6 py-3 cursor-pointer rounded-lg transition-all duration-300 hover:shadow-xl text-white"
+                        style={{ background: colors.accent }}
                       >
-                        <span className="font-medium tracking-wide transition-colors duration-300 group-hover:text-white">
+                        <span className="font-medium tracking-wide transition-colors duration-300">
                           View Details
                         </span>
-                        <ArrowRight className="w-5 h-5 transition-transform duration-300 group-hover:translate-x-1 group-hover:stroke-white" />
+                        <ArrowRight className="w-5 h-5 transition-transform duration-300 group-hover:translate-x-1" />
                       </div>
                     </div>
                   </div>
@@ -309,13 +331,56 @@ const CategoryProducts = () => {
             Take the first step now!
           </p>
           <button
-            onClick={() => window.scrollTo({ top: document.getElementById('products').offsetTop, behavior: 'smooth' })}
+            onClick={() => {
+              const productsEl = document.getElementById('products');
+              if (productsEl) {
+                window.scrollTo({ top: productsEl.offsetTop, behavior: 'smooth' });
+              }
+            }}
             className="px-8 py-4 rounded-lg shadow-lg font-medium cursor-pointer text-black bg-white hover:bg-gray-100 hover:shadow-xl transition-all duration-300"
           >
             Shop {selectedCat.name} Products
           </button>
         </div>
       </section>
+
+      {/* Custom Styles for HTML Content */}
+      <style>{`
+        .prose h3 {
+          font-size: 1.5rem;
+          font-weight: 700;
+          margin-top: 1.5rem;
+          margin-bottom: 1rem;
+          color: ${colors.second};
+        }
+        .prose ul, .prose ol {
+          margin-top: 1rem;
+          margin-bottom: 1rem;
+          padding-left: 1.5rem;
+        }
+        .prose li {
+          margin-top: 0.5rem;
+          margin-bottom: 0.5rem;
+        }
+        .prose ul li {
+          list-style-type: disc;
+        }
+        .prose ol li {
+          list-style-type: decimal;
+        }
+        .prose strong {
+          font-weight: 700;
+          color: ${colors.accent};
+        }
+        .prose em {
+          font-style: italic;
+        }
+        .prose p {
+          margin-top: 1rem;
+          margin-bottom: 1rem;
+          line-height: 1.8;
+        }
+      `}</style>
     </div>
   );
 };

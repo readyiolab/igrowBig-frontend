@@ -1,4 +1,4 @@
-// Opportunity.jsx
+// Opportunity.jsx - FIXED VERSION
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import useTenantApi from "@/hooks/useTenantApi";
@@ -24,8 +24,10 @@ const Opportunity = () => {
     const fetchData = async () => {
       try {
         const response = await getAll("/site/data");
+        console.log("Opportunity Page Data:", response); // DEBUG
         setSiteData(response);
       } catch (err) {
+        console.error("Fetch error:", err); // DEBUG
         setError(err.message);
         setSiteData({});
       } finally {
@@ -62,7 +64,7 @@ const Opportunity = () => {
 
   return (
     <div className="min-h-screen" style={{ background: colors.first }}>
-      {/* Hero Banner Section */}
+      {/* Hero Banner Section - ✅ FIXED: Now uses hero_section_image_url */}
       <section aria-label="Hero Section" className="relative">
         <div className="flex flex-col lg:flex-row min-h-[400px] md:min-h-[500px] lg:min-h-[600px]">
           {/* LEFT – Text + Gradient Overlay */}
@@ -104,11 +106,11 @@ const Opportunity = () => {
             </div>
           </div>
 
-          {/* RIGHT – Image */}
+          {/* RIGHT – Image - ✅ FIXED: Now uses correct hero_section_image_url */}
           <div className="lg:w-1/2 h-[300px] lg:h-auto overflow-hidden">
             <img
-              src={opportunityPage.door_section_image_url || "https://images.unsplash.com/photo-1552664730-d307ca884978?q=80&w=2070&auto=format&fit=crop"}
-              alt="Opportunity Banner"
+              src={opportunityPage.hero_section_image_url || "https://images.unsplash.com/photo-1552664730-d307ca884978?w=1200&h=600&fit=crop"}
+              alt="Opportunity Hero"
               className="w-full h-full object-cover"
               loading="eager"
             />
@@ -123,7 +125,7 @@ const Opportunity = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
               <div className="relative">
                 <img
-                  src={opportunityPage.door_section_image_url || "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?q=80&w=2070&auto=format&fit=crop"}
+                  src={opportunityPage.door_section_image_url || "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=1200&h=600&fit=crop"}
                   alt="Open the Door"
                   className="w-full h-[400px] object-cover rounded-lg shadow-xl"
                 />
@@ -182,7 +184,7 @@ const Opportunity = () => {
               </div>
               <div className="relative order-1 md:order-2">
                 <img
-                  src={opportunityPage.marketing_section_image_url || "https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?q=80&w=2070&auto=format&fit=crop"}
+                  src={opportunityPage.marketing_section_image_url || "https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?w=1200&h=600&fit=crop"}
                   alt="Network Marketing"
                   className="w-full h-[400px] object-cover rounded-lg shadow-xl"
                 />
@@ -199,7 +201,7 @@ const Opportunity = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
               <div className="relative">
                 <img
-                  src={opportunityPage.business_model_section_image_url || "https://images.unsplash.com/photo-1552664730-d307ca884978?q=80&w=2070&auto=format&fit=crop"}
+                  src={opportunityPage.business_model_section_image_url || "https://images.unsplash.com/photo-1552664730-d307ca884978?w=1200&h=600&fit=crop"}
                   alt="Business Model"
                   className="w-full h-[400px] object-cover rounded-lg shadow-xl"
                 />
@@ -243,8 +245,8 @@ const Opportunity = () => {
                 {opportunityPage.overview_section_title || "Opportunity Overview"}
               </h2>
             </div>
-            {opportunityPage.overview_section_youtube_url ? (
-              <div className="rounded-xl overflow-hidden shadow-2xl">
+            <div className="rounded-xl overflow-hidden shadow-2xl">
+              {opportunityPage.overview_section_youtube_url ? (
                 <div className="aspect-video">
                   <iframe
                     width="100%"
@@ -256,9 +258,7 @@ const Opportunity = () => {
                     allowFullScreen
                   ></iframe>
                 </div>
-              </div>
-            ) : opportunityPage.overview_section_video_url ? (
-              <div className="rounded-xl overflow-hidden shadow-2xl">
+              ) : opportunityPage.overview_section_video_url ? (
                 <video
                   width="100%"
                   height="auto"
@@ -271,21 +271,8 @@ const Opportunity = () => {
                   />
                   Your browser does not support the video tag.
                 </video>
-              </div>
-            ) : (
-              <div
-                className="rounded-xl h-96 flex items-center justify-center"
-                style={{ background: colors.first }}
-              >
-                <div className="text-center">
-                  <Play
-                    className="w-16 h-16 mx-auto mb-4"
-                    style={{ color: colors.second }}
-                  />
-                  <p style={{ color: colors.second }}>No video available</p>
-                </div>
-              </div>
-            )}
+              ) : null}
+            </div>
           </div>
         </section>
       )}
