@@ -328,9 +328,9 @@ const ProductDetail = () => {
     : [];
 
   const priceOptions = [
-    { key: "your", label: "Your Price", price: product.your_price },
-    { key: "base", label: "Base Price", price: product.base_price },
-    { key: "member", label: "Member Price", price: product.preferred_customer_price },
+
+    { key: "base", label: "Base Price", price: product.base_price }
+
   ].filter(option => option.price);
 
   const discount = product.base_price && product.your_price 
@@ -417,7 +417,7 @@ const ProductDetail = () => {
                           {option.label}
                         </span>
                         <span className="text-lg sm:text-xl font-bold" style={{ color: colors.Fourth }}>
-                          ₹{option.price}
+                          {option.price}
                         </span>
                       </div>
                     ))}

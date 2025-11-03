@@ -1,4 +1,3 @@
-// EcommerceProducts.jsx - COMPREHENSIVE FIX
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import useTenantApi from "@/hooks/useTenantApi";
@@ -12,7 +11,6 @@ const EcommerceProducts = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Color palette to match new design
   const colors = {
     first: "#d3d6db",
     second: "#3a4750",
@@ -24,10 +22,10 @@ const EcommerceProducts = () => {
     const fetchData = async () => {
       try {
         const response = await getAll("/site/data");
-        console.log("Site data:", response); // DEBUG
+        console.log("Site data:", response);
         setSiteData(response);
       } catch (err) {
-        console.error("Fetch error:", err); // DEBUG
+        console.error("Fetch error:", err);
         setError(err.message);
       } finally {
         setLoading(false);
@@ -96,7 +94,7 @@ const EcommerceProducts = () => {
 
   return (
     <div className="min-h-screen" style={{ background: colors.first }}>
-      {/* Banner Section - FIXED to use correct properties */}
+      {/* Banner Section */}
       <section className="relative h-96 md:h-[500px] overflow-hidden">
         <img
           src={productPage.banner_section_image_url || "https://via.placeholder.com/1200x600"}
@@ -115,10 +113,8 @@ const EcommerceProducts = () => {
               className="text-4xl md:text-5xl font-bold mb-4 tracking-tight"
               style={{ textShadow: "2px 2px 4px rgba(0, 0, 0, 0.5)" }}
             >
-              {/* FIXED: Use banner_section_title for heading */}
               {productPage.banner_section_title || "Welcome to Our Products"}
             </h1>
-            {/* FIXED: Use banner_section_content for subtitle/description */}
             {productPage.banner_section_content && (
               <p className="text-lg md:text-xl text-gray-100">
                 {productPage.banner_section_content}
@@ -271,30 +267,28 @@ const EcommerceProducts = () => {
                 <div
                   key={category.id}
                   onClick={() => handleCategoryClick(category)}
-                  className="group bg-white overflow-hidden rounded-2xl transition-all duration-300 cursor-pointer hover:shadow-xl"
+                  className="group flex flex-col justify-center items-center bg-white overflow-hidden rounded-2xl transition-all duration-300 cursor-pointer hover:shadow-xl"
                 >
-                  <div className="relative w-full h-48 bg-gray-100 overflow-hidden">
+                  <div className="relative w-24 h-24 sm:w-32 sm:h-32 mb-4 sm:mb-6">
                     <img
                       src={category.image_url || "https://via.placeholder.com/500x300"}
                       loading="lazy"
                       alt={category.name}
-                      className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                      className="w-full h-full mt-5 object-cover transition-transform duration-300 group-hover:scale-105"
                     />
                   </div>
-                  
                   <div className="p-6">
                     <h3
-                      className="text-xl font-bold mb-2 transition-colors text-center"
+                      className="text-xl font-bold mb-2 group-hover:text-accent transition-colors text-center"
                       style={{ color: colors.second }}
                     >
                       {category.name}
                     </h3>
-                    <p className="text-gray-600 text-sm mb-4 text-center line-clamp-2">
+                    <p className="text-gray-600 text-sm mb-4 line-clamp-2 text-center">
                       {category.description || "Explore our premium products."}
                     </p>
                     <div
-                      className="group flex items-center justify-center gap-2 px-6 py-3 cursor-pointer rounded-lg transition-all text-white duration-300 hover:shadow-xl"
-                      style={{ background: colors.accent }}
+                      className="group flex items-center gap-2 px-6 py-3 cursor-pointer border transition-all bg-[#be3144] text-white duration-300 hover:bg-[#be3144] hover:shadow-xl group-hover:text-white"
                     >
                       <span className="font-semibold tracking-wide transition-colors duration-300">
                         Explore Products
