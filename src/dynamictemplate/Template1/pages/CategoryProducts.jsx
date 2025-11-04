@@ -304,7 +304,7 @@ const CategoryProducts = () => {
                       
                       {(product.your_price || product.base_price || product.price) && (
                         <p className="text-center text-lg font-bold mb-4" style={{ color: colors.second }}>
-                          ₹{product.your_price || product.base_price || product.price}
+                          {product.your_price || product.base_price || product.price}
                         </p>
                       )}
 

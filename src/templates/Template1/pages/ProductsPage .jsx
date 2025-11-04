@@ -32,17 +32,17 @@ const ProductsPage = () => {
       const mockProductPageData = {
         id: 1,
         banner_section_image_url:
-          "https://images.unsplash.com/photo-1556228720-195a672e8a03?w=1200&h=600&fit=crop",
+          "https://res.cloudinary.com/dbyjiqjui/image/upload/v1762237196/022_qpg4p4.jpg",
         banner_section_content: "Welcome to Our Products",
         about_section_title: "Product is Life Line of Any Business",
         about_section_content:
           "<p>Product is life line of any business. <strong>Unique products</strong> make it very easy to do business. Product in <strong>Health & Wellness, Beauty & Anti Aging</strong> is evergreen and never going to out of business.</p><p>At NHT Global, we understand that different lifestyles call for different needs. For the modern day city dweller in particular, an urban lifestyle is often associated with stress, busy schedules, environmental toxins and pollutants, poor food choices, and work pressure. These factors affect overall quality life and can challenge our bodies in ways that require additional support. From anti-aging skincare to antioxidant rich beverages, NHT products have been designed to supplement your daily routine and help you live a healthier and better life. We target your specific needs with multi-functional, multi-benefit products that are safe, immediate impact, and easy to use and incorporate into your current lifestyle.</p>",
         about_section_image_url:
-          "https://images.unsplash.com/photo-1556228720-195a672e8a03?w=600&h=400&fit=crop",
+          "https://res.cloudinary.com/dbyjiqjui/image/upload/v1762237196/022_qpg4p4.jpg",
         video_section_title: "Watch NHT Global Product Video",
         video_section_content:
           "<p>NHT products fall under <strong>4 major categories: Beauty, Lifestyle, Wellness and Herbal</strong>. In few markets we have introduced a new category called '<strong>Home</strong>' where we are bringing good home products like air and water purifiers. We uphold the highest quality standards— we use leading domestic and foreign GMP certified contract manufacturers, utilize high technology, source the finest ingredients, and are fueled by market trends and the latest scientific research. Quality and satisfaction are guaranteed. Whether you want to supplement your current lifestyle or make a major lifestyle change, NHT Global offers product solutions to help you look and feel better today, and in the long-term!</p><p><strong>Your key to health, beauty, vitality, longevity, and protection lie with the targeted benefits of our premium product offering.</strong></p><p><em>Note: Availability of products may vary country to country. Get in touch with more details if you want to buy any product for personal use.</em></p>",
-        video_section_youtube_url: "https://www.youtube.com/embed/dQw4w9WgXcQ",
+        video_section_youtube_url: " ",
         video_section_file_url: null,
       };
 

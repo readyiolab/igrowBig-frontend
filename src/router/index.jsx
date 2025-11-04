@@ -77,7 +77,7 @@ const EcommerceContact2 = lazy(() => import("@/templates/Template2/pages/Contact
 const EcommerceBlog2 = lazy(() => import("@/templates/Template2/pages/Blog"));
 const EcommerceBlogPost2 = lazy(() => import("@/templates/Template2/pages/BlogPost"));
 
-const ProductsListing = lazy(() => import("@/dynamictemplate/Template1/pages/ProductsListing"));
+const ProductsListing = lazy(() => import("@/dynamictemplate/Template1/pages/Products"));
 const CategoryProducts = lazy(() => import("@/dynamictemplate/Template1/pages/CategoryProducts"));
 const ProductDetail = lazy(() => import("@/dynamictemplate/Template1/pages/ProductDetail"));
 const DynamicOpportunity = lazy(() => import("@/dynamictemplate/Template1/pages/Opportunity"));
