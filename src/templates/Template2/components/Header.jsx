@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { Menu, X, ChevronRight, Sparkles } from 'lucide-react';
+import { Menu, X, ChevronRight } from 'lucide-react';
 
 function Header() {
   const [isOpen, setIsOpen] = useState(false);
@@ -77,7 +77,7 @@ function Header() {
                       className="relative px-5 py-2.5 text-sm font-medium rounded-2xl transition-all duration-300 block group"
                       style={{
                         background: isActive 
-                          ? `linear-gradient(135deg,  ${colors.tertiary})`
+                          ? `linear-gradient(135deg, ${colors.secondary}, ${colors.tertiary})`
                           : 'transparent',
                         color: isActive ? 'white' : colors.primary,
                       }}
@@ -103,7 +103,7 @@ function Header() {
               className="relative px-5 py-5 text-sm font-semibold rounded-2xl transition-all duration-300 overflow-hidden group border-2"
               style={{
                 background: isScrolled 
-                  ? `linear-gradient(135deg,  ${colors.tertiary})`
+                  ? `linear-gradient(135deg, ${colors.secondary}, ${colors.tertiary})`
                   : 'transparent',
                 borderColor: isScrolled ? 'transparent' : 'white',
                 color: 'white'
@@ -132,19 +132,22 @@ function Header() {
 
             <SheetContent 
               side="right" 
-              className="w-[320px] sm:w-[400px] p-0 border-0"
-              style={{ background: colors.primary }}
+              className="w-[320px] sm:w-[400px] p-0 border-0 bg-white flex flex-col"
             >
-              {/* Mobile menu header */}
-              <div className="p-6 border-b border-white/10 flex justify-between items-center">
-                <div className="flex items-center gap-2">
-                  <Sparkles className="w-5 h-5" style={{ color: colors.accent }} />
-                  <span className="text-lg font-bold text-white">Menu</span>
-                </div>
+              {/* Mobile menu header with logo */}
+              <div className="p-6 flex justify-between items-center border-b border-gray-100">
+                <Link to="/template2" onClick={handleNavClick}>
+                  <img
+                    src="https://unitedstates.nhtglobal.com/wp-content/uploads/sites/55/2013/08/logo.png"
+                    alt="NHT Global Logo"
+                    className="w-32 h-auto object-contain"
+                  />
+                </Link>
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="rounded-full text-white hover:bg-white/10"
+                  className="rounded-full hover:bg-gray-100"
+                  style={{ color: colors.primary }}
                   onClick={() => setIsOpen(false)}
                 >
                   <X className="h-5 w-5" />
@@ -152,8 +155,8 @@ function Header() {
               </div>
 
               {/* Mobile navigation */}
-              <nav className="p-6">
-                <ul className="flex flex-col gap-2">
+              <nav className="flex-1 p-6 overflow-y-auto">
+                <ul className="flex flex-col gap-3">
                   {navItems.map((item) => {
                     const isActive = location.pathname === item.path;
                     return (
@@ -161,61 +164,49 @@ function Header() {
                         <Link
                           to={item.path}
                           onClick={handleNavClick}
-                          className="flex items-center justify-between px-4 py-3 text-base font-medium rounded-2xl transition-all duration-300 group"
+                          className="flex items-center justify-between px-5 py-4 text-base font-medium rounded-2xl transition-all duration-300 group"
                           style={{
                             background: isActive 
-                              ? `linear-gradient(135deg,  ${colors.tertiary})`
-                              : 'rgba(255, 255, 255, 0.05)',
-                            color: 'white',
+                              ? `linear-gradient(135deg, ${colors.secondary}, ${colors.tertiary})`
+                              : colors.light,
+                            color: isActive ? 'white' : colors.primary,
+                            boxShadow: isActive ? '0 4px 12px rgba(139, 92, 246, 0.2)' : 'none',
                           }}
                         >
                           <span>{item.label}</span>
                           <ChevronRight 
-                            className="w-5 h-5 opacity-50 group-hover:opacity-100 group-hover:translate-x-1 transition-all" 
+                            className="w-5 h-5 transition-all" 
+                            style={{ 
+                              opacity: isActive ? 1 : 0.4,
+                            }}
                           />
                         </Link>
                       </li>
                     );
                   })}
                 </ul>
-
-                {/* Mobile CTA */}
-                <div className="mt-8 pt-6 border-t border-white/10">
-                  <Button
-              asChild
-              className="relative px-6 py-6 text-sm font-semibold rounded-2xl transition-all duration-300 overflow-hidden group border-2"
-              style={{
-                background: isScrolled 
-                  ? `linear-gradient(135deg, ${colors.secondary}, ${colors.tertiary})`
-                  : 'transparent',
-                borderColor: isScrolled ? 'transparent' : 'white',
-                color: 'white'
-              }}
-            >
-              <Link to="/template2/contact" className="flex items-center gap-2">
-                <span className="relative z-10">Contact Us</span>
-                <ChevronRight className="w-4 h-4 relative z-10 group-hover:translate-x-1 transition-transform" />
-              </Link>
-            </Button>
-                </div>
-
-                {/* Mobile menu footer */}
-                <div className="mt-8 pt-6 border-t border-white/10">
-                  <p className="text-sm text-white/60 text-center">
-                    Ready to transform your life?
-                  </p>
-                  <p className="text-xs text-white/40 text-center mt-2">
-                    Join thousands of successful entrepreneurs
-                  </p>
-                </div>
               </nav>
+
+              {/* Mobile CTA - Fixed at bottom */}
+              <div className="p-6 border-t border-gray-100">
+                <Button
+                  asChild
+                  className="w-full relative px-6 py-6 text-base font-semibold rounded-2xl transition-all duration-300 overflow-hidden group shadow-lg hover:shadow-xl"
+                  style={{
+                    background: `linear-gradient(135deg, ${colors.secondary}, ${colors.tertiary})`,
+                    color: 'white'
+                  }}
+                >
+                  <Link to="/template2/contact" onClick={handleNavClick} className="flex items-center gap-2 justify-center">
+                    <span className="relative z-10">Contact Us</span>
+                    <ChevronRight className="w-5 h-5 relative z-10 group-hover:translate-x-1 transition-transform" />
+                  </Link>
+                </Button>
+              </div>
             </SheetContent>
           </Sheet>
         </div>
       </div>
-
-
-      
     </header>
   );
 }

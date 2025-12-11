@@ -28,10 +28,8 @@ function Header() {
     const fetchData = async () => {
       try {
         const response = await getAll("/site/data");
-        console.log("Header data received:", response);
         setSiteData(response);
       } catch (err) {
-        console.error("Header fetch error:", err);
         setError(err.message);
       } finally {
         setLoading(false);
@@ -179,22 +177,30 @@ function Header() {
 
             <SheetContent
               side="right"
-              className="w-[320px] sm:w-[400px] p-0 border-0"
-              style={{ background: colors.primary }}
+              className="w-[320px] sm:w-[400px] p-0 border-0 bg-white flex flex-col"
             >
-              {/* Mobile menu header */}
-              <div className="p-6 border-b border-white/10 flex justify-between items-center">
-                <div className="flex items-center gap-2">
-                  <Sparkles
-                    className="w-5 h-5"
-                    style={{ color: colors.accent }}
-                  />
-                  <span className="text-lg font-bold text-white">Menu</span>
-                </div>
+              {/* Mobile menu header with logo */}
+              <div className="p-6 flex justify-between items-center border-b border-gray-100">
+                <Link to="/" onClick={handleNavClick}>
+                  {loading ? (
+                    <div className="w-32 h-10 bg-gray-200 animate-pulse rounded"></div>
+                  ) : error ? (
+                    <div className="w-32 h-10 bg-gray-200 rounded flex items-center justify-center text-xs font-semibold" style={{ color: colors.primary }}>
+                      {siteName}
+                    </div>
+                  ) : (
+                    <img
+                      src={logoUrl}
+                      alt={`${siteName} Logo`}
+                      className="w-32 h-auto object-contain"
+                    />
+                  )}
+                </Link>
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="rounded-full text-white hover:bg-white/10"
+                  className="rounded-full hover:bg-gray-100"
+                  style={{ color: colors.primary }}
                   onClick={() => setIsOpen(false)}
                 >
                   <X className="h-5 w-5" />
@@ -202,8 +208,8 @@ function Header() {
               </div>
 
               {/* Mobile navigation */}
-              <nav className="p-6">
-                <ul className="flex flex-col gap-2">
+              <nav className="flex-1 p-6 overflow-y-auto">
+                <ul className="flex flex-col gap-3">
                   {navItems.map((item) => {
                     const isActive = location.pathname === item.path;
                     return (
@@ -211,50 +217,45 @@ function Header() {
                         <Link
                           to={item.path}
                           onClick={handleNavClick}
-                          className="flex items-center justify-between px-4 py-3 text-base font-medium rounded-2xl transition-all duration-300 group"
+                          className="flex items-center justify-between px-5 py-4 text-base font-medium rounded-2xl transition-all duration-300 group"
                           style={{
                             background: isActive
                               ? `linear-gradient(135deg, ${colors.secondary}, ${colors.tertiary})`
-                              : "rgba(255, 255, 255, 0.05)",
-                            color: "white",
+                              : colors.light,
+                            color: isActive ? "white" : colors.primary,
+                            boxShadow: isActive ? "0 4px 12px rgba(139, 92, 246, 0.2)" : "none",
                           }}
                         >
                           <span>{item.label}</span>
-                          <ChevronRight className="w-5 h-5 opacity-50 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
+                          <ChevronRight 
+                            className="w-5 h-5 transition-all" 
+                            style={{ 
+                              opacity: isActive ? 1 : 0.4,
+                            }}
+                          />
                         </Link>
                       </li>
                     );
                   })}
                 </ul>
-
-                {/* Mobile CTA */}
-                <div className="mt-8 pt-6 border-t border-white/10">
-                  <Button
-                    asChild
-                    className="w-full relative px-6 py-6 text-sm font-semibold rounded-2xl transition-all duration-300 overflow-hidden group border-2"
-                    style={{
-                      background: `linear-gradient(135deg, ${colors.secondary}, ${colors.tertiary})`,
-                      borderColor: "transparent",
-                      color: "white",
-                    }}
-                  >
-                    <Link to="/contact" className="flex items-center gap-2 justify-center">
-                      <span className="relative z-10">Contact Us</span>
-                      <ChevronRight className="w-4 h-4 relative z-10 group-hover:translate-x-1 transition-transform" />
-                    </Link>
-                  </Button>
-                </div>
-
-                {/* Mobile menu footer */}
-                <div className="mt-8 pt-6 border-t border-white/10">
-                  <p className="text-sm text-white/60 text-center">
-                    Ready to transform your life?
-                  </p>
-                  <p className="text-xs text-white/40 text-center mt-2">
-                    Join thousands of successful entrepreneurs
-                  </p>
-                </div>
               </nav>
+
+              {/* Mobile CTA - Fixed at bottom */}
+              <div className="p-6 border-t border-gray-100">
+                <Button
+                  asChild
+                  className="w-full relative px-6 py-6 text-base font-semibold rounded-2xl transition-all duration-300 overflow-hidden group shadow-lg hover:shadow-xl"
+                  style={{
+                    background: `linear-gradient(135deg, ${colors.secondary}, ${colors.tertiary})`,
+                    color: "white",
+                  }}
+                >
+                  <Link to="/contact" onClick={handleNavClick} className="flex items-center gap-2 justify-center">
+                    <span className="relative z-10">Contact Us</span>
+                    <ChevronRight className="w-5 h-5 relative z-10 group-hover:translate-x-1 transition-transform" />
+                  </Link>
+                </Button>
+              </div>
             </SheetContent>
           </Sheet>
         </div>

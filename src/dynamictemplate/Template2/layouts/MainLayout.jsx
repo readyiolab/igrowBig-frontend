@@ -1,10 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, Suspense } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import Header from '.././components/Header';
 import Footer from '.././components/Footer';
 import { ArrowUp } from 'lucide-react';
 
-function MainLayout() {
+function MainLayout({ children }) {  // ✅ ADD children prop
   const [isVisible, setIsVisible] = useState(false);
   const location = useLocation();
 
@@ -75,7 +75,10 @@ function MainLayout() {
     <div className="flex flex-col min-h-screen">
       <Header />
       <main className="flex-grow" id="main-content">
-        <Outlet />
+       
+        <Suspense fallback={<div className="text-center py-10">Loading...</div>}>
+          {children || <Outlet />}
+        </Suspense>
       </main>
       <Footer />
 

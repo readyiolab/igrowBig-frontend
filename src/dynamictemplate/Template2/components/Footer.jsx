@@ -25,10 +25,10 @@ function Footer() {
     const fetchData = async () => {
       try {
         const response = await getAll("/site/data");
-        console.log("Footer data received:", response);
+        
         setFooterData(response);
       } catch (err) {
-        console.error("Footer fetch error:", err);
+     
         setError(err.message);
       } finally {
         setLoading(false);
