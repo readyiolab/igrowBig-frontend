@@ -90,8 +90,7 @@ function Footer() {
               <li><Link to="/join-us" className="hover:underline transition-colors">Join Us</Link></li>
               <li><Link to="/contact" className="hover:underline transition-colors">Contact</Link></li>
               <li><Link to="/blog" className="hover:underline transition-colors">Blog</Link></li>
-              <li><Link to="/leaders" className="hover:underline transition-colors">Leaders</Link></li>
-              <li><Link to="/newsletters" className="hover:underline transition-colors">Newsletters</Link></li>
+              
             </ul>
           </div>
 

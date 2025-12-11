@@ -12,10 +12,14 @@ import {
   Globe,
   Zap,
 } from "lucide-react";
+import useTenantApi from "@/hooks/useTenantApi";
 
 const OpportunityPage = () => {
-  const [opportunityData, setOpportunityData] = useState(null);
+  
   const [loading, setLoading] = useState(true);
+  const { getAll } = useTenantApi();
+  const [siteData, setSiteData] = useState(null);
+  const [error, setError] = useState(null);
 
   // Modern color palette - matching Home page
   const colors = {
@@ -27,17 +31,30 @@ const OpportunityPage = () => {
     lightGray: "#e2e8f0", // Light gray
   };
 
-  useEffect(() => {
-    loadOpportunityData();
-  }, []);
+   useEffect(() => {
+      const fetchData = async () => {
+        try {
+          const response = await getAll("/site/data");
+          console.log("Opportunity Page Data:", response); // DEBUG
+          setSiteData(response);
+        } catch (err) {
+          console.error("Fetch error:", err); // DEBUG
+          setError(err.message);
+          setSiteData({});
+        } finally {
+          setLoading(false);
+        }
+      };
+      fetchData();
+    }, [getAll]);
 
   const renderContent = (htmlContent) => {
     return { __html: htmlContent || "" };
   };
 
-  const loadOpportunityData = async () => {
+  const loadsiteData = async () => {
     try {
-      const mockOpportunityData = {
+      const mocksiteData = {
         id: 1,
         tenant_id: 1,
         hero_section_content: "A lifetime opportunity",
@@ -69,7 +86,7 @@ const OpportunityPage = () => {
         compensation_plan_document_url: null,
       };
 
-      setOpportunityData(mockOpportunityData);
+      setSiteData(mocksiteData);
       setLoading(false);
     } catch (error) {
       console.error("Error loading opportunity data:", error);
@@ -115,13 +132,13 @@ const OpportunityPage = () => {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             <div className="text-white space-y-6">
               <h1 className="text-4xl sm:text-5xl md:text-6xl font-semibold leading-tight">
-                {opportunityData?.hero_section_content || "A Lifetime Opportunity"}
+                {siteData?.hero_section_content || "A Lifetime Opportunity"}
               </h1>
 
               <div
                 className="text-lg sm:text-xl opacity-90 leading-relaxed"
                 dangerouslySetInnerHTML={renderContent(
-                  opportunityData?.description_section_content
+                  siteData?.description_section_content
                 )}
               />
 
@@ -165,7 +182,7 @@ const OpportunityPage = () => {
             <div className="lg:col-span-1">
               <div className="sticky top-8 rounded-2xl overflow-hidden">
                 <img
-                  src={opportunityData.door_section_image_url}
+                  src={siteData.door_section_image_url}
                   alt="Open the Door"
                   className="w-full h-[500px] object-cover"
                   loading="lazy"
@@ -180,13 +197,13 @@ const OpportunityPage = () => {
                 className="text-4xl md:text-5xl font-semibold"
                 style={{ color: colors.primary }}
               >
-                {opportunityData.door_section_title}
+                {siteData.door_section_title}
               </h2>
 
               <div
                 className="prose prose-lg max-w-none text-gray-700 leading-relaxed"
                 dangerouslySetInnerHTML={renderContent(
-                  opportunityData.door_section_content
+                  siteData.door_section_content
                 )}
               />
 
@@ -256,7 +273,7 @@ const OpportunityPage = () => {
               className="text-4xl md:text-5xl font-semibold"
               style={{ color: colors.primary }}
             >
-              {opportunityData.marketing_section_title}
+              {siteData.marketing_section_title}
             </h2>
           </div>
 
@@ -265,7 +282,7 @@ const OpportunityPage = () => {
               <div
                 className="prose prose-lg max-w-none text-gray-700 leading-relaxed"
                 dangerouslySetInnerHTML={renderContent(
-                  opportunityData.marketing_section_content
+                  siteData.marketing_section_content
                 )}
               />
               <Button
@@ -282,7 +299,7 @@ const OpportunityPage = () => {
                 style={{ background: colors.secondary }}
               ></div>
               <img
-                src={opportunityData.marketing_section_image_url}
+                src={siteData.marketing_section_image_url}
                 alt="Network Marketing"
                 className="relative rounded-3xl shadow-2xl w-full h-[500px] object-cover"
                 loading="lazy"
@@ -299,7 +316,7 @@ const OpportunityPage = () => {
             <div className="order-2 lg:order-1 relative">
               <div className="rounded-3xl overflow-hidden shadow-2xl">
                 <img
-                  src={opportunityData.business_model_section_image_url}
+                  src={siteData.business_model_section_image_url}
                   alt="Business Model"
                   className="w-full h-[500px] object-cover"
                   loading="lazy"
@@ -316,13 +333,13 @@ const OpportunityPage = () => {
                 className="text-4xl md:text-5xl font-semibold"
                 style={{ color: colors.primary }}
               >
-                {opportunityData.business_model_section_title}
+                {siteData.business_model_section_title}
               </h2>
 
               <div
                 className="prose prose-lg max-w-none text-gray-700 leading-relaxed"
                 dangerouslySetInnerHTML={renderContent(
-                  opportunityData.business_model_section_content
+                  siteData.business_model_section_content
                 )}
               />
 
@@ -338,8 +355,8 @@ const OpportunityPage = () => {
       </section>
 
       {/* Video Section - Centered with glow effect */}
-      {(opportunityData.overview_section_youtube_url ||
-        opportunityData.overview_section_video_url) && (
+      {(siteData.overview_section_youtube_url ||
+        siteData.overview_section_video_url) && (
         <section
           className="py-20 px-4 sm:px-6 lg:px-8 relative overflow-hidden"
           style={{
@@ -359,22 +376,22 @@ const OpportunityPage = () => {
 
           <div className="max-w-5xl mx-auto text-center relative z-10">
             <h2 className="text-4xl md:text-5xl font-semibold mb-12 text-white">
-              {opportunityData.overview_section_title}
+              {siteData.overview_section_title}
             </h2>
 
             <div className="relative">
               <div className="absolute -inset-8 rounded-3xl opacity-50 blur-3xl"></div>
               <div className="relative rounded-3xl overflow-hidden shadow-2xl aspect-video">
-                {opportunityData.overview_section_youtube_url ? (
+                {siteData.overview_section_youtube_url ? (
                   <iframe
-                    src={opportunityData.overview_section_youtube_url}
+                    src={siteData.overview_section_youtube_url}
                     className="w-full h-full"
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                     allowFullScreen
                   ></iframe>
                 ) : (
                   <video
-                    src={opportunityData.overview_section_video_url}
+                    src={siteData.overview_section_video_url}
                     controls
                     className="w-full h-full"
                   >
@@ -398,7 +415,7 @@ const OpportunityPage = () => {
               className="text-4xl md:text-5xl font-semibold"
               style={{ color: colors.primary }}
             >
-              {opportunityData.compensation_plan_section_title}
+              {siteData.compensation_plan_section_title}
             </h2>
           </div>
 
@@ -406,10 +423,10 @@ const OpportunityPage = () => {
             <div
               className="prose prose-lg max-w-none text-gray-700 leading-relaxed"
               dangerouslySetInnerHTML={renderContent(
-                opportunityData.compensation_plan_section_content
+                siteData.compensation_plan_section_content
               )}
             />
-            {opportunityData.compensation_plan_document_url && (
+            {siteData.compensation_plan_document_url && (
               <div className="text-center pt-6">
                 <Button
                   className="px-8 py-6 rounded-2xl font-semibold shadow-lg hover:shadow-xl transition-all cursor-pointer"

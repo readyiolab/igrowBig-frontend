@@ -12,7 +12,7 @@ import {
 } from "@/components/common";
 import {
   useOpportunityData,
-  useFormSubmit,
+  useOpportunityFormSubmit,
   useImageValidation,
   useDebouncedCallback,
 } from "@/hooks";
@@ -29,7 +29,7 @@ const OpportunityBusinessModelSection = () => {
     refresh, // Add refresh function
   } = useOpportunityData("Business Model section loaded!");
 
-  const { submitForm, isSubmitting } = useFormSubmit();
+  const { submitForm, isSubmitting } = useOpportunityFormSubmit();
   const { image, imagePreview, handleImageUpload, resetImage, validateImage } = useImageValidation();
 
   const [title, setTitle] = useState("");

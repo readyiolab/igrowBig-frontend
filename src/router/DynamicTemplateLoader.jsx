@@ -3,18 +3,25 @@ import { useNavigate } from "react-router-dom";
 import useTenantApi from "@/hooks/useTenantApi";
 import { getDomainInfo } from "@/utils/domain";
 import LoadingFallback from "@/components/common/LoadingFallback";
-import DynamicMainLayout from "@/dynamictemplate/Template1/layouts/MainLayout";
-import Template2 from "@/templates/Template2";
+import DynamicMainLayout1 from "@/dynamictemplate/Template1/layouts/MainLayout";
+import DynamicMainLayout2 from "@/dynamictemplate/Template2/layouts/MainLayout";
 import Template3 from "@/templates/Template3";
 
-const DynamicTemplateLoader = ({ children }) => {
+const DynamicTemplateLoader = ({ children, template }) => {
   const { getAll } = useTenantApi();
-  const [templateId, setTemplateId] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [templateId, setTemplateId] = useState(template || null);
+  const [loading, setLoading] = useState(!template);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
+    // If template is provided as prop, skip API call
+    if (template) {
+      setTemplateId(template);
+      setLoading(false);
+      return;
+    }
+
     const fetchTenantData = async () => {
       try {
         const { hostname, isMain } = getDomainInfo();
@@ -37,9 +44,10 @@ const DynamicTemplateLoader = ({ children }) => {
     };
 
     fetchTenantData();
-  }, [getAll, navigate]);
+  }, [getAll, navigate, template]);
 
   if (loading) return <LoadingFallback />;
+  
   if (error) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50">
@@ -59,9 +67,15 @@ const DynamicTemplateLoader = ({ children }) => {
 
   let TemplateLayout;
   switch (templateId) {
-    case 1: TemplateLayout = DynamicMainLayout; break;
-    case 2: TemplateLayout = Template2; break;
-    case 3: TemplateLayout = Template3; break;
+    case 1:
+      TemplateLayout = DynamicMainLayout1;
+      break;
+    case 2:
+      TemplateLayout = DynamicMainLayout2;
+      break;
+    case 3:
+      TemplateLayout = Template3;
+      break;
     default:
       return (
         <div className="flex items-center justify-center min-h-screen bg-gray-50">

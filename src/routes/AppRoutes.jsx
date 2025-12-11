@@ -191,7 +191,7 @@ const EcommerceProducts2 = lazy(() =>
   import("../templates/Template2/pages/Products")
 );
 const EcommerceProductDetail2 = lazy(() =>
-  import("../templates/Template2/pages/ProductDetail")
+  import("../templates/Template2/pages/ProductDetailPage")
 );
 const EcommerceOpportunity2 = lazy(() =>
   import("../templates/Template2/pages/Opportunity")

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import useTenantApi from "@/hooks/useTenantApi";
 import {
   BookOpen,
   CircleEllipsis,
@@ -12,7 +13,7 @@ import {
 } from "lucide-react";
 
 // Mock API data - Replace with actual API call
-const mockApiData = {
+const defaultData = {
   hero_section_title: "Do you know what it means to have Dream Life?",
   hero_section_content:
     "<p>Living the Best Life means <strong>Excellent Health</strong>, Better Financial Potential, Enriching Personal Relationships and the freedom to spend YOUR time enjoying what makes you happy... we call that a <strong>Dream Life</strong>!</p>",
@@ -49,8 +50,10 @@ const mockApiData = {
 };
 
 function Home() {
-  const [pageData, setPageData] = useState(mockApiData);
-  const [loading, setLoading] = useState(false);
+  const { getAll } = useTenantApi();
+  const [pageData, setPageData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);;
 
   // Modern color palette - Vibrant purple and teal theme
   const colors = {
@@ -62,9 +65,53 @@ function Home() {
     lightGray: "#e2e8f0", // Light gray
   };
 
-  useEffect(() => {
-    setPageData(mockApiData);
-  }, []);
+useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const response = await getAll("/site/data");
+        const homeData = response?.homePage || {};
+        
+        // ✅ NO TRANSFORMATION NEEDED - Use backend data directly with defaults as fallback
+        const finalData = {
+          hero_section_title: homeData.hero_section_title || defaultData.hero_section_title,
+          hero_section_content: homeData.hero_section_content || defaultData.hero_section_content,
+          hero_banner_image_url: homeData.hero_banner_image_url || defaultData.hero_banner_image_url,
+          
+          welcome_section_title: homeData.welcome_section_title || defaultData.welcome_section_title,
+          welcome_section_content: homeData.welcome_section_content || defaultData.welcome_section_content,
+          welcome_section_image_url: homeData.welcome_section_image_url || defaultData.welcome_section_image_url,
+          
+          about_section_title: homeData.about_section_title || defaultData.about_section_title,
+          about_section_content: homeData.about_section_content || defaultData.about_section_content,
+          about_section_image_url: homeData.about_section_image_url || defaultData.about_section_image_url,
+          
+          history_section_title: homeData.history_section_title || defaultData.history_section_title,
+          history_section_content: homeData.history_section_content || defaultData.history_section_content,
+          history_section_image_url: homeData.history_section_image_url || defaultData.history_section_image_url,
+          
+          video_section_title: homeData.video_section_title || defaultData.video_section_title,
+          video_section_youtube_url: homeData.video_section_youtube_url || defaultData.video_section_youtube_url,
+          video_section_file_url: homeData.video_section_file_url || defaultData.video_section_file_url,
+          
+          help_section_title: homeData.help_section_title || defaultData.help_section_title,
+          help_section_content: homeData.help_section_content || defaultData.help_section_content,
+          help_section_image_url: homeData.help_section_image_url || defaultData.help_section_image_url,
+        };
+
+        setPageData(finalData);
+      } catch (err) {
+        setError(err.message);
+        console.error("Error fetching data:", err);
+        // ✅ Use defaults on error
+        setPageData(defaultData);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [getAll]);
 
   const renderContent = (htmlContent) => {
     return { __html: htmlContent || "" };
@@ -83,6 +130,22 @@ function Home() {
       </div>
     );
   }
+
+  if (error && !pageData) {
+      return (
+        <div className="min-h-screen flex items-center justify-center" style={{ background: colors.primary }}>
+          <div className="text-center p-8">
+            <h2 className="text-2xl font-bold mb-4" style={{ color: colors.accent }}>
+              Oops! Something went wrong
+            </h2>
+            <p className="mb-6" style={{ color: colors.secondary }}>{error}</p>
+            <Button onClick={() => window.location.reload()} style={{ background: colors.accent }} className="text-white">
+              Try Again
+            </Button>
+          </div>
+        </div>
+      );
+    }
 
   return (
     <div className="min-h-screen" >

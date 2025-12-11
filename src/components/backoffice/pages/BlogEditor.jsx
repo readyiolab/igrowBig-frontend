@@ -427,11 +427,14 @@ const BlogEditor = () => {
     dispatch(fetchBlogs(tenantId));
   };
 
-  const filteredBlogs = blogs.filter(
-    (blog) =>
-      blog.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      blog.content.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+ const filteredBlogs = (blogs || []).filter((blog) => {
+  const title = (blog.title || "").toLowerCase();
+  const content = (blog.content || "").toLowerCase();
+  const search = (searchTerm || "").toLowerCase();
+
+  return title.includes(search) || content.includes(search);
+});
+
 
   return (
     <div className="container mx-auto p-4">
