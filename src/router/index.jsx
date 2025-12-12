@@ -3,7 +3,7 @@ import { lazy } from "react";
 import SmartRouter from "./SmartRouter";
 import AdminProtectedRoute from "@/auth/AdminProtectedRoute";
 import BackofficeProtectedRoute from "@/auth/BackofficeProtectedRoute";
-import { protect } from "@/auth/protectRoute.jsx"; // or keep without extension if your alias resolves it
+import { protect } from "@/auth/protectRoute.jsx";
 import { withSuspense } from "@/auth/withSuspense";
 import ErrorBoundary from "@/components/common/ErrorBoundary";
 import DynamicTemplateLoader from "./DynamicTemplateLoader";
@@ -29,11 +29,7 @@ const SuperAdminLogin = lazy(() =>
   import("@/components/superadmin/pages/SuperAdminLogin")
 );
 
-
-
-
 //backoffice path
-
 const BackofficeLayout = lazy(() =>
   import("@/components/backoffice/layout/BackofficeLayout")
 );
@@ -130,20 +126,17 @@ const SubscriberMessagePlaceholder = lazy(() =>
 const TenantTrainingList = lazy(() =>
   import("@/components/backoffice/pages/TenantTrainingList")
 );
-
 const ForgotPasswordPage = lazy(() =>
   import("@/components/backoffice/pages/ForgotPassword")
-); 
+);
 const ResetPasswordPage = lazy(() =>
   import("@/components/backoffice/pages/ResetPassword")
-); 
-
+);
 
 //template [1] path
 const MainLayout = lazy(() =>
   import("@/templates/Template1/layouts/MainLayout")
 );
-
 const EcommerceHome = lazy(() => import("@/templates/Template1/pages/Home"));
 const EcommerceProducts = lazy(() =>
   import("@/templates/Template1/pages/ProductsPage ")
@@ -171,8 +164,6 @@ const EcommerceBlogPost = lazy(() =>
   import("@/templates/Template1/pages/BlogPost")
 );
 
-
-
 // template[2] path
 const MainLayout2 = lazy(() =>
   import("@/templates/Template2/layouts/MainLayout")
@@ -187,7 +178,6 @@ const EcommerceProductDetail2 = lazy(() =>
 const EcommerceCategoryProductsPage2 = lazy(() =>
   import("@/templates/Template2/pages/CategoryProductsPage")
 );
-
 const EcommerceOpportunity2 = lazy(() =>
   import("@/templates/Template2/pages/Opportunity")
 );
@@ -203,36 +193,6 @@ const EcommerceContact2 = lazy(() =>
 const EcommerceBlog2 = lazy(() => import("@/templates/Template2/pages/Blog"));
 const EcommerceBlogPost2 = lazy(() =>
   import("@/templates/Template2/pages/BlogPost")
-);
-
-//dynamic template 1
-
-const ProductsListing = lazy(() =>
-  import("@/dynamictemplate/Template1/pages/Products")
-);
-const CategoryProducts = lazy(() =>
-  import("@/dynamictemplate/Template1/pages/CategoryProducts")
-);
-const ProductDetail = lazy(() =>
-  import("@/dynamictemplate/Template1/pages/ProductDetail")
-);
-const DynamicOpportunity = lazy(() =>
-  import("@/dynamictemplate/Template1/pages/Opportunity")
-);
-const DynamicOpportunityOverView = lazy(() =>
-  import("@/dynamictemplate/Template1/pages/OpportunityOverview")
-);
-const DynamicJoinUs = lazy(() =>
-  import("@/dynamictemplate/Template1/pages/JoinUs")
-);
-const DynamicContact = lazy(() =>
-  import("@/dynamictemplate/Template1/pages/Contact")
-);
-const DynamicBlog = lazy(() =>
-  import("@/dynamictemplate/Template1/pages/Blog")
-);
-const DynamicBlogPost = lazy(() =>
-  import("@/dynamictemplate/Template1/pages/BlogPost")
 );
 
 /* Helper */
@@ -275,7 +235,7 @@ const router = createBrowserRouter([
     AdminProtectedRoute
   ),
 
-  // BACKOFFICE - 
+  // BACKOFFICE
   protect(
     {
       path: "/backoffice",
@@ -342,22 +302,16 @@ const router = createBrowserRouter([
   { path: "backoffice-login", element: wrap(BackofficeLogin)() },
   { path: "/backoffice-signup", element: wrap(BackofficeSignup)() },
   { path: "/superadmin-login", element: wrap(SuperAdminLogin)() },
-  { path: "/forgot-password", element: wrap(ForgotPasswordPage)() }, 
-  { path: "/reset-password", element: wrap(ResetPasswordPage)() }, 
+  { path: "/forgot-password", element: wrap(ForgotPasswordPage)() },
+  { path: "/reset-password", element: wrap(ResetPasswordPage)() },
 
   // DEMO TEMPLATE1
   {
     path: "/template1",
     element: wrap(MainLayout)(),
     children: [
-      {
-        path: "",
-        element: wrap(EcommerceHome)(),
-      },
-      {
-        path: "products",
-        element: wrap(EcommerceProducts)(),
-      },
+      { path: "", element: wrap(EcommerceHome)() },
+      { path: "products", element: wrap(EcommerceProducts)() },
       {
         path: "products/:categorySlug",
         element: wrap(EcommerceCategoryProductsPage)(),
@@ -366,30 +320,15 @@ const router = createBrowserRouter([
         path: "products/:categorySlug/:productSlug",
         element: wrap(EcommerceProductDetail)(),
       },
-      {
-        path: "opportunity",
-        element: wrap(EcommerceOpportunity)(),
-      },
+      { path: "opportunity", element: wrap(EcommerceOpportunity)() },
       {
         path: "opportunity-overview",
         element: wrap(EcommerceOpportunityOverView)(),
       },
-      {
-        path: "join-us",
-        element: wrap(EcommerceJoinUs)(),
-      },
-      {
-        path: "contact",
-        element: wrap(EcommerceContact)(),
-      },
-      {
-        path: "blog",
-        element: wrap(EcommerceBlog)(),
-      },
-      {
-        path: "blog/:id",
-        element: wrap(EcommerceBlogPost)(),
-      },
+      { path: "join-us", element: wrap(EcommerceJoinUs)() },
+      { path: "contact", element: wrap(EcommerceContact)() },
+      { path: "blog", element: wrap(EcommerceBlog)() },
+      { path: "blog/:id", element: wrap(EcommerceBlogPost)() },
     ],
   },
 
@@ -404,7 +343,6 @@ const router = createBrowserRouter([
         path: "products/:categorySlug",
         element: wrap(EcommerceCategoryProductsPage2)(),
       },
-
       {
         path: "products/:categorySlug/:productSlug",
         element: wrap(EcommerceProductDetail2)(),
@@ -421,64 +359,42 @@ const router = createBrowserRouter([
     ],
   },
 
-  // SUBDOMAIN DYNAMIC
+  // SUBDOMAIN DYNAMIC ROUTES - AUTO-DETECTS TEMPLATE AND LOADS CORRECT COMPONENTS
   {
     path: "/products",
-    element: (
-      <DynamicTemplateLoader>{wrap(ProductsListing)()}</DynamicTemplateLoader>
-    ),
+    element: <DynamicTemplateLoader />,
   },
   {
     path: "/products/:category",
-    element: (
-      <DynamicTemplateLoader>{wrap(CategoryProducts)()}</DynamicTemplateLoader>
-    ),
+    element: <DynamicTemplateLoader />,
   },
   {
     path: "/products/:category/:id",
-    element: (
-      <DynamicTemplateLoader>{wrap(ProductDetail)()}</DynamicTemplateLoader>
-    ),
+    element: <DynamicTemplateLoader />,
   },
   {
     path: "/opportunity",
-    element: (
-      <DynamicTemplateLoader>
-        {wrap(DynamicOpportunity)()}
-      </DynamicTemplateLoader>
-    ),
+    element: <DynamicTemplateLoader />,
   },
   {
     path: "/opportunity-overview",
-    element: (
-      <DynamicTemplateLoader>
-        {wrap(DynamicOpportunityOverView)()}
-      </DynamicTemplateLoader>
-    ),
+    element: <DynamicTemplateLoader />,
   },
   {
     path: "/join-us",
-    element: (
-      <DynamicTemplateLoader>{wrap(DynamicJoinUs)()}</DynamicTemplateLoader>
-    ),
+    element: <DynamicTemplateLoader />,
   },
   {
     path: "/contact",
-    element: (
-      <DynamicTemplateLoader>{wrap(DynamicContact)()}</DynamicTemplateLoader>
-    ),
+    element: <DynamicTemplateLoader />,
   },
   {
     path: "/blog",
-    element: (
-      <DynamicTemplateLoader>{wrap(DynamicBlog)()}</DynamicTemplateLoader>
-    ),
+    element: <DynamicTemplateLoader />,
   },
   {
     path: "/blog/:id",
-    element: (
-      <DynamicTemplateLoader>{wrap(DynamicBlogPost)()}</DynamicTemplateLoader>
-    ),
+    element: <DynamicTemplateLoader />,
   },
 
   // CATCH ALL

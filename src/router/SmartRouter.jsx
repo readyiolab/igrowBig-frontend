@@ -35,7 +35,8 @@ const SmartRouter = () => {
         const tid = response?.tenant?.template_id;
 
         if (tid) {
-          setTemplateId(Number(tid)); // 🔥 FIX
+          console.log("[SR] ✅ Template ID:", tid);
+          setTemplateId(Number(tid));
         }
       } catch (e) {
         console.error("[SR] Error:", e);
@@ -45,7 +46,7 @@ const SmartRouter = () => {
     };
 
     load();
-  }, []);
+  }, [getAll]);
 
   if (loading) return <LoadingFallback />;
 
